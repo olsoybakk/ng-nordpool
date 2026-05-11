@@ -1,11 +1,12 @@
 @if (vm$ | async; as vm) {
-  <div class="chart-wrapper">
+  <div class="chart-wrapper" (mouseleave)="onMouseLeave()">
     <svg
       class="chart"
       [attr.viewBox]="viewBox"
       preserveAspectRatio="xMidYMid meet"
       role="img"
       [attr.aria-label]="(chartMode() === 'bar' ? 'Bar' : 'Line') + ' chart of hourly electricity prices'"
+      (mousemove)="onMouseMove($event)"
     >
       @if (chartMode() === 'line') {
         <!-- Zone bands -->
@@ -55,9 +56,7 @@
               [class.bar--mid]="bar.priceLevel === 'mid'"
               [class.bar--high]="bar.priceLevel === 'high'"
               [class.bar--current]="bar.isCurrent"
-            >
-              <title>{{ bar.hour }}:00 — {{ bar.price.NOK_per_kWh | number: '1.2-2' }} kr/kWh</title>
-            </rect>
+            />
             <text
               [attr.x]="bar.x + vm.barW / 2"
               [attr.y]="bottomY + 16"
@@ -67,17 +66,14 @@
           </g>
         }
       } @else {
-        <!-- Multi-area line chart — non-selected areas first, selected on top -->
+        <!-- Multi-area step line chart -->
         @for (line of vm.areaLines; track trackByArea($index, line)) {
           <g class="area-line" [class.area-line--selected]="line.isSelected">
             <polyline
               [attr.points]="line.linePoints"
               class="line-path"
               [attr.stroke]="line.color"
-            >
-              <title>{{ line.area }}</title>
-            </polyline>
-
+            />
             @if (line.isSelected) {
               @for (pt of line.points; track pt.hour) {
                 <circle
@@ -87,13 +83,9 @@
                   class="line-dot"
                   [class.line-dot--current]="pt.isCurrent"
                   [attr.fill]="line.color"
-                >
-                  <title>{{ pt.hour }}:00 — {{ pt.nok | number: '1.2-2' }} kr/kWh</title>
-                </circle>
+                />
               }
             }
-
-            <!-- Area label at end of line -->
             <text
               [attr.x]="line.labelX"
               [attr.y]="line.labelY"
@@ -104,7 +96,7 @@
           </g>
         }
 
-        <!-- Hour labels on X axis (at left edge = start of hour) -->
+        <!-- Hour labels -->
         @for (bar of vm.bars; track bar.hour) {
           @if (bar.hour % 3 === 0) {
             <text
@@ -115,6 +107,17 @@
             >{{ bar.hour }}</text>
           }
         }
+      }
+
+      <!-- Hover column highlight (rendered above chart content) -->
+      @if (hoveredHour() !== null) {
+        <rect
+          [attr.x]="offsetX + hoveredHour()! * hourW"
+          [attr.y]="offsetY"
+          [attr.width]="hourW"
+          [attr.height]="chartH"
+          class="hover-column"
+        />
       }
 
       <!-- Current-time marker -->
@@ -152,6 +155,30 @@
         [attr.transform]="'rotate(-90 12 ' + (offsetY + chartH / 2) + ')'"
       >kr/kWh</text>
     </svg>
+
+    <!-- Floating tooltip -->
+    @if (hoveredHour() !== null && vm.pricesByHour[hoveredHour()!].length) {
+      <div
+        class="tooltip"
+        [style.left.px]="tooltipLeft()"
+        [style.top.px]="tooltipTop()"
+        [style.transform]="tooltipFlip() ? 'translate(calc(-100% - 12px), -50%)' : 'translate(12px, -50%)'"
+      >
+        <div class="tooltip__header">
+          {{ hoveredHour() }}:00 – {{ hoveredHour()! === 23 ? '24' : hoveredHour()! + 1 }}:00
+          <span class="tooltip__unit">kr/kWh</span>
+        </div>
+        <div class="tooltip__rows">
+          @for (entry of vm.pricesByHour[hoveredHour()!]; track trackByAreaEntry($index, entry)) {
+            <div class="tooltip__row" [class.tooltip__row--selected]="entry.isSelected">
+              <span class="tooltip__swatch" [style.background]="entry.color"></span>
+              <span class="tooltip__area">{{ entry.area }}</span>
+              <span class="tooltip__price">{{ entry.nok | number: '1.3-3' }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
   </div>
 } @else {
   <div class="chart-empty">No data to display</div>

@@ -1,4 +1,4 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
 import { map } from 'rxjs/operators';
@@ -49,6 +49,13 @@ interface Zone {
   label: string;
 }
 
+export interface TooltipEntry {
+  area: PriceArea;
+  nok: number;
+  color: string;
+  isSelected: boolean;
+}
+
 const CHART_W = 900;
 const CHART_H = 260;
 const PADDING = { top: 16, right: 48, bottom: 32, left: 60 };
@@ -65,12 +72,20 @@ export class PriceChartComponent {
 
   chartMode = input<ChartMode>('line');
 
+  readonly viewBoxW = CHART_W;
   readonly viewBox = `0 0 ${CHART_W} ${CHART_H + PADDING.top + PADDING.bottom}`;
   readonly chartH = CHART_H;
   readonly chartW = CHART_W - PADDING.left - PADDING.right;
   readonly offsetX = PADDING.left;
   readonly offsetY = PADDING.top;
   readonly bottomY = PADDING.top + CHART_H;
+  readonly hourW = (CHART_W - PADDING.left - PADDING.right) / 24;
+
+  // Hover / tooltip state
+  hoveredHour = signal<number | null>(null);
+  tooltipLeft = signal(0);
+  tooltipTop = signal(0);
+  tooltipFlip = signal(false);
 
   vm$ = combineLatest([
     this.store.select(selectAllPrices),
@@ -83,6 +98,30 @@ export class PriceChartComponent {
       this.buildViewModel(prices, current, allAreaPrices, selectedArea, selectedDate)
     )
   );
+
+  onMouseMove(event: MouseEvent): void {
+    const svg = event.currentTarget as SVGSVGElement;
+    const rect = svg.getBoundingClientRect();
+    const relX = event.clientX - rect.left;
+    const relY = event.clientY - rect.top;
+
+    // Convert rendered pixels → viewBox coordinates
+    const svgX = relX * (this.viewBoxW / rect.width);
+    const hour = Math.floor((svgX - this.offsetX) / this.hourW);
+
+    if (hour >= 0 && hour < 24) {
+      this.hoveredHour.set(hour);
+      this.tooltipLeft.set(relX);
+      this.tooltipTop.set(relY);
+      this.tooltipFlip.set(relX > rect.width * 0.6);
+    } else {
+      this.hoveredHour.set(null);
+    }
+  }
+
+  onMouseLeave(): void {
+    this.hoveredHour.set(null);
+  }
 
   private buildViewModel(
     prices: HourlyPrice[],
@@ -101,10 +140,7 @@ export class PriceChartComponent {
     const gap = this.chartW / prices.length;
     const barW = gap * 0.8;
 
-    // --- Bar chart data (single area) ---
-    const toYSingle = (v: number) =>
-      this.offsetY + CHART_H - ((v - singleMin) / singleRange) * CHART_H;
-
+    // Bar chart data
     const bars: BarData[] = prices.map((p, i) => {
       const normalised = (p.NOK_per_kWh - singleMin) / singleRange;
       const barH = Math.max(2, normalised * CHART_H);
@@ -127,7 +163,7 @@ export class PriceChartComponent {
 
     const yTicks = this.buildYTicks(singleMin, singleMax);
 
-    // --- Multi-line data (all areas) ---
+    // Multi-area line data
     const areaEntries = PRICE_AREAS.map(({ value }) => ({
       area: value,
       hourlyPrices: allAreaPrices[value] ?? [],
@@ -141,51 +177,38 @@ export class PriceChartComponent {
       }
     }
     const multiRange = multiMax - multiMin || 1;
-
     const toYMulti = (v: number) =>
       this.offsetY + CHART_H - ((v - multiMin) / multiRange) * CHART_H;
-
     const multiGap = this.chartW / 24;
 
     const areaLines: AreaLine[] = areaEntries.map(({ area, hourlyPrices }) => {
-      // Step chart: two points per hour (left edge and right edge at same Y)
       const stepPairs: string[] = [];
       const pts: PointData[] = [];
 
       hourlyPrices.forEach((p, i) => {
         const x1 = this.offsetX + i * multiGap;
         const x2 = this.offsetX + (i + 1) * multiGap;
-        const y  = toYMulti(p.NOK_per_kWh);
+        const y = toYMulti(p.NOK_per_kWh);
         stepPairs.push(`${x1},${y}`, `${x2},${y}`);
-        pts.push({
-          hour: new Date(p.time_start).getHours(),
-          cx: x1,
-          cy: y,
-          isCurrent: p === current,
-          nok: p.NOK_per_kWh,
-        });
+        pts.push({ hour: new Date(p.time_start).getHours(), cx: x1, cy: y, isCurrent: p === current, nok: p.NOK_per_kWh });
       });
 
       const lastPrice = hourlyPrices[hourlyPrices.length - 1];
-      const labelY = toYMulti(lastPrice.NOK_per_kWh);
-
       return {
         area,
         color: AREA_COLORS[area],
         isSelected: area === selectedArea,
         linePoints: stepPairs.join(' '),
         labelX: this.offsetX + hourlyPrices.length * multiGap + 4,
-        labelY: labelY + 4,
+        labelY: toYMulti(lastPrice.NOK_per_kWh) + 4,
         points: pts,
       };
     });
 
-    // Sort so selected area renders on top
     areaLines.sort((a, b) => (a.isSelected ? 1 : 0) - (b.isSelected ? 1 : 0));
 
     const multiTicks = this.buildYTicks(multiMin, multiMax);
 
-    // Zone bands based on global multi-area range
     const lowThreshY = toYMulti(multiMin + multiRange / 3);
     const highThreshY = toYMulti(multiMin + (2 * multiRange) / 3);
     const zones: Zone[] = [
@@ -194,15 +217,27 @@ export class PriceChartComponent {
       { y: lowThreshY,   height: this.bottomY - lowThreshY,   level: 'low',  label: 'Low'  },
     ];
 
+    // Per-hour tooltip data: all areas sorted cheapest → most expensive
+    const pricesByHour: TooltipEntry[][] = Array.from({ length: 24 }, (_, hour) =>
+      areaEntries
+        .filter(({ hourlyPrices }) => hourlyPrices[hour] != null)
+        .map(({ area, hourlyPrices }) => ({
+          area,
+          nok: hourlyPrices[hour].NOK_per_kWh,
+          color: AREA_COLORS[area],
+          isSelected: area === selectedArea,
+        }))
+        .sort((a, b) => a.nok - b.nok)
+    );
+
     const todayISO = new Date().toISOString().slice(0, 10);
-    const gap24 = this.chartW / 24;
     let nowLineX: number | null = null;
     if (selectedDate === todayISO) {
       const now = new Date();
-      nowLineX = this.offsetX + (now.getHours() + now.getMinutes() / 60) * gap24;
+      nowLineX = this.offsetX + (now.getHours() + now.getMinutes() / 60) * (this.chartW / 24);
     }
 
-    return { bars, barW, yTicks, areaLines, multiTicks, zones, multiMin, multiMax, nowLineX };
+    return { bars, barW, yTicks, areaLines, multiTicks, zones, pricesByHour, nowLineX };
   }
 
   private buildYTicks(min: number, max: number) {
@@ -217,4 +252,5 @@ export class PriceChartComponent {
 
   trackByArea(_: number, line: AreaLine) { return line.area; }
   trackByHour(_: number, bar: BarData) { return bar.hour; }
+  trackByAreaEntry(_: number, entry: TooltipEntry) { return entry.area; }
 }
