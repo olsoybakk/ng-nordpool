@@ -1,0 +1,25 @@
+<div class="controls">
+  <div class="control-group">
+    <label for="area-select">Price area</label>
+    <select
+      id="area-select"
+      [ngModel]="currentArea"
+      (ngModelChange)="onAreaChange($event)"
+    >
+      @for (area of areas; track area.value) {
+        <option [value]="area.value">{{ area.label }}</option>
+      }
+    </select>
+  </div>
+
+  <div class="control-group">
+    <label for="date-input">Date</label>
+    <input
+      id="date-input"
+      type="date"
+      [ngModel]="currentDate"
+      [max]="maxDate"
+      (ngModelChange)="onDateChange($event)"
+    />
+  </div>
+</div>

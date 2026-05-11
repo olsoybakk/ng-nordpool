@@ -1,0 +1,69 @@
+.chart-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.chart {
+  width: 100%;
+  min-width: 520px;
+  height: auto;
+  display: block;
+}
+
+.grid-line {
+  stroke: var(--color-border);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+
+.axis-line {
+  stroke: var(--color-border);
+  stroke-width: 1.5;
+}
+
+.axis-label {
+  font-size: 10px;
+  fill: var(--color-muted);
+  font-family: inherit;
+}
+
+.axis-title {
+  font-size: 10px;
+  fill: var(--color-muted);
+  font-family: inherit;
+}
+
+.hour-label {
+  font-size: 10px;
+  fill: var(--color-muted);
+  font-family: inherit;
+}
+
+.bar {
+  transition: opacity 0.15s;
+
+  &--low  { fill: var(--color-low); }
+  &--mid  { fill: var(--color-accent); }
+  &--high { fill: var(--color-high); }
+
+  &--current {
+    stroke: var(--color-text);
+    stroke-width: 1.5;
+    filter: brightness(1.15);
+  }
+}
+
+.bar-group:hover .bar {
+  opacity: 0.8;
+}
+
+.chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 8px;
+}

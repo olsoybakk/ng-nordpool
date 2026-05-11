@@ -1,0 +1,78 @@
+@if (vm$ | async; as vm) {
+  <div class="chart-wrapper">
+    <svg
+      class="chart"
+      [attr.viewBox]="viewBox"
+      preserveAspectRatio="xMidYMid meet"
+      role="img"
+      aria-label="Hourly electricity price chart"
+    >
+      <!-- Y-axis grid lines and labels -->
+      @for (tick of vm.yTicks; track tick.y) {
+        <line
+          [attr.x1]="offsetX"
+          [attr.y1]="tick.y"
+          [attr.x2]="offsetX + chartW"
+          [attr.y2]="tick.y"
+          class="grid-line"
+        />
+        <text
+          [attr.x]="offsetX - 8"
+          [attr.y]="tick.y + 4"
+          class="axis-label"
+          text-anchor="end"
+        >{{ tick.val | number: '1.2-2' }}</text>
+      }
+
+      <!-- Bars -->
+      @for (bar of vm.bars; track trackByHour($index, bar)) {
+        <g class="bar-group" [class.bar-group--current]="bar.isCurrent">
+          <rect
+            [attr.x]="bar.x"
+            [attr.y]="bar.barY"
+            [attr.width]="vm.barW"
+            [attr.height]="bar.barHeight"
+            [attr.rx]="3"
+            class="bar"
+            [class.bar--low]="bar.priceLevel === 'low'"
+            [class.bar--mid]="bar.priceLevel === 'mid'"
+            [class.bar--high]="bar.priceLevel === 'high'"
+            [class.bar--current]="bar.isCurrent"
+          >
+            <title>{{ bar.hour }}:00 — {{ bar.price.NOK_per_kWh | number: '1.2-2' }} kr/kWh</title>
+          </rect>
+
+          <!-- Hour label -->
+          <text
+            [attr.x]="bar.x + vm.barW / 2"
+            [attr.y]="bottomY + 16"
+            class="hour-label"
+            text-anchor="middle"
+          >
+            @if (bar.hour % 3 === 0) { {{ bar.hour }} }
+          </text>
+        </g>
+      }
+
+      <!-- Y-axis line -->
+      <line
+        [attr.x1]="offsetX"
+        [attr.y1]="offsetY"
+        [attr.x2]="offsetX"
+        [attr.y2]="bottomY"
+        class="axis-line"
+      />
+
+      <!-- Y-axis title -->
+      <text
+        [attr.x]="12"
+        [attr.y]="offsetY + chartH / 2"
+        class="axis-title"
+        text-anchor="middle"
+        [attr.transform]="'rotate(-90 12 ' + (offsetY + chartH / 2) + ')'"
+      >kr/kWh</text>
+    </svg>
+  </div>
+} @else {
+  <div class="chart-empty">No data to display</div>
+}

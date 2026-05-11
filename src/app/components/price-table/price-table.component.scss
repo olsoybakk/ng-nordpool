@@ -1,0 +1,64 @@
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+thead tr {
+  border-bottom: 2px solid var(--color-border);
+}
+
+th {
+  padding: 0.5rem 1rem;
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+}
+
+td {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.row--current td {
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  font-weight: 600;
+}
+
+.cell--hour {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.cell--price {
+  font-variant-numeric: tabular-nums;
+  font-family: monospace;
+}
+
+.cell--exr {
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+  font-family: monospace;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--color-accent);
+  color: #fff;
+  letter-spacing: 0.05em;
+}

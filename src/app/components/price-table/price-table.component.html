@@ -1,0 +1,29 @@
+@if (rows$ | async; as rows) {
+  @if (rows.length) {
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Hour</th>
+            <th>NOK/kWh</th>
+            <th>EUR/kWh</th>
+            <th>Exchange rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows; track row.hour) {
+            <tr [class.row--current]="row.isCurrent">
+              <td class="cell--hour">
+                {{ row.hour }}
+                @if (row.isCurrent) { <span class="badge">Now</span> }
+              </td>
+              <td class="cell--price">{{ row.NOK_per_kWh | number: '1.4-4' }}</td>
+              <td class="cell--price">{{ row.EUR_per_kWh | number: '1.4-4' }}</td>
+              <td class="cell--exr">{{ row.EXR | number: '1.4-4' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+}
