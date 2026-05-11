@@ -31,6 +31,8 @@ export const loadAllAreaPricesFailure = createAction(
   props<{ error: string }>()
 );
 
+export const detectLocation = createAction('[Prices] Detect Location');
+
 export const selectArea = createAction(
   '[Prices] Select Area',
   props<{ area: PriceArea }>()

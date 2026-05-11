@@ -14,7 +14,7 @@ import {
   selectSelectedArea,
   selectSelectedDate,
 } from '../../store';
-import { loadPrices, loadAllAreaPrices } from '../../store/prices/prices.actions';
+import { detectLocation, loadPrices, loadAllAreaPrices } from '../../store/prices/prices.actions';
 
 @Component({
   selector: 'app-dashboard',
@@ -44,6 +44,9 @@ export class DashboardComponent implements OnInit {
     ])
       .pipe(first())
       .subscribe(([area, date]) => {
+        if (!localStorage.getItem('selectedArea')) {
+          this.store.dispatch(detectLocation());
+        }
         this.store.dispatch(loadPrices({ area, date }));
         this.store.dispatch(loadAllAreaPrices({ date }));
       });
