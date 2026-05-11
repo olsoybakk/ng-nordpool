@@ -1,13 +1,14 @@
 import { createReducer, on } from '@ngrx/store';
-import { PricesState } from '../../models/price.model';
+import { PriceArea, PricesState } from '../../models/price.model';
 import * as PricesActions from './prices.actions';
 
 const todayISO = new Date().toISOString().slice(0, 10);
+const storedArea = localStorage.getItem('selectedArea') as PriceArea | null;
 
 export const initialState: PricesState = {
   prices: [],
   allAreaPrices: {},
-  selectedArea: 'NO1',
+  selectedArea: storedArea ?? 'NO1',
   selectedDate: todayISO,
   loading: false,
   allAreasLoading: false,

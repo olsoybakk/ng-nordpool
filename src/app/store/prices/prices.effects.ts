@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { catchError, map, switchMap } from 'rxjs/operators';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { forkJoin, of, Observable } from 'rxjs';
 import { NordpoolService } from '../../services/nordpool.service';
 import { PRICE_AREAS, HourlyPrice, PriceArea } from '../../models/price.model';
@@ -10,6 +10,15 @@ import * as PricesActions from './prices.actions';
 export class PricesEffects {
   private readonly actions$ = inject(Actions);
   private readonly nordpoolService = inject(NordpoolService);
+
+  persistSelectedArea$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(PricesActions.selectArea),
+        tap(({ area }) => localStorage.setItem('selectedArea', area))
+      ),
+    { dispatch: false }
+  );
 
   loadPrices$ = createEffect(() =>
     this.actions$.pipe(
