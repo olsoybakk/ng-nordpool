@@ -8,6 +8,13 @@ Angular 21 app that displays Nordpool day-ahead electricity spot prices.
 - **Live app:** https://olsoybakk.github.io/ng-nordpool/
 - **GitHub Actions:** https://github.com/olsoybakk/ng-nordpool/actions
 
+## README badges
+
+```markdown
+[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-live-brightgreen?logo=github)](https://olsoybakk.github.io/ng-nordpool/)
+[![Deploy to GitHub Pages](https://github.com/olsoybakk/ng-nordpool/actions/workflows/deploy.yml/badge.svg)](https://github.com/olsoybakk/ng-nordpool/actions/workflows/deploy.yml)
+```
+
 ## Commands
 
 ```bash
