@@ -1,4 +1,4 @@
-import { Component, HostListener, inject, input, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
 import { map } from 'rxjs/operators';
@@ -69,6 +69,7 @@ const PADDING = { top: 16, right: 48, bottom: 32, left: 60 };
 })
 export class PriceChartComponent {
   private readonly store = inject(Store);
+  private readonly elementRef = inject(ElementRef);
 
   chartMode = input<ChartMode>('line');
 
@@ -86,6 +87,13 @@ export class PriceChartComponent {
   @HostListener('document:keydown.escape')
   onEscape(): void {
     if (this.isFullscreen()) this.isFullscreen.set(false);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event): void {
+    if (!this.elementRef.nativeElement.contains(event.target)) {
+      this.hoveredHour.set(null);
+    }
   }
 
   toggleFullscreen(): void {

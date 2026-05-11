@@ -31,22 +31,6 @@
       [attr.aria-label]="(chartMode() === 'bar' ? 'Bar' : 'Line') + ' chart of hourly electricity prices'"
       (mousemove)="onMouseMove($event)"
     >
-      @if (chartMode() === 'line') {
-        <!-- Zone bands -->
-        @for (zone of vm.zones; track zone.level) {
-          <rect
-            [attr.x]="offsetX"
-            [attr.y]="zone.y"
-            [attr.width]="chartW"
-            [attr.height]="zone.height"
-            class="zone"
-            [class.zone--low]="zone.level === 'low'"
-            [class.zone--mid]="zone.level === 'mid'"
-            [class.zone--high]="zone.level === 'high'"
-          />
-        }
-      }
-
       <!-- Y-axis grid lines and labels -->
       @for (tick of (chartMode() === 'bar' ? vm.yTicks : vm.multiTicks); track tick.y) {
         <line

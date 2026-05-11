@@ -25,9 +25,13 @@ Angular 21 app that displays Nordpool day-ahead electricity spot prices.
 npm start          # dev server at http://localhost:4200
 npm run build      # production build → dist/ng-nordpool/browser/
 npm test           # all unit tests (vitest via @angular/build:unit-test)
-ng test --include="**/price-chart.component.spec.ts"  # single test file
+ng test --include="**/app.spec.ts"  # single test file (currently the only spec)
 npx prettier --write .  # format all files (printWidth 100, singleQuotes)
 ```
+
+## TypeScript
+
+`tsconfig.json` has `strict: true` plus `noImplicitReturns`, `noPropertyAccessFromIndexSignature`, `noFallthroughCasesInSwitch`, and `noImplicitOverride`. Angular templates use `strictTemplates` and `strictInjectionParameters`. All new code must satisfy these.
 
 ## Data source
 
@@ -53,9 +57,9 @@ src/app/store/prices/
                        }
                        selectedArea is hydrated from localStorage on startup.
   prices.effects.ts    loadPrices$ → NordpoolService.getPrices() via switchMap
-                       loadAllAreaPrices$ → forkJoin of all 20 areas via switchMap;
-                         each area uses catchError(() => of([])) so one failure
-                         doesn't cancel the rest
+                       loadAllAreaPrices$ → forkJoin over PRICE_AREAS (currently 5)
+                         via switchMap; each area uses catchError(() => of([])) so
+                         one failure doesn't cancel the rest
                        detectLocation$ → LocationService.detectPriceArea(), then
                          mergeMap → of(selectArea, loadPrices, loadAllAreaPrices);
                          catchError → EMPTY (silent fallback, keeps default NO1)
@@ -99,8 +103,8 @@ src/app/components/
                     One polyline per area using AREA_COLORS. Selected area is
                     2.5px / 100% opacity with dots at each hour-start; others are
                     1.2px / 70%. Y scale = global min/max across all loaded areas.
-                    Zone bands (low/mid/high) as background rects. Selected area
-                    sorts last so it renders on top. Area code label at line end.
+                    Selected area sorts last so it renders on top. Area code label
+                    at line end.
                     Hour labels sit at left edge (HH:00 boundary).
                   Both modes: dashed vertical "now" line interpolated to
                     hour + minute/60, with a "now" label. Only shown when
@@ -113,11 +117,14 @@ src/app/components/
                     areas sorted cheapest→most expensive: colour swatch, area
                     code, price to 3dp. Selected area row highlighted. Tooltip
                     flips left when cursor > 60% of SVG width. Data comes from
-                    vm.pricesByHour[hour] built in buildViewModel.
-                  DOM structure: .chart-outer (position:relative, tooltip anchor)
-                    wraps .chart-wrapper (overflow-x:auto, scroll container)
-                    which wraps the SVG. Tooltip is a sibling of .chart-wrapper
-                    inside .chart-outer so overflow clipping never hides it.
+                    vm.pricesByHour[hour] built in buildViewModel. Closes on
+                    mouseleave and on document click outside the component
+                    (@HostListener('document:click')) — covers mobile tap-away.
+                  DOM structure: .chart-outer (card: surface bg, border,
+                    border-radius 8px; position:relative, tooltip anchor) wraps
+                    .chart-wrapper (overflow-x:auto, scroll container) which
+                    wraps the SVG. Tooltip is a sibling of .chart-wrapper inside
+                    .chart-outer so overflow clipping never hides it.
                   Fullscreen: an expand/compress icon button (position:absolute,
                     top-right of .chart-outer) toggles isFullscreen signal.
                     Fullscreen is CSS-based (.chart-outer--fullscreen adds
@@ -168,7 +175,7 @@ Repo must be **public** for GitHub Pages on a free plan.
 - Step chart geometry: two points per hour (left + right edge at same Y) produces correct staircase without any path commands — a plain `<polyline>` is enough.
 - Tooltip uses HTML (not SVG foreignObject) for easy styling and scrollability. Positioned absolute inside `.chart-outer`; `pointer-events: none` so it never blocks mouse events on the SVG. The tooltip is a sibling of `.chart-wrapper` (not inside it) so that `overflow-x: auto` on the scroll container doesn't clip it.
 - `chartMode` lives in the dashboard signal, not the store — it's purely presentational and doesn't need to survive a reload.
-- `loadAllAreaPrices` fires 20 parallel HTTP requests; per-area `catchError` means partial data is shown rather than a full failure.
+- `loadAllAreaPrices` fires one parallel HTTP request per entry in `PRICE_AREAS`; per-area `catchError` means partial data is shown rather than a full failure.
 - Geolocation detection is fire-and-forget: the initial `loadPrices` + `loadAllAreaPrices` dispatch runs immediately with the stored/default area, then if detection succeeds it re-dispatches both for the detected area. No loading gate needed.
 - `404.html` copy pattern handles deep-link / refresh on GitHub Pages without hash routing.
 - `--base-href` is only needed for the Pages build; local dev works without it.
