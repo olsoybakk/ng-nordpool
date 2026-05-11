@@ -1,4 +1,4 @@
-import { Component, inject, input, signal } from '@angular/core';
+import { Component, HostListener, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
 import { map } from 'rxjs/operators';
@@ -80,6 +80,17 @@ export class PriceChartComponent {
   readonly offsetY = PADDING.top;
   readonly bottomY = PADDING.top + CHART_H;
   readonly hourW = (CHART_W - PADDING.left - PADDING.right) / 24;
+
+  isFullscreen = signal(false);
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.isFullscreen()) this.isFullscreen.set(false);
+  }
+
+  toggleFullscreen(): void {
+    this.isFullscreen.update(v => !v);
+  }
 
   // Hover / tooltip state
   hoveredHour = signal<number | null>(null);

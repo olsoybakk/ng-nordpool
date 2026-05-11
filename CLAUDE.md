@@ -115,6 +115,13 @@ src/app/components/
                     wraps .chart-wrapper (overflow-x:auto, scroll container)
                     which wraps the SVG. Tooltip is a sibling of .chart-wrapper
                     inside .chart-outer so overflow clipping never hides it.
+                  Fullscreen: an expand/compress icon button (position:absolute,
+                    top-right of .chart-outer) toggles isFullscreen signal.
+                    Fullscreen is CSS-based (.chart-outer--fullscreen adds
+                    position:fixed; inset:0; z-index:1000) — not the browser
+                    Fullscreen API, which silently fails on element-level
+                    requests in many environments. Escape key also exits via
+                    @HostListener('document:keydown.escape').
   price-table/    24-row table. Current hour row highlighted + "Now" badge.
                   Only shown when chartMode === 'bar'.
 
@@ -161,3 +168,4 @@ Repo must be **public** for GitHub Pages on a free plan.
 - `404.html` copy pattern handles deep-link / refresh on GitHub Pages without hash routing.
 - `--base-href` is only needed for the Pages build; local dev works without it.
 - NgRx Store Devtools enabled in dev mode — works with the Redux DevTools browser extension.
+- Chart fullscreen uses CSS (`position:fixed; inset:0`) not the browser Fullscreen API — the API silently does nothing on element-level requests in many environments (no rejection, no activation).
