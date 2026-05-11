@@ -38,11 +38,22 @@ Feature key: `prices`. Single feature slice — no root reducer needed beyond th
 ```
 src/app/store/prices/
   prices.actions.ts    loadPrices / loadPricesSuccess / loadPricesFailure
+                       loadAllAreaPrices / loadAllAreaPricesSuccess / loadAllAreaPricesFailure
                        selectArea / selectDate
-  prices.reducer.ts    initialState: { prices[], selectedArea:'NO1', selectedDate:today, loading, error }
+  prices.reducer.ts    initialState: {
+                         prices[], allAreaPrices{}, selectedArea, selectedDate:today,
+                         loading, allAreasLoading, error
+                       }
+                       selectedArea is hydrated from localStorage on startup.
   prices.effects.ts    loadPrices$ → NordpoolService.getPrices() via switchMap
-  prices.selectors.ts  selectAllPrices, selectSelectedArea, selectSelectedDate,
-                       selectLoading, selectError, selectCurrentPrice, selectDailyStats
+                       loadAllAreaPrices$ → forkJoin of all 20 areas via switchMap;
+                         each area uses catchError(() => of([])) so one failure
+                         doesn't cancel the rest
+                       persistSelectedArea$ → tap selectArea, writes to localStorage
+                         (dispatch: false)
+  prices.selectors.ts  selectAllPrices, selectAllAreaPrices, selectSelectedArea,
+                       selectSelectedDate, selectLoading, selectAllAreasLoading,
+                       selectError, selectCurrentPrice, selectDailyStats
 src/app/store/index.ts re-exports all of the above
 ```
 
@@ -52,7 +63,7 @@ src/app/store/index.ts re-exports all of the above
 
 ### Models
 
-`src/app/models/price.model.ts` — `HourlyPrice`, `PricesState`, `PriceArea` union type, `PRICE_AREAS` display list.
+`src/app/models/price.model.ts` — `HourlyPrice`, `PricesState`, `PriceArea` union type, `PRICE_AREAS` display list, `AREA_COLORS` record (20 evenly-spaced HSL hues, 18° apart).
 
 ### Components
 
@@ -60,23 +71,34 @@ All standalone. No shared module.
 
 ```
 src/app/components/
-  controls/       Area <select> + date <input>. Dispatches selectArea + selectDate + loadPrices on change.
+  controls/       Area <select> + date <input>.
+                  Area change → selectArea + loadPrices.
+                  Date change → selectDate + loadPrices + loadAllAreaPrices.
   stats-bar/      Now / Min / Avg / Max cards derived from store selectors.
-  price-chart/    Pure SVG chart (no charting lib). Toggle between Bar and Line mode via a
-                  segmented button. Mode held in a component signal — not in the store.
-                  Bar: colour-coded low/mid/high by tertile; current hour gets highlight stroke.
-                  Line: polyline + area fill; dots on each hour, larger dot on current hour.
-                  Y-axis ticks built dynamically from min/max of the day's prices.
+  price-chart/    Pure SVG chart (no charting lib). Accepts chartMode input signal.
+                  Bar mode: colour-coded bars (low/mid/high by tertile); current
+                    hour highlighted. Y scale = single-area min/max.
+                  Line mode: one polyline per area using AREA_COLORS. Selected area
+                    is 2.5px / 100% opacity and gets hour dots; others are 1.2px /
+                    70%. Y scale = global min/max across all loaded areas. Zone bands
+                    (low/mid/high) drawn as background rects. Selected area sorts
+                    last so it renders on top. Area code label at end of each line.
   price-table/    24-row table. Current hour row highlighted + "Now" badge.
+                  Only shown when chartMode === 'bar'.
 
 src/app/pages/
-  dashboard/      Composes all four components. Dispatches initial loadPrices on OnInit
-                  using combineLatest + first() to avoid subscribe-in-subscribe.
+  dashboard/      Owns chartMode signal (default: 'line'). Line/Bar toggle in header.
+                  On init dispatches loadPrices + loadAllAreaPrices via
+                  combineLatest + first(). Shows allAreasLoading spinner in line mode.
 ```
 
 ### Routing
 
 Lazy-loads `DashboardComponent` at `''`. Wildcard redirects to `''`.
+
+### Persistence
+
+`selectedArea` is written to `localStorage` by the `persistSelectedArea$` effect and read back in the reducer's `initialState`. The selected date always resets to today on load.
 
 ### Styling
 
@@ -95,6 +117,8 @@ Repo must be **public** for GitHub Pages on a free plan.
 ## Key decisions
 
 - No third-party chart library — SVG rendered directly in the component to keep the bundle small.
+- `chartMode` lives in the dashboard signal, not the store — it's purely presentational and doesn't need to survive a reload.
+- `loadAllAreaPrices` fires 20 parallel HTTP requests; per-area `catchError` means partial data is shown rather than a full failure.
 - `404.html` copy pattern handles deep-link / refresh on GitHub Pages without hash routing.
 - `--base-href` is only needed for the Pages build; local dev works without it.
 - NgRx Store Devtools enabled in dev mode — works with the Redux DevTools browser extension.
