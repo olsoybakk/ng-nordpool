@@ -1,62 +1,37 @@
-# NgNordpool
+# ng-nordpool
 
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-live-brightgreen?logo=github)](https://olsoybakk.github.io/ng-nordpool/)
 [![Deploy to GitHub Pages](https://github.com/olsoybakk/ng-nordpool/actions/workflows/deploy.yml/badge.svg)](https://github.com/olsoybakk/ng-nordpool/actions/workflows/deploy.yml)
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.10.
+A single-page Angular app for browsing Nordpool day-ahead electricity spot prices across Europe. Pick a price area and date to see the full 24-hour price profile as a bar chart and table, with live highlighting of the current hour.
 
-## Development server
+## Features
 
-To start a local development server, run:
+- **20 price areas** — Norway (NO1–NO5), Sweden (SE1–SE4), Denmark (DK1–DK2), Finland, the Baltic states, and several central European markets
+- **Hourly bar chart** — colour-coded low/mid/high by price tertile; current hour highlighted
+- **Stats bar** — current, min, avg and max for the selected day
+- **Hourly table** — NOK/kWh, EUR/kWh and exchange rate for all 24 hours
+- **Dark/light mode** — follows system preference automatically
+- **NgRx store** — all state managed via actions, reducers, effects and selectors
 
-```bash
-ng serve
-```
+## Data source
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Prices are fetched from [hvakosterstrommen.no](https://www.hvakosterstrommen.no/api), a free public API that republishes Nordpool spot data. No API key required.
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Development
 
 ```bash
-ng generate --help
+npm start       # dev server → http://localhost:4200
+npm run build   # production build → dist/ng-nordpool/browser/
+npm test        # unit tests (Vitest)
 ```
 
-## Building
+## Tech stack
 
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+| | |
+|---|---|
+| Framework | Angular 21 (standalone components) |
+| State | NgRx 21 (store, effects, store-devtools) |
+| Styling | SCSS with CSS custom properties |
+| Chart | Pure SVG — no charting library |
+| CI/CD | GitHub Actions → GitHub Pages |
