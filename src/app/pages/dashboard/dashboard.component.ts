@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, effect, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
 import { combineLatest } from 'rxjs';
@@ -36,6 +36,20 @@ export class DashboardComponent implements OnInit {
   allAreasLoading$ = this.store.select(selectAllAreasLoading);
   error$ = this.store.select(selectError);
   chartMode = signal<ChartMode>('line');
+  theme = signal<'dark' | 'light'>(
+    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+  );
+
+  constructor() {
+    effect(() => {
+      document.documentElement.setAttribute('data-theme', this.theme());
+    });
+
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onSystemChange = (e: MediaQueryListEvent) => this.theme.set(e.matches ? 'dark' : 'light');
+    mq.addEventListener('change', onSystemChange);
+    inject(DestroyRef).onDestroy(() => mq.removeEventListener('change', onSystemChange));
+  }
 
   ngOnInit(): void {
     combineLatest([
@@ -54,5 +68,9 @@ export class DashboardComponent implements OnInit {
 
   setChartMode(mode: ChartMode): void {
     this.chartMode.set(mode);
+  }
+
+  toggleTheme(): void {
+    this.theme.set(this.theme() === 'dark' ? 'light' : 'dark');
   }
 }

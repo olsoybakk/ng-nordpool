@@ -11,7 +11,7 @@ A single-page Angular app for browsing Nordpool day-ahead electricity spot price
 - **Hourly bar chart** — colour-coded low/mid/high by price tertile; current hour highlighted
 - **Stats bar** — current, min, avg and max for the selected day
 - **Hourly table** — NOK/kWh, EUR/kWh and exchange rate for all 24 hours
-- **Dark/light mode** — follows system preference automatically
+- **Dark/light mode** — follows system preference automatically; toggle button overrides manually
 - **NgRx store** — all state managed via actions, reducers, effects and selectors
 
 ## Data source

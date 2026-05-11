@@ -4,31 +4,49 @@
       <h1 class="dashboard__title">
         <span class="dashboard__logo">⚡</span> Nordpool Spot Prices
       </h1>
-      <div class="chart-toggle" role="group" aria-label="Chart type">
+      <div class="dashboard__header-actions">
         <button
-          class="toggle-btn"
-          [class.toggle-btn--active]="chartMode() === 'line'"
-          (click)="setChartMode('line')"
-          aria-label="Line chart"
+          class="theme-btn"
+          (click)="toggleTheme()"
+          [attr.aria-label]="theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-            <polyline points="1,13 5,7 9,9 13,3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
-          </svg>
-          Line
+          @if (theme() === 'dark') {
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+              <circle cx="8" cy="8" r="3" fill="currentColor" stroke="none"/>
+              <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.22 3.22l1.42 1.42M11.36 11.36l1.42 1.42M3.22 12.78l1.42-1.42M11.36 4.64l1.42-1.42"/>
+            </svg>
+          } @else {
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <path d="M14 8.53A6 6 0 1 1 7.47 2 4.67 4.67 0 0 0 14 8.53z"/>
+            </svg>
+          }
         </button>
-        <button
-          class="toggle-btn"
-          [class.toggle-btn--active]="chartMode() === 'bar'"
-          (click)="setChartMode('bar')"
-          aria-label="Bar chart"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-            <rect x="1" y="6" width="3" height="9" rx="1"/>
-            <rect x="6" y="3" width="3" height="12" rx="1"/>
-            <rect x="11" y="8" width="3" height="7" rx="1"/>
-          </svg>
-          Bar
-        </button>
+        <div class="chart-toggle" role="group" aria-label="Chart type">
+          <button
+            class="toggle-btn"
+            [class.toggle-btn--active]="chartMode() === 'line'"
+            (click)="setChartMode('line')"
+            aria-label="Line chart"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+              <polyline points="1,13 5,7 9,9 13,3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+            </svg>
+            Line
+          </button>
+          <button
+            class="toggle-btn"
+            [class.toggle-btn--active]="chartMode() === 'bar'"
+            (click)="setChartMode('bar')"
+            aria-label="Bar chart"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+              <rect x="1" y="6" width="3" height="9" rx="1"/>
+              <rect x="6" y="3" width="3" height="12" rx="1"/>
+              <rect x="11" y="8" width="3" height="7" rx="1"/>
+            </svg>
+            Bar
+          </button>
+        </div>
       </div>
     </div>
     <p class="dashboard__subtitle">Day-ahead electricity prices</p>

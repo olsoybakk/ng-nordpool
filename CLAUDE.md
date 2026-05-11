@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # ng-nordpool
 
 Angular 21 app that displays Nordpool day-ahead electricity spot prices.
@@ -20,7 +24,9 @@ Angular 21 app that displays Nordpool day-ahead electricity spot prices.
 ```bash
 npm start          # dev server at http://localhost:4200
 npm run build      # production build → dist/ng-nordpool/browser/
-npm test           # unit tests (vitest)
+npm test           # all unit tests (vitest via @angular/build:unit-test)
+ng test --include="**/price-chart.component.spec.ts"  # single test file
+npx prettier --write .  # format all files (printWidth 100, singleQuotes)
 ```
 
 ## Data source
@@ -143,6 +149,8 @@ Lazy-loads `DashboardComponent` at `''`. Wildcard redirects to `''`.
 ### Styling
 
 CSS custom properties in `src/styles.scss`. Dark mode default, light mode via `prefers-color-scheme: light`. Variables: `--color-bg`, `--color-surface`, `--color-border`, `--color-text`, `--color-muted`, `--color-accent`, `--color-low`, `--color-high`.
+
+Theme toggle: `DashboardComponent` holds a `theme` signal (`'dark' | 'light'`) initialised from `window.matchMedia('(prefers-color-scheme: dark)')` on load. An `effect()` writes it to `document.documentElement` as `data-theme`. A `matchMedia` change listener keeps the signal in sync when the OS theme changes while the app is open. The sun/moon button in the header lets the user override manually (a subsequent OS change will reset it). CSS uses `:root:not([data-theme='dark'])` in the media query and explicit `:root[data-theme='light']` / `:root[data-theme='dark']` blocks to handle all three states.
 
 ## Deployment
 
