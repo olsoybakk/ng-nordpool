@@ -39,6 +39,7 @@ Feature key: `prices`. Single feature slice — no root reducer needed beyond th
 src/app/store/prices/
   prices.actions.ts    loadPrices / loadPricesSuccess / loadPricesFailure
                        loadAllAreaPrices / loadAllAreaPricesSuccess / loadAllAreaPricesFailure
+                       detectLocation
                        selectArea / selectDate
   prices.reducer.ts    initialState: {
                          prices[], allAreaPrices{}, selectedArea, selectedDate:today,
@@ -49,6 +50,9 @@ src/app/store/prices/
                        loadAllAreaPrices$ → forkJoin of all 20 areas via switchMap;
                          each area uses catchError(() => of([])) so one failure
                          doesn't cancel the rest
+                       detectLocation$ → LocationService.detectPriceArea(), then
+                         mergeMap → of(selectArea, loadPrices, loadAllAreaPrices);
+                         catchError → EMPTY (silent fallback, keeps default NO1)
                        persistSelectedArea$ → tap selectArea, writes to localStorage
                          (dispatch: false)
   prices.selectors.ts  selectAllPrices, selectAllAreaPrices, selectSelectedArea,
@@ -57,9 +61,16 @@ src/app/store/prices/
 src/app/store/index.ts re-exports all of the above
 ```
 
-### Service
+### Services
 
 `src/app/services/nordpool.service.ts` — single method `getPrices(date, area)` that builds the URL and calls `HttpClient.get<HourlyPrice[]>`.
+
+`src/app/services/location.service.ts` — `detectPriceArea()` wraps `navigator.geolocation.getCurrentPosition` in an Observable, calls `nominatim.openstreetmap.org/reverse` for the country code, then maps to a `PriceArea`:
+- Norway: lat/lon → NO1–NO5 (approximate bidding-zone boundaries)
+- Sweden: lat → SE1–SE4
+- Denmark: lon < 10° → DK1, else DK2
+- FI / EE / LV / LT / AT / BE / DE / LU / FR / NL → direct
+- Unknown country → NO1
 
 ### Models
 
@@ -89,7 +100,9 @@ src/app/components/
 src/app/pages/
   dashboard/      Owns chartMode signal (default: 'line'). Line/Bar toggle in header.
                   On init dispatches loadPrices + loadAllAreaPrices via
-                  combineLatest + first(). Shows allAreasLoading spinner in line mode.
+                  combineLatest + first(). Also dispatches detectLocation if
+                  localStorage has no saved area. Shows allAreasLoading spinner
+                  in line mode.
 ```
 
 ### Routing
@@ -99,6 +112,8 @@ Lazy-loads `DashboardComponent` at `''`. Wildcard redirects to `''`.
 ### Persistence
 
 `selectedArea` is written to `localStorage` by the `persistSelectedArea$` effect and read back in the reducer's `initialState`. The selected date always resets to today on load.
+
+`detectLocation` is only dispatched when `localStorage.getItem('selectedArea')` is null (first visit or cleared storage). Once the area is detected and `selectArea` fires, `persistSelectedArea$` writes it to localStorage so detection never runs again.
 
 ### Styling
 
@@ -119,6 +134,7 @@ Repo must be **public** for GitHub Pages on a free plan.
 - No third-party chart library — SVG rendered directly in the component to keep the bundle small.
 - `chartMode` lives in the dashboard signal, not the store — it's purely presentational and doesn't need to survive a reload.
 - `loadAllAreaPrices` fires 20 parallel HTTP requests; per-area `catchError` means partial data is shown rather than a full failure.
+- Geolocation detection is fire-and-forget: the initial `loadPrices` + `loadAllAreaPrices` dispatch runs immediately with the stored/default area, then if detection succeeds it re-dispatches both for the detected area. No loading gate needed.
 - `404.html` copy pattern handles deep-link / refresh on GitHub Pages without hash routing.
 - `--base-href` is only needed for the Pages build; local dev works without it.
 - NgRx Store Devtools enabled in dev mode — works with the Redux DevTools browser extension.
