@@ -17,10 +17,10 @@ export class LocationService {
         this.http
           .get<NominatimReverse>(
             `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
-            { headers: { 'Accept-Language': 'en' } }
+            { headers: { 'Accept-Language': 'en' } },
           )
-          .pipe(map((r) => this.mapToArea(r.address.country_code, lat, lon)))
-      )
+          .pipe(map((r) => this.mapToArea(r.address.country_code, lat, lon))),
+      ),
     );
   }
 
@@ -32,44 +32,46 @@ export class LocationService {
           observer.complete();
         },
         (err) => observer.error(err),
-        { timeout: 10_000 }
+        { timeout: 10_000 },
       );
     });
   }
 
   private mapToArea(countryCode: string, lat: number, lon: number): PriceArea {
     switch (countryCode.toLowerCase()) {
-      case 'no': return this.mapNorway(lat, lon);
-      case 'se': return this.mapSweden(lat);
-      case 'dk': return lon < 10 ? 'DK1' : 'DK2';
-      case 'fi': return 'FI';
-      case 'ee': return 'EE';
-      case 'lv': return 'LV';
-      case 'lt': return 'LT';
-      case 'at': return 'AT';
-      case 'be': return 'BE';
-      case 'de':
-      case 'lu': return 'DE-LU';
-      case 'fr': return 'FR';
-      case 'nl': return 'NL';
-      default:   return 'NO1';
+      case 'no':
+        return this.mapNorway(lat, lon);
+      // case 'se': return this.mapSweden(lat);
+      // case 'dk': return lon < 10 ? 'DK1' : 'DK2';
+      // case 'fi': return 'FI';
+      // case 'ee': return 'EE';
+      // case 'lv': return 'LV';
+      // case 'lt': return 'LT';
+      // case 'at': return 'AT';
+      // case 'be': return 'BE';
+      // case 'de':
+      // case 'lu': return 'DE-LU';
+      // case 'fr': return 'FR';
+      // case 'nl': return 'NL';
+      default:
+        return 'NO1';
     }
   }
 
   // Approximate Norwegian bidding-zone boundaries
   private mapNorway(lat: number, lon: number): PriceArea {
-    if (lat > 65)              return 'NO4'; // North
-    if (lon < 7)               return 'NO5'; // Bergen / West
+    if (lat > 65) return 'NO4'; // North
+    if (lon < 7) return 'NO5'; // Bergen / West
     if (lat < 59.5 && lon < 9) return 'NO2'; // Kristiansand / South
-    if (lat > 62)              return 'NO3'; // Trondheim / Central
-    return 'NO1';                             // Oslo / East
+    if (lat > 62) return 'NO3'; // Trondheim / Central
+    return 'NO1'; // Oslo / East
   }
 
   // Approximate Swedish bidding-zone boundaries
-  private mapSweden(lat: number): PriceArea {
-    if (lat > 64) return 'SE1';
-    if (lat > 60) return 'SE2';
-    if (lat > 57) return 'SE3';
-    return 'SE4';
-  }
+  // private mapSweden(lat: number): PriceArea {
+  //   if (lat > 64) return 'SE1';
+  //   if (lat > 60) return 'SE2';
+  //   if (lat > 57) return 'SE3';
+  //   return 'SE4';
+  // }
 }

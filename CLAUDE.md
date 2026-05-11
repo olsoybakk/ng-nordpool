@@ -27,7 +27,7 @@ npm test           # unit tests (vitest)
 
 `https://www.hvakosterstrommen.no/api/v1/prices/{year}/{month}-{day}_{area}.json`
 
-Free, no API key. Returns 24 hourly objects with `NOK_per_kWh`, `EUR_per_kWh`, `EXR`, `time_start`, `time_end`. Supports 20 price areas: NO1–NO5, SE1–SE4, DK1–DK2, FI, EE, LT, LV, AT, BE, DE-LU, FR, NL.
+Free, no API key. Returns 24 hourly objects with `NOK_per_kWh`, `EUR_per_kWh`, `EXR`, `time_start`, `time_end`. The API supports 20 price areas, but the app currently shows only Norwegian areas: NO1–NO5. Non-Norwegian areas are commented out in the model, PRICE_AREAS list, AREA_COLORS, and location service.
 
 ## Architecture
 
@@ -67,14 +67,11 @@ src/app/store/index.ts re-exports all of the above
 
 `src/app/services/location.service.ts` — `detectPriceArea()` wraps `navigator.geolocation.getCurrentPosition` in an Observable, calls `nominatim.openstreetmap.org/reverse` for the country code, then maps to a `PriceArea`:
 - Norway: lat/lon → NO1–NO5 (approximate bidding-zone boundaries)
-- Sweden: lat → SE1–SE4
-- Denmark: lon < 10° → DK1, else DK2
-- FI / EE / LV / LT / AT / BE / DE / LU / FR / NL → direct
-- Unknown country → NO1
+- All other countries → NO1 (non-Norwegian mappings commented out)
 
 ### Models
 
-`src/app/models/price.model.ts` — `HourlyPrice`, `PricesState`, `PriceArea` union type, `PRICE_AREAS` display list, `AREA_COLORS` record (20 evenly-spaced HSL hues, 18° apart).
+`src/app/models/price.model.ts` — `HourlyPrice`, `PricesState`, `PriceArea` union type (currently NO1–NO5 only; other areas commented out), `PRICE_AREAS` display list, `AREA_COLORS` record (5 HSL hues for active areas; remaining 15 commented out).
 
 ### Components
 
