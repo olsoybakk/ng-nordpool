@@ -1,5 +1,9 @@
-.chart-wrapper {
+.chart-outer {
   position: relative;
+  width: 100%;
+}
+
+.chart-wrapper {
   width: 100%;
   overflow-x: auto;
 }

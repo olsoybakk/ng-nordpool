@@ -1,5 +1,6 @@
 @if (vm$ | async; as vm) {
-  <div class="chart-wrapper" (mouseleave)="onMouseLeave()">
+  <div class="chart-outer" (mouseleave)="onMouseLeave()">
+    <div class="chart-wrapper">
     <svg
       class="chart"
       [attr.viewBox]="viewBox"
@@ -155,8 +156,9 @@
         [attr.transform]="'rotate(-90 12 ' + (offsetY + chartH / 2) + ')'"
       >kr/kWh</text>
     </svg>
+    </div>
 
-    <!-- Floating tooltip -->
+    <!-- Floating tooltip (outside scroll container to avoid overflow clipping) -->
     @if (hoveredHour() !== null && vm.pricesByHour[hoveredHour()!].length) {
       <div
         class="tooltip"

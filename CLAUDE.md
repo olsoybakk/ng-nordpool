@@ -106,11 +106,15 @@ src/app/components/
                     viewBox coords (scaleX = viewBoxW / rect.width) to find the
                     hovered hour. A semi-transparent column rect highlights the
                     active hour. An HTML div tooltip (pointer-events:none,
-                    position:absolute inside .chart-wrapper) lists all loaded
+                    position:absolute inside .chart-outer) lists all loaded
                     areas sorted cheapest→most expensive: colour swatch, area
                     code, price to 3dp. Selected area row highlighted. Tooltip
                     flips left when cursor > 60% of SVG width. Data comes from
                     vm.pricesByHour[hour] built in buildViewModel.
+                  DOM structure: .chart-outer (position:relative, tooltip anchor)
+                    wraps .chart-wrapper (overflow-x:auto, scroll container)
+                    which wraps the SVG. Tooltip is a sibling of .chart-wrapper
+                    inside .chart-outer so overflow clipping never hides it.
   price-table/    24-row table. Current hour row highlighted + "Now" badge.
                   Only shown when chartMode === 'bar'.
 
@@ -150,7 +154,7 @@ Repo must be **public** for GitHub Pages on a free plan.
 
 - No third-party chart library — SVG rendered directly in the component to keep the bundle small.
 - Step chart geometry: two points per hour (left + right edge at same Y) produces correct staircase without any path commands — a plain `<polyline>` is enough.
-- Tooltip uses HTML (not SVG foreignObject) for easy styling and scrollability. Positioned absolute inside the chart wrapper; `pointer-events: none` so it never blocks mouse events on the SVG.
+- Tooltip uses HTML (not SVG foreignObject) for easy styling and scrollability. Positioned absolute inside `.chart-outer`; `pointer-events: none` so it never blocks mouse events on the SVG. The tooltip is a sibling of `.chart-wrapper` (not inside it) so that `overflow-x: auto` on the scroll container doesn't clip it.
 - `chartMode` lives in the dashboard signal, not the store — it's purely presentational and doesn't need to survive a reload.
 - `loadAllAreaPrices` fires 20 parallel HTTP requests; per-area `catchError` means partial data is shown rather than a full failure.
 - Geolocation detection is fire-and-forget: the initial `loadPrices` + `loadAllAreaPrices` dispatch runs immediately with the stored/default area, then if detection succeeds it re-dispatches both for the detected area. No loading gate needed.
