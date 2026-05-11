@@ -9,6 +9,7 @@ import {
   selectCurrentPrice,
   selectAllAreaPrices,
   selectSelectedArea,
+  selectSelectedDate,
 } from '../../store';
 
 export type ChartMode = 'bar' | 'line';
@@ -76,9 +77,10 @@ export class PriceChartComponent {
     this.store.select(selectCurrentPrice),
     this.store.select(selectAllAreaPrices),
     this.store.select(selectSelectedArea),
+    this.store.select(selectSelectedDate),
   ]).pipe(
-    map(([prices, current, allAreaPrices, selectedArea]) =>
-      this.buildViewModel(prices, current, allAreaPrices, selectedArea)
+    map(([prices, current, allAreaPrices, selectedArea, selectedDate]) =>
+      this.buildViewModel(prices, current, allAreaPrices, selectedArea, selectedDate)
     )
   );
 
@@ -86,7 +88,8 @@ export class PriceChartComponent {
     prices: HourlyPrice[],
     current: HourlyPrice | null,
     allAreaPrices: Partial<Record<PriceArea, HourlyPrice[]>>,
-    selectedArea: PriceArea
+    selectedArea: PriceArea,
+    selectedDate: string
   ) {
     if (!prices.length) return null;
 
@@ -145,23 +148,34 @@ export class PriceChartComponent {
     const multiGap = this.chartW / 24;
 
     const areaLines: AreaLine[] = areaEntries.map(({ area, hourlyPrices }) => {
-      const pts: PointData[] = hourlyPrices.map((p, i) => ({
-        hour: new Date(p.time_start).getHours(),
-        cx: this.offsetX + i * multiGap + multiGap * 0.5,
-        cy: toYMulti(p.NOK_per_kWh),
-        isCurrent: p === current,
-        nok: p.NOK_per_kWh,
-      }));
+      // Step chart: two points per hour (left edge and right edge at same Y)
+      const stepPairs: string[] = [];
+      const pts: PointData[] = [];
 
-      const last = pts[pts.length - 1];
+      hourlyPrices.forEach((p, i) => {
+        const x1 = this.offsetX + i * multiGap;
+        const x2 = this.offsetX + (i + 1) * multiGap;
+        const y  = toYMulti(p.NOK_per_kWh);
+        stepPairs.push(`${x1},${y}`, `${x2},${y}`);
+        pts.push({
+          hour: new Date(p.time_start).getHours(),
+          cx: x1,
+          cy: y,
+          isCurrent: p === current,
+          nok: p.NOK_per_kWh,
+        });
+      });
+
+      const lastPrice = hourlyPrices[hourlyPrices.length - 1];
+      const labelY = toYMulti(lastPrice.NOK_per_kWh);
 
       return {
         area,
         color: AREA_COLORS[area],
         isSelected: area === selectedArea,
-        linePoints: pts.map((p) => `${p.cx},${p.cy}`).join(' '),
-        labelX: last.cx + 6,
-        labelY: last.cy + 4,
+        linePoints: stepPairs.join(' '),
+        labelX: this.offsetX + hourlyPrices.length * multiGap + 4,
+        labelY: labelY + 4,
         points: pts,
       };
     });
@@ -180,7 +194,15 @@ export class PriceChartComponent {
       { y: lowThreshY,   height: this.bottomY - lowThreshY,   level: 'low',  label: 'Low'  },
     ];
 
-    return { bars, barW, yTicks, areaLines, multiTicks, zones, multiMin, multiMax };
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const gap24 = this.chartW / 24;
+    let nowLineX: number | null = null;
+    if (selectedDate === todayISO) {
+      const now = new Date();
+      nowLineX = this.offsetX + (now.getHours() + now.getMinutes() / 60) * gap24;
+    }
+
+    return { bars, barW, yTicks, areaLines, multiTicks, zones, multiMin, multiMax, nowLineX };
   }
 
   private buildYTicks(min: number, max: number) {

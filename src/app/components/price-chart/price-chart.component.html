@@ -104,15 +104,34 @@
           </g>
         }
 
-        <!-- Hour labels on X axis -->
+        <!-- Hour labels on X axis (at left edge = start of hour) -->
         @for (bar of vm.bars; track bar.hour) {
-          <text
-            [attr.x]="offsetX + ($index + 0.5) * (chartW / 24)"
-            [attr.y]="bottomY + 16"
-            class="hour-label"
-            text-anchor="middle"
-          >@if (bar.hour % 3 === 0) { {{ bar.hour }} }</text>
+          @if (bar.hour % 3 === 0) {
+            <text
+              [attr.x]="offsetX + $index * (chartW / 24)"
+              [attr.y]="bottomY + 16"
+              class="hour-label"
+              text-anchor="middle"
+            >{{ bar.hour }}</text>
+          }
         }
+      }
+
+      <!-- Current-time marker -->
+      @if (vm.nowLineX !== null) {
+        <line
+          [attr.x1]="vm.nowLineX"
+          [attr.y1]="offsetY"
+          [attr.x2]="vm.nowLineX"
+          [attr.y2]="bottomY"
+          class="now-line"
+        />
+        <text
+          [attr.x]="vm.nowLineX"
+          [attr.y]="offsetY - 3"
+          class="now-label"
+          text-anchor="middle"
+        >now</text>
       }
 
       <!-- Y-axis line -->

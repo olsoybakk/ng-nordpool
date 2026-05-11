@@ -106,6 +106,24 @@
   }
 }
 
+// Current-time marker
+.now-line {
+  stroke: var(--color-text);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+  opacity: 0.6;
+}
+
+.now-label {
+  font-size: 9px;
+  font-weight: 700;
+  fill: var(--color-text);
+  font-family: inherit;
+  opacity: 0.6;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 .chart-empty {
   display: flex;
   align-items: center;
