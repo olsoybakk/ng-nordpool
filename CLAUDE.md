@@ -87,13 +87,21 @@ src/app/components/
                   Date change → selectDate + loadPrices + loadAllAreaPrices.
   stats-bar/      Now / Min / Avg / Max cards derived from store selectors.
   price-chart/    Pure SVG chart (no charting lib). Accepts chartMode input signal.
+                  Also selects selectedDate from store to compute the now-line.
                   Bar mode: colour-coded bars (low/mid/high by tertile); current
                     hour highlighted. Y scale = single-area min/max.
-                  Line mode: one polyline per area using AREA_COLORS. Selected area
-                    is 2.5px / 100% opacity and gets hour dots; others are 1.2px /
-                    70%. Y scale = global min/max across all loaded areas. Zone bands
-                    (low/mid/high) drawn as background rects. Selected area sorts
-                    last so it renders on top. Area code label at end of each line.
+                  Line mode: step chart — each price is a flat horizontal segment
+                    from HH:00 to (H+1):00 with vertical steps between hours
+                    (two SVG points per hour: left edge + right edge at same Y).
+                    One polyline per area using AREA_COLORS. Selected area is
+                    2.5px / 100% opacity with dots at each hour-start; others are
+                    1.2px / 70%. Y scale = global min/max across all loaded areas.
+                    Zone bands (low/mid/high) as background rects. Selected area
+                    sorts last so it renders on top. Area code label at line end.
+                    Hour labels sit at left edge (HH:00 boundary).
+                  Both modes: dashed vertical "now" line interpolated to
+                    hour + minute/60, with a "now" label. Only shown when
+                    selectedDate === today.
   price-table/    24-row table. Current hour row highlighted + "Now" badge.
                   Only shown when chartMode === 'bar'.
 
@@ -132,6 +140,7 @@ Repo must be **public** for GitHub Pages on a free plan.
 ## Key decisions
 
 - No third-party chart library — SVG rendered directly in the component to keep the bundle small.
+- Step chart geometry: two points per hour (left + right edge at same Y) produces correct staircase without any path commands — a plain `<polyline>` is enough.
 - `chartMode` lives in the dashboard signal, not the store — it's purely presentational and doesn't need to survive a reload.
 - `loadAllAreaPrices` fires 20 parallel HTTP requests; per-area `catchError` means partial data is shown rather than a full failure.
 - Geolocation detection is fire-and-forget: the initial `loadPrices` + `loadAllAreaPrices` dispatch runs immediately with the stored/default area, then if detection succeeds it re-dispatches both for the detected area. No loading gate needed.
