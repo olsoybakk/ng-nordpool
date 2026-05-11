@@ -1,6 +1,7 @@
 # NgNordpool
 
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-live-brightgreen?logo=github)](https://olsoybakk.github.io/ng-nordpool/)
+[![Deploy to GitHub Pages](https://github.com/olsoybakk/ng-nordpool/actions/workflows/deploy.yml/badge.svg)](https://github.com/olsoybakk/ng-nordpool/actions/workflows/deploy.yml)
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.10.
 
