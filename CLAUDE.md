@@ -62,8 +62,11 @@ All standalone. No shared module.
 src/app/components/
   controls/       Area <select> + date <input>. Dispatches selectArea + selectDate + loadPrices on change.
   stats-bar/      Now / Min / Avg / Max cards derived from store selectors.
-  price-chart/    Pure SVG bar chart (no charting lib). Bars coloured low/mid/high by tertile.
-                  Current hour bar gets a highlight stroke. Y-axis ticks built dynamically.
+  price-chart/    Pure SVG chart (no charting lib). Toggle between Bar and Line mode via a
+                  segmented button. Mode held in a component signal — not in the store.
+                  Bar: colour-coded low/mid/high by tertile; current hour gets highlight stroke.
+                  Line: polyline + area fill; dots on each hour, larger dot on current hour.
+                  Y-axis ticks built dynamically from min/max of the day's prices.
   price-table/    24-row table. Current hour row highlighted + "Now" badge.
 
 src/app/pages/
