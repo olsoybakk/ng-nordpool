@@ -8,6 +8,11 @@ export const selectAllPrices = createSelector(
   (state) => state.prices
 );
 
+export const selectAllAreaPrices = createSelector(
+  selectPricesState,
+  (state) => state.allAreaPrices
+);
+
 export const selectSelectedArea = createSelector(
   selectPricesState,
   (state) => state.selectedArea
@@ -21,6 +26,11 @@ export const selectSelectedDate = createSelector(
 export const selectLoading = createSelector(
   selectPricesState,
   (state) => state.loading
+);
+
+export const selectAllAreasLoading = createSelector(
+  selectPricesState,
+  (state) => state.allAreasLoading
 );
 
 export const selectError = createSelector(

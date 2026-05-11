@@ -1,33 +1,4 @@
 @if (vm$ | async; as vm) {
-  <div class="chart-header">
-    <div class="chart-toggle" role="group" aria-label="Chart type">
-      <button
-        class="toggle-btn"
-        [class.toggle-btn--active]="chartMode() === 'bar'"
-        (click)="setMode('bar')"
-        aria-label="Bar chart"
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-          <rect x="1" y="6" width="3" height="9" rx="1"/>
-          <rect x="6" y="3" width="3" height="12" rx="1"/>
-          <rect x="11" y="8" width="3" height="7" rx="1"/>
-        </svg>
-        Bar
-      </button>
-      <button
-        class="toggle-btn"
-        [class.toggle-btn--active]="chartMode() === 'line'"
-        (click)="setMode('line')"
-        aria-label="Line chart"
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-          <polyline points="1,13 5,7 9,9 13,3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
-        </svg>
-        Line
-      </button>
-    </div>
-  </div>
-
   <div class="chart-wrapper">
     <svg
       class="chart"
@@ -36,8 +7,24 @@
       role="img"
       [attr.aria-label]="(chartMode() === 'bar' ? 'Bar' : 'Line') + ' chart of hourly electricity prices'"
     >
+      @if (chartMode() === 'line') {
+        <!-- Zone bands -->
+        @for (zone of vm.zones; track zone.level) {
+          <rect
+            [attr.x]="offsetX"
+            [attr.y]="zone.y"
+            [attr.width]="chartW"
+            [attr.height]="zone.height"
+            class="zone"
+            [class.zone--low]="zone.level === 'low'"
+            [class.zone--mid]="zone.level === 'mid'"
+            [class.zone--high]="zone.level === 'high'"
+          />
+        }
+      }
+
       <!-- Y-axis grid lines and labels -->
-      @for (tick of vm.yTicks; track tick.y) {
+      @for (tick of (chartMode() === 'bar' ? vm.yTicks : vm.multiTicks); track tick.y) {
         <line
           [attr.x1]="offsetX"
           [attr.y1]="tick.y"
@@ -80,28 +67,51 @@
           </g>
         }
       } @else {
-        <!-- Line chart -->
-        <polygon [attr.points]="vm.areaPoints" class="line-area" />
-        <polyline [attr.points]="vm.linePoints" class="line-path" />
-
-        @for (pt of vm.points; track trackByHour($index, pt)) {
-          <g class="point-group">
-            <circle
-              [attr.cx]="pt.cx"
-              [attr.cy]="pt.cy"
-              [attr.r]="pt.isCurrent ? 5 : 3.5"
-              class="line-dot"
-              [class.line-dot--current]="pt.isCurrent"
+        <!-- Multi-area line chart — non-selected areas first, selected on top -->
+        @for (line of vm.areaLines; track trackByArea($index, line)) {
+          <g class="area-line" [class.area-line--selected]="line.isSelected">
+            <polyline
+              [attr.points]="line.linePoints"
+              class="line-path"
+              [attr.stroke]="line.color"
             >
-              <title>{{ pt.hour }}:00 — {{ pt.price.NOK_per_kWh | number: '1.2-2' }} kr/kWh</title>
-            </circle>
+              <title>{{ line.area }}</title>
+            </polyline>
+
+            @if (line.isSelected) {
+              @for (pt of line.points; track pt.hour) {
+                <circle
+                  [attr.cx]="pt.cx"
+                  [attr.cy]="pt.cy"
+                  [attr.r]="pt.isCurrent ? 5 : 3"
+                  class="line-dot"
+                  [class.line-dot--current]="pt.isCurrent"
+                  [attr.fill]="line.color"
+                >
+                  <title>{{ pt.hour }}:00 — {{ pt.nok | number: '1.2-2' }} kr/kWh</title>
+                </circle>
+              }
+            }
+
+            <!-- Area label at end of line -->
             <text
-              [attr.x]="pt.cx"
-              [attr.y]="bottomY + 16"
-              class="hour-label"
-              text-anchor="middle"
-            >@if (pt.hour % 3 === 0) { {{ pt.hour }} }</text>
+              [attr.x]="line.labelX"
+              [attr.y]="line.labelY"
+              class="area-label"
+              [class.area-label--selected]="line.isSelected"
+              [attr.fill]="line.color"
+            >{{ line.area }}</text>
           </g>
+        }
+
+        <!-- Hour labels on X axis -->
+        @for (bar of vm.bars; track bar.hour) {
+          <text
+            [attr.x]="offsetX + ($index + 0.5) * (chartW / 24)"
+            [attr.y]="bottomY + 16"
+            class="hour-label"
+            text-anchor="middle"
+          >@if (bar.hour % 3 === 0) { {{ bar.hour }} }</text>
         }
       }
 

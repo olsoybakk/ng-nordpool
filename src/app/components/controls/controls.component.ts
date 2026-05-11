@@ -7,6 +7,7 @@ import {
   selectSelectedArea,
   selectSelectedDate,
   loadPrices,
+  loadAllAreaPrices,
   selectArea,
   selectDate,
 } from '../../store';
@@ -43,5 +44,6 @@ export class ControlsComponent implements OnInit {
   onDateChange(date: string): void {
     this.store.dispatch(selectDate({ date }));
     this.store.dispatch(loadPrices({ area: this.currentArea, date }));
+    this.store.dispatch(loadAllAreaPrices({ date }));
   }
 }

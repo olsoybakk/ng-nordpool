@@ -1,8 +1,36 @@
 <div class="dashboard">
   <header class="dashboard__header">
-    <h1 class="dashboard__title">
-      <span class="dashboard__logo">⚡</span> Nordpool Spot Prices
-    </h1>
+    <div class="dashboard__title-row">
+      <h1 class="dashboard__title">
+        <span class="dashboard__logo">⚡</span> Nordpool Spot Prices
+      </h1>
+      <div class="chart-toggle" role="group" aria-label="Chart type">
+        <button
+          class="toggle-btn"
+          [class.toggle-btn--active]="chartMode() === 'line'"
+          (click)="setChartMode('line')"
+          aria-label="Line chart"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <polyline points="1,13 5,7 9,9 13,3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+          </svg>
+          Line
+        </button>
+        <button
+          class="toggle-btn"
+          [class.toggle-btn--active]="chartMode() === 'bar'"
+          (click)="setChartMode('bar')"
+          aria-label="Bar chart"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <rect x="1" y="6" width="3" height="9" rx="1"/>
+            <rect x="6" y="3" width="3" height="12" rx="1"/>
+            <rect x="11" y="8" width="3" height="7" rx="1"/>
+          </svg>
+          Bar
+        </button>
+      </div>
+    </div>
     <p class="dashboard__subtitle">Day-ahead electricity prices</p>
   </header>
 
@@ -10,10 +38,10 @@
     <app-controls />
   </section>
 
-  @if (loading$ | async) {
+  @if ((loading$ | async) || (chartMode() === 'line' && (allAreasLoading$ | async))) {
     <div class="loading">
       <div class="spinner"></div>
-      <span>Loading prices…</span>
+      <span>{{ (allAreasLoading$ | async) ? 'Loading all areas…' : 'Loading prices…' }}</span>
     </div>
   }
 
@@ -29,11 +57,13 @@
 
   <section class="dashboard__chart">
     <h2 class="section-title">Hourly prices</h2>
-    <app-price-chart />
+    <app-price-chart [chartMode]="chartMode()" />
   </section>
 
-  <section class="dashboard__table">
-    <h2 class="section-title">All hours</h2>
-    <app-price-table />
-  </section>
+  @if (chartMode() === 'bar') {
+    <section class="dashboard__table">
+      <h2 class="section-title">All hours</h2>
+      <app-price-table />
+    </section>
+  }
 </div>

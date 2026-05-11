@@ -13,6 +13,14 @@
   gap: 0.25rem;
 }
 
+.dashboard__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .dashboard__title {
   margin: 0;
   font-size: 1.75rem;
@@ -31,6 +39,40 @@
   margin: 0;
   color: var(--color-muted);
   font-size: 0.9rem;
+}
+
+.chart-toggle {
+  display: flex;
+  gap: 2px;
+  background: var(--color-border);
+  border-radius: 7px;
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+
+  svg { flex-shrink: 0; fill: currentColor; }
+
+  &:hover { color: var(--color-text); }
+
+  &--active {
+    background: var(--color-surface);
+    color: var(--color-text);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  }
 }
 
 .loading {

@@ -6,9 +6,11 @@ const todayISO = new Date().toISOString().slice(0, 10);
 
 export const initialState: PricesState = {
   prices: [],
+  allAreaPrices: {},
   selectedArea: 'NO1',
   selectedDate: todayISO,
   loading: false,
+  allAreasLoading: false,
   error: null,
 };
 
@@ -30,6 +32,24 @@ export const pricesReducer = createReducer(
   on(PricesActions.loadPricesFailure, (state, { error }) => ({
     ...state,
     loading: false,
+    error,
+  })),
+
+  on(PricesActions.loadAllAreaPrices, (state) => ({
+    ...state,
+    allAreaPrices: {},
+    allAreasLoading: true,
+  })),
+
+  on(PricesActions.loadAllAreaPricesSuccess, (state, { results }) => ({
+    ...state,
+    allAreaPrices: results,
+    allAreasLoading: false,
+  })),
+
+  on(PricesActions.loadAllAreaPricesFailure, (state, { error }) => ({
+    ...state,
+    allAreasLoading: false,
     error,
   })),
 

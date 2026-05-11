@@ -8,9 +8,11 @@ export interface HourlyPrice {
 
 export interface PricesState {
   prices: HourlyPrice[];
+  allAreaPrices: Partial<Record<PriceArea, HourlyPrice[]>>;
   selectedArea: PriceArea;
   selectedDate: string;
   loading: boolean;
+  allAreasLoading: boolean;
   error: string | null;
 }
 
@@ -43,3 +45,28 @@ export const PRICE_AREAS: { value: PriceArea; label: string }[] = [
   { value: 'FR', label: 'FR — France' },
   { value: 'NL', label: 'NL — Netherlands' },
 ];
+
+// 20 evenly-spaced hues (18° apart) at consistent saturation/lightness
+// so every area has a clearly distinct colour at a glance
+export const AREA_COLORS: Record<PriceArea, string> = {
+  NO1:   'hsl(0,   72%, 62%)',
+  NO2:   'hsl(18,  72%, 62%)',
+  NO3:   'hsl(36,  72%, 62%)',
+  NO4:   'hsl(54,  72%, 62%)',
+  NO5:   'hsl(72,  72%, 62%)',
+  SE1:   'hsl(90,  72%, 55%)',
+  SE2:   'hsl(108, 72%, 55%)',
+  SE3:   'hsl(126, 72%, 55%)',
+  SE4:   'hsl(144, 72%, 55%)',
+  DK1:   'hsl(162, 72%, 58%)',
+  DK2:   'hsl(180, 72%, 58%)',
+  FI:    'hsl(198, 72%, 62%)',
+  EE:    'hsl(216, 72%, 65%)',
+  LT:    'hsl(234, 72%, 65%)',
+  LV:    'hsl(252, 72%, 65%)',
+  AT:    'hsl(270, 72%, 65%)',
+  BE:    'hsl(288, 72%, 65%)',
+  'DE-LU': 'hsl(306, 72%, 65%)',
+  FR:    'hsl(324, 72%, 65%)',
+  NL:    'hsl(342, 72%, 65%)',
+};

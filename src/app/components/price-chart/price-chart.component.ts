@@ -1,10 +1,15 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
 import { map } from 'rxjs/operators';
 import { combineLatest } from 'rxjs';
-import { HourlyPrice } from '../../models/price.model';
-import { selectAllPrices, selectCurrentPrice } from '../../store';
+import { AREA_COLORS, HourlyPrice, PRICE_AREAS, PriceArea } from '../../models/price.model';
+import {
+  selectAllPrices,
+  selectCurrentPrice,
+  selectAllAreaPrices,
+  selectSelectedArea,
+} from '../../store';
 
 export type ChartMode = 'bar' | 'line';
 
@@ -20,15 +25,32 @@ interface BarData {
 
 interface PointData {
   hour: number;
-  price: HourlyPrice;
   cx: number;
   cy: number;
   isCurrent: boolean;
+  nok: number;
+}
+
+interface AreaLine {
+  area: PriceArea;
+  color: string;
+  isSelected: boolean;
+  linePoints: string;
+  labelX: number;
+  labelY: number;
+  points: PointData[];
+}
+
+interface Zone {
+  y: number;
+  height: number;
+  level: 'low' | 'mid' | 'high';
+  label: string;
 }
 
 const CHART_W = 900;
 const CHART_H = 260;
-const PADDING = { top: 16, right: 16, bottom: 32, left: 60 };
+const PADDING = { top: 16, right: 48, bottom: 32, left: 60 };
 
 @Component({
   selector: 'app-price-chart',
@@ -40,6 +62,8 @@ const PADDING = { top: 16, right: 16, bottom: 32, left: 60 };
 export class PriceChartComponent {
   private readonly store = inject(Store);
 
+  chartMode = input<ChartMode>('line');
+
   readonly viewBox = `0 0 ${CHART_W} ${CHART_H + PADDING.top + PADDING.bottom}`;
   readonly chartH = CHART_H;
   readonly chartW = CHART_W - PADDING.left - PADDING.right;
@@ -47,44 +71,45 @@ export class PriceChartComponent {
   readonly offsetY = PADDING.top;
   readonly bottomY = PADDING.top + CHART_H;
 
-  chartMode = signal<ChartMode>('bar');
-
   vm$ = combineLatest([
     this.store.select(selectAllPrices),
     this.store.select(selectCurrentPrice),
+    this.store.select(selectAllAreaPrices),
+    this.store.select(selectSelectedArea),
   ]).pipe(
-    map(([prices, current]) => this.buildViewModel(prices, current))
+    map(([prices, current, allAreaPrices, selectedArea]) =>
+      this.buildViewModel(prices, current, allAreaPrices, selectedArea)
+    )
   );
 
-  setMode(mode: ChartMode) {
-    this.chartMode.set(mode);
-  }
-
-  private buildViewModel(prices: HourlyPrice[], current: HourlyPrice | null) {
+  private buildViewModel(
+    prices: HourlyPrice[],
+    current: HourlyPrice | null,
+    allAreaPrices: Partial<Record<PriceArea, HourlyPrice[]>>,
+    selectedArea: PriceArea
+  ) {
     if (!prices.length) return null;
 
     const values = prices.map((p) => p.NOK_per_kWh);
-    const minVal = Math.min(...values);
-    const maxVal = Math.max(...values);
-    const range = maxVal - minVal || 1;
+    const singleMin = Math.min(...values);
+    const singleMax = Math.max(...values);
+    const singleRange = singleMax - singleMin || 1;
 
     const gap = this.chartW / prices.length;
     const barW = gap * 0.8;
-    const yTicks = this.buildYTicks(minVal, maxVal);
 
-    const toY = (v: number) =>
-      this.offsetY + CHART_H - ((v - minVal) / range) * CHART_H;
+    // --- Bar chart data (single area) ---
+    const toYSingle = (v: number) =>
+      this.offsetY + CHART_H - ((v - singleMin) / singleRange) * CHART_H;
 
     const bars: BarData[] = prices.map((p, i) => {
-      const normalised = (p.NOK_per_kWh - minVal) / range;
+      const normalised = (p.NOK_per_kWh - singleMin) / singleRange;
       const barH = Math.max(2, normalised * CHART_H);
-      const third = range / 3;
+      const third = singleRange / 3;
       const priceLevel =
-        p.NOK_per_kWh <= minVal + third
-          ? 'low'
-          : p.NOK_per_kWh <= minVal + 2 * third
-            ? 'mid'
-            : 'high';
+        p.NOK_per_kWh <= singleMin + third ? 'low'
+        : p.NOK_per_kWh <= singleMin + 2 * third ? 'mid'
+        : 'high';
 
       return {
         hour: new Date(p.time_start).getHours(),
@@ -97,22 +122,65 @@ export class PriceChartComponent {
       };
     });
 
-    const points: PointData[] = prices.map((p, i) => ({
-      hour: new Date(p.time_start).getHours(),
-      price: p,
-      cx: this.offsetX + i * gap + gap * 0.5,
-      cy: toY(p.NOK_per_kWh),
-      isCurrent: p === current,
-    }));
+    const yTicks = this.buildYTicks(singleMin, singleMax);
 
-    const linePoints = points.map((p) => `${p.cx},${p.cy}`).join(' ');
-    const areaPoints = [
-      `${points[0].cx},${this.bottomY}`,
-      ...points.map((p) => `${p.cx},${p.cy}`),
-      `${points[points.length - 1].cx},${this.bottomY}`,
-    ].join(' ');
+    // --- Multi-line data (all areas) ---
+    const areaEntries = PRICE_AREAS.map(({ value }) => ({
+      area: value,
+      hourlyPrices: allAreaPrices[value] ?? [],
+    })).filter((e) => e.hourlyPrices.length > 0);
 
-    return { bars, barW, points, linePoints, areaPoints, yTicks, minVal, maxVal };
+    let multiMin = Infinity, multiMax = -Infinity;
+    for (const { hourlyPrices } of areaEntries) {
+      for (const p of hourlyPrices) {
+        if (p.NOK_per_kWh < multiMin) multiMin = p.NOK_per_kWh;
+        if (p.NOK_per_kWh > multiMax) multiMax = p.NOK_per_kWh;
+      }
+    }
+    const multiRange = multiMax - multiMin || 1;
+
+    const toYMulti = (v: number) =>
+      this.offsetY + CHART_H - ((v - multiMin) / multiRange) * CHART_H;
+
+    const multiGap = this.chartW / 24;
+
+    const areaLines: AreaLine[] = areaEntries.map(({ area, hourlyPrices }) => {
+      const pts: PointData[] = hourlyPrices.map((p, i) => ({
+        hour: new Date(p.time_start).getHours(),
+        cx: this.offsetX + i * multiGap + multiGap * 0.5,
+        cy: toYMulti(p.NOK_per_kWh),
+        isCurrent: p === current,
+        nok: p.NOK_per_kWh,
+      }));
+
+      const last = pts[pts.length - 1];
+
+      return {
+        area,
+        color: AREA_COLORS[area],
+        isSelected: area === selectedArea,
+        linePoints: pts.map((p) => `${p.cx},${p.cy}`).join(' '),
+        labelX: last.cx + 6,
+        labelY: last.cy + 4,
+        points: pts,
+      };
+    });
+
+    // Sort so selected area renders on top
+    areaLines.sort((a, b) => (a.isSelected ? 1 : 0) - (b.isSelected ? 1 : 0));
+
+    const multiTicks = this.buildYTicks(multiMin, multiMax);
+
+    // Zone bands based on global multi-area range
+    const lowThreshY = toYMulti(multiMin + multiRange / 3);
+    const highThreshY = toYMulti(multiMin + (2 * multiRange) / 3);
+    const zones: Zone[] = [
+      { y: this.offsetY, height: highThreshY - this.offsetY,  level: 'high', label: 'High' },
+      { y: highThreshY,  height: lowThreshY - highThreshY,    level: 'mid',  label: 'Mid'  },
+      { y: lowThreshY,   height: this.bottomY - lowThreshY,   level: 'low',  label: 'Low'  },
+    ];
+
+    return { bars, barW, yTicks, areaLines, multiTicks, zones, multiMin, multiMax };
   }
 
   private buildYTicks(min: number, max: number) {
@@ -125,7 +193,6 @@ export class PriceChartComponent {
     });
   }
 
-  trackByHour(_: number, item: BarData | PointData) {
-    return item.hour;
-  }
+  trackByArea(_: number, line: AreaLine) { return line.area; }
+  trackByHour(_: number, bar: BarData) { return bar.hour; }
 }

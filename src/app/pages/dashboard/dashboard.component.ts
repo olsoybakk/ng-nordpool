@@ -1,14 +1,20 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
 import { combineLatest } from 'rxjs';
 import { first } from 'rxjs/operators';
 import { ControlsComponent } from '../../components/controls/controls.component';
 import { StatsBarComponent } from '../../components/stats-bar/stats-bar.component';
-import { PriceChartComponent } from '../../components/price-chart/price-chart.component';
+import { PriceChartComponent, ChartMode } from '../../components/price-chart/price-chart.component';
 import { PriceTableComponent } from '../../components/price-table/price-table.component';
-import { selectError, selectLoading, selectSelectedArea, selectSelectedDate } from '../../store';
-import { loadPrices } from '../../store/prices/prices.actions';
+import {
+  selectError,
+  selectLoading,
+  selectAllAreasLoading,
+  selectSelectedArea,
+  selectSelectedDate,
+} from '../../store';
+import { loadPrices, loadAllAreaPrices } from '../../store/prices/prices.actions';
 
 @Component({
   selector: 'app-dashboard',
@@ -27,7 +33,9 @@ export class DashboardComponent implements OnInit {
   private readonly store = inject(Store);
 
   loading$ = this.store.select(selectLoading);
+  allAreasLoading$ = this.store.select(selectAllAreasLoading);
   error$ = this.store.select(selectError);
+  chartMode = signal<ChartMode>('line');
 
   ngOnInit(): void {
     combineLatest([
@@ -37,6 +45,11 @@ export class DashboardComponent implements OnInit {
       .pipe(first())
       .subscribe(([area, date]) => {
         this.store.dispatch(loadPrices({ area, date }));
+        this.store.dispatch(loadAllAreaPrices({ date }));
       });
+  }
+
+  setChartMode(mode: ChartMode): void {
+    this.chartMode.set(mode);
   }
 }

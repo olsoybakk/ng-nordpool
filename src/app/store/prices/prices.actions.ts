@@ -16,6 +16,21 @@ export const loadPricesFailure = createAction(
   props<{ error: string }>()
 );
 
+export const loadAllAreaPrices = createAction(
+  '[Prices] Load All Area Prices',
+  props<{ date: string }>()
+);
+
+export const loadAllAreaPricesSuccess = createAction(
+  '[Prices] Load All Area Prices Success',
+  props<{ results: Partial<Record<PriceArea, HourlyPrice[]>> }>()
+);
+
+export const loadAllAreaPricesFailure = createAction(
+  '[Prices] Load All Area Prices Failure',
+  props<{ error: string }>()
+);
+
 export const selectArea = createAction(
   '[Prices] Select Area',
   props<{ area: PriceArea }>()
