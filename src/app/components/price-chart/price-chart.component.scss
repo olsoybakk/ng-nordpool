@@ -1,3 +1,42 @@
+.chart-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
+}
+
+.chart-toggle {
+  display: flex;
+  gap: 2px;
+  background: var(--color-border);
+  border-radius: 7px;
+  padding: 2px;
+}
+
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+
+  svg { flex-shrink: 0; fill: currentColor; }
+
+  &:hover { color: var(--color-text); }
+
+  &--active {
+    background: var(--color-surface);
+    color: var(--color-text);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  }
+}
+
 .chart-wrapper {
   width: 100%;
   overflow-x: auto;
@@ -39,6 +78,7 @@
   font-family: inherit;
 }
 
+// Bar chart
 .bar {
   transition: opacity 0.15s;
 
@@ -53,9 +93,36 @@
   }
 }
 
-.bar-group:hover .bar {
-  opacity: 0.8;
+.bar-group:hover .bar { opacity: 0.8; }
+
+// Line chart
+.line-area {
+  fill: var(--color-accent);
+  opacity: 0.12;
 }
+
+.line-path {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.line-dot {
+  fill: var(--color-accent);
+  stroke: var(--color-surface);
+  stroke-width: 2;
+  transition: r 0.1s;
+
+  &--current {
+    fill: var(--color-text);
+    stroke: var(--color-accent);
+    stroke-width: 2;
+  }
+}
+
+.point-group:hover .line-dot { r: 5; }
 
 .chart-empty {
   display: flex;
