@@ -46,4 +46,11 @@ export class ControlsComponent implements OnInit {
     this.store.dispatch(loadPrices({ area: this.currentArea, date }));
     this.store.dispatch(loadAllAreaPrices({ date }));
   }
+
+  stepDate(days: number): void {
+    const d = new Date(this.currentDate);
+    d.setDate(d.getDate() + days);
+    const next = d.toISOString().slice(0, 10);
+    if (next <= this.maxDate) this.onDateChange(next);
+  }
 }

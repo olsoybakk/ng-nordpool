@@ -56,32 +56,32 @@
     <app-controls />
   </section>
 
-  @if ((loading$ | async) || (chartMode() === 'line' && (allAreasLoading$ | async))) {
-    <div class="loading">
-      <div class="spinner"></div>
-      <span>{{ (allAreasLoading$ | async) ? 'Loading all areas…' : 'Loading prices…' }}</span>
-    </div>
-  }
+  <div class="data-area">
+    @if (error$ | async; as error) {
+      <div class="error-banner" role="alert">
+        <strong>Error:</strong> {{ error }}
+      </div>
+    }
 
-  @if (error$ | async; as error) {
-    <div class="error-banner" role="alert">
-      <strong>Error:</strong> {{ error }}
-    </div>
-  }
-
-  <section class="dashboard__stats">
-    <app-stats-bar />
-  </section>
-
-  <section class="dashboard__chart">
-    <h2 class="section-title">Hourly prices</h2>
-    <app-price-chart [chartMode]="chartMode()" />
-  </section>
-
-  @if (chartMode() === 'bar') {
-    <section class="dashboard__table">
-      <h2 class="section-title">All hours</h2>
-      <app-price-table />
+    <section class="dashboard__stats" [class.dashboard__stats--loading]="(loading$ | async) || (allAreasLoading$ | async)">
+      <app-stats-bar />
     </section>
-  }
+
+    <section class="dashboard__chart">
+      @if ((loading$ | async) || (allAreasLoading$ | async)) {
+        <div class="data-overlay" aria-hidden="true">
+          <div class="spinner"></div>
+        </div>
+      }
+      <h2 class="section-title">Hourly prices</h2>
+      <app-price-chart [chartMode]="chartMode()" />
+    </section>
+
+    @if (chartMode() === 'bar') {
+      <section class="dashboard__table" [class.dashboard__table--loading]="(loading$ | async) || (allAreasLoading$ | async)">
+        <h2 class="section-title">All hours</h2>
+        <app-price-table />
+      </section>
+    }
+  </div>
 </div>

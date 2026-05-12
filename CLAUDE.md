@@ -112,7 +112,9 @@ All standalone. No shared module.
 
 ```
 src/app/components/
-  controls/       Area <select> + date <input>.
+  controls/       Area <select> + date <input> with ‹/› prev/next day buttons.
+                  maxDate is tomorrow (Date.now() + 864e5). stepDate(±1) guards
+                  against going past maxDate. Next button disabled at maxDate.
                   Area change → selectArea + loadPrices.
                   Date change → selectDate + loadPrices + loadAllAreaPrices.
   stats-bar/      Now / Min / Avg / Max cards derived from store selectors.
@@ -162,8 +164,10 @@ src/app/pages/
   dashboard/      Owns chartMode signal (default: 'line'). Line/Bar toggle in header.
                   On init dispatches loadPrices + loadAllAreaPrices via
                   combineLatest + first(). Also dispatches detectLocation if
-                  localStorage has no saved area. Shows allAreasLoading spinner
-                  in line mode.
+                  localStorage has no saved area.
+                  Loading state: a semi-transparent overlay spinner covers the
+                  chart section; stats bar and "All hours" table fade to 40%
+                  opacity (pointer-events: none) while loading$ || allAreasLoading$.
 ```
 
 ### Routing
