@@ -12,6 +12,14 @@ Angular 21 app that displays Nordpool day-ahead electricity spot prices.
 - **Live app:** https://olsoybakk.github.io/ng-nordpool/
 - **GitHub Actions:** https://github.com/olsoybakk/ng-nordpool/actions
 
+## Git workflow
+
+`main` is protected — direct pushes are blocked (enforced on GitHub and by a local pre-push hook in `.githooks/pre-push`). All changes go through a PR. New clones need:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ## Commands
 
 ```bash
