@@ -120,14 +120,17 @@ src/app/components/
   stats-bar/      Now / Min / Avg / Max cards derived from store selectors.
   price-chart/    Pure SVG chart (no charting lib). Accepts chartMode input signal.
                   Also selects selectedDate from store to compute the now-line.
+                  Y scale: both modes snap min to floor-25 and max to ceil-25 of
+                    (data ± 5 øre buffer), guaranteeing the snapped bound is
+                    strictly outside the data. Grid lines at every 50 øre.
                   Bar mode: colour-coded bars (low/mid/high by tertile); current
-                    hour highlighted. Y scale = single-area min/max.
+                    hour highlighted. Y scale = single-area snapped min/max.
                   Line mode: step chart — each price is a flat horizontal segment
                     from HH:00 to (H+1):00 with vertical steps between hours
                     (two SVG points per hour: left edge + right edge at same Y).
                     One polyline per area using AREA_COLORS. Selected area is
-                    2.5px / 100% opacity with dots at each hour-start; others are
-                    1.2px / 70%. Y scale = global min/max across all loaded areas.
+                    3px / 100% opacity with dots at current slot; others are
+                    1.5px / 70%. Y scale = global snapped min/max across all areas.
                     Selected area sorts last so it renders on top. Area code label
                     at line end.
                     Hour labels sit at left edge (HH:00 boundary).
@@ -136,26 +139,30 @@ src/app/components/
                     selectedDate === today.
                   Hover tooltip: mousemove on SVG converts rendered pixels to
                     viewBox coords (scaleX = viewBoxW / rect.width) to find the
-                    hovered hour. A semi-transparent column rect highlights the
-                    active hour. An HTML div tooltip (pointer-events:none,
+                    hovered slot. A semi-transparent column rect highlights the
+                    active slot. An HTML div tooltip (pointer-events:none,
                     position:absolute inside .chart-outer) lists all loaded
                     areas sorted cheapest→most expensive: colour swatch, area
-                    code, price to 3dp. Selected area row highlighted. Tooltip
+                    code, price to 2dp. Selected area row highlighted. Tooltip
                     flips left when cursor > 60% of SVG width. Data comes from
-                    vm.pricesByHour[hour] built in buildViewModel. Closes on
+                    vm.pricesBySlot[slot] built in buildViewModel. Closes on
                     mouseleave and on document click outside the component
                     (@HostListener('document:click')) — covers mobile tap-away.
                   DOM structure: .chart-outer (card: surface bg, border,
                     border-radius 8px; position:relative, tooltip anchor) wraps
-                    .chart-wrapper (overflow-x:auto, scroll container) which
-                    wraps the SVG. Tooltip is a sibling of .chart-wrapper inside
-                    .chart-outer so overflow clipping never hides it.
+                    .chart-wrapper which wraps the SVG. Tooltip is a sibling of
+                    .chart-wrapper inside .chart-outer.
                   Fullscreen: an expand/compress icon button (position:absolute,
                     top-right of .chart-outer) toggles isFullscreen signal.
-                    Fullscreen is CSS-based (.chart-outer--fullscreen adds
-                    position:fixed; inset:0; z-index:1000) — not the browser
-                    Fullscreen API, which silently fails on element-level
-                    requests in many environments. Escape key also exits via
+                    A .fullscreen-backdrop div (position:fixed; inset:0;
+                    backdrop-filter:blur) is rendered as a sibling when fullscreen.
+                    Clicking the backdrop also exits fullscreen.
+                    .chart-outer--fullscreen uses position:fixed; inset:24px;
+                    width:auto; z-index:1000 — card stays on screen with padding.
+                    dims() computed signal recalculates chartH and viewBox to
+                    match the available area (innerWidth/Height minus outer inset
+                    and inner padding), so the SVG fills the card without
+                    distortion or letterboxing. Escape key exits via
                     @HostListener('document:keydown.escape').
   price-table/    24-row table. Current hour row highlighted + "Now" badge.
                   Only shown when chartMode === 'bar'.
@@ -200,11 +207,12 @@ Repo must be **public** for GitHub Pages on a free plan.
 
 - No third-party chart library — SVG rendered directly in the component to keep the bundle small.
 - Step chart geometry: two points per hour (left + right edge at same Y) produces correct staircase without any path commands — a plain `<polyline>` is enough.
-- Tooltip uses HTML (not SVG foreignObject) for easy styling and scrollability. Positioned absolute inside `.chart-outer`; `pointer-events: none` so it never blocks mouse events on the SVG. The tooltip is a sibling of `.chart-wrapper` (not inside it) so that `overflow-x: auto` on the scroll container doesn't clip it.
+- Tooltip uses HTML (not SVG foreignObject) for easy styling and scrollability. Positioned absolute inside `.chart-outer`; `pointer-events: none` so it never blocks mouse events on the SVG. The tooltip is a sibling of `.chart-wrapper` so it is never clipped by the wrapper.
 - `chartMode` lives in the dashboard signal, not the store — it's purely presentational and doesn't need to survive a reload.
 - `loadAllAreaPrices` fires a single API request for all 5 areas via `getAllAreaPrices(date)` — the proxy accepts a comma-separated `deliveryArea` list so no parallel requests are needed.
 - Geolocation detection is fire-and-forget: the initial `loadPrices` + `loadAllAreaPrices` dispatch runs immediately with the stored/default area, then if detection succeeds it re-dispatches both for the detected area. No loading gate needed.
 - `404.html` copy pattern handles deep-link / refresh on GitHub Pages without hash routing.
 - `--base-href` is only needed for the Pages build; local dev works without it.
 - NgRx Store Devtools enabled in dev mode — works with the Redux DevTools browser extension.
-- Chart fullscreen uses CSS (`position:fixed; inset:0`) not the browser Fullscreen API — the API silently does nothing on element-level requests in many environments (no rejection, no activation).
+- Chart fullscreen uses CSS (`position:fixed; inset:24px; width:auto`) not the browser Fullscreen API. `dims()` computed signal recalculates the SVG viewBox to match the card's available area so the chart fills without distortion. `width:auto` is critical — without it, the base `width:100%` on `.chart-outer` overrides the `right` inset and the card overflows.
+- Y-scale bounds are snapped to the nearest 25 øre after adding a 5 øre buffer. The snap helpers guarantee the result is strictly outside the buffered value (not equal), so a data max of exactly 220 øre never produces a scale max of 225.
