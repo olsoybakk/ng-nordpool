@@ -12,26 +12,26 @@ Angular 21 app that displays Nordpool day-ahead electricity spot prices.
 - **Live app:** https://olsoybakk.github.io/ng-nordpool/
 - **GitHub Actions:** https://github.com/olsoybakk/ng-nordpool/actions
 
-## README badges
-
-```markdown
-[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-live-brightgreen?logo=github)](https://olsoybakk.github.io/ng-nordpool/)
-[![Deploy to GitHub Pages](https://github.com/olsoybakk/ng-nordpool/actions/workflows/deploy.yml/badge.svg)](https://github.com/olsoybakk/ng-nordpool/actions/workflows/deploy.yml)
-```
-
 ## Commands
 
 ```bash
 npm start          # dev server at http://localhost:4200
+npm run dev        # dev server at http://localhost:3000
 npm run build      # production build → dist/ng-nordpool/browser/
 npm test           # all unit tests (vitest via @angular/build:unit-test)
 ng test --include="**/app.spec.ts"  # single test file (currently the only spec)
 npx prettier --write .  # format all files (printWidth 100, singleQuotes)
 ```
 
+> **Note:** `app.spec.ts` has a stale "render title" test that expects `<h1>Hello, ng-nordpool</h1>` — the `App` component only renders `<router-outlet />`, so that assertion always fails. The "should create the app" test passes fine.
+
 ## TypeScript
 
 `tsconfig.json` has `strict: true` plus `noImplicitReturns`, `noPropertyAccessFromIndexSignature`, `noFallthroughCasesInSwitch`, and `noImplicitOverride`. Angular templates use `strictTemplates` and `strictInjectionParameters`. All new code must satisfy these.
+
+## Angular Signals
+
+Component state uses `signal()` / `effect()` rather than `BehaviorSubject`. Cleanup uses `inject(DestroyRef).onDestroy(...)` instead of `ngOnDestroy`. Store observables (`store.select(...)`) are kept as observables for the template `async` pipe; signals are used for purely local UI state (`chartMode`, `theme`, `isFullscreen`, `tooltipData`, etc.). `@ngrx/entity` is installed but not used.
 
 ## Data source
 
