@@ -59,8 +59,7 @@ export const environment = {
 
 Free, no API key. Returns 15-minute interval data for all requested areas in one response (`multiAreaEntries`), with prices in `NOK/MWh`. The service maps each 15-min entry directly to `HourlyPrice`, converting `NOK/MWh → øre/kWh` (÷ 10). `time_start`/`time_end` use `localDeliveryStart`/`localDeliveryEnd` (CET/CEST local time, no timezone suffix) — parsed as local time by JS `Date`.
 
-**CORS note:** the proxy is configured for `localhost:3000` — use `npm run dev` for development. Production (GitHub Pages) requires the proxy to also allow the Pages origin. A sample response is at `src/app/assets/nordpool-data.json`.
-
+**CORS note:** the proxy is configured for `localhost:3000` — use `npm run dev` for development. Production (GitHub Pages) requires the proxy to also allow the Pages origin.
 The app shows only Norwegian areas: NO1–NO5. Non-Norwegian areas are commented out in the model, PRICE_AREAS list, AREA_COLORS, and location service.
 
 ## Architecture
