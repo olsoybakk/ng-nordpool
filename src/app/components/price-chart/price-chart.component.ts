@@ -60,8 +60,8 @@ export interface TooltipEntry {
 }
 
 const CHART_W = 1500;
-const CHART_H = 260;
-const PADDING = { top: 16, right: 48, bottom: 32, left: 60 };
+const CHART_H = 380;
+const PADDING = { top: 16, right: 48, bottom: 36, left: 60 };
 const SLOT_COUNT = 96;
 
 @Component({

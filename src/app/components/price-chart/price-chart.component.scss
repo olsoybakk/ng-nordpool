@@ -58,12 +58,10 @@
 
 .chart-wrapper {
   width: 100%;
-  overflow-x: auto;
 }
 
 .chart {
   width: 100%;
-  min-width: 520px;
   height: auto;
   display: block;
 }
@@ -80,19 +78,19 @@
 }
 
 .axis-label {
-  font-size: 10px;
+  font-size: 12px;
   fill: var(--color-muted);
   font-family: inherit;
 }
 
 .axis-title {
-  font-size: 10px;
+  font-size: 12px;
   fill: var(--color-muted);
   font-family: inherit;
 }
 
 .hour-label {
-  font-size: 10px;
+  font-size: 12px;
   fill: var(--color-muted);
   font-family: inherit;
 }
@@ -123,7 +121,7 @@
 .area-line {
   .line-path {
     fill: none;
-    stroke-width: 1.2;
+    stroke-width: 1.5;
     stroke-linejoin: round;
     stroke-linecap: round;
     opacity: 0.7;
@@ -131,13 +129,13 @@
   }
 
   &--selected .line-path {
-    stroke-width: 2.5;
+    stroke-width: 3;
     opacity: 1;
   }
 
   &:hover .line-path {
     opacity: 0.9;
-    stroke-width: 2;
+    stroke-width: 2.5;
   }
 }
 
@@ -152,13 +150,13 @@
 }
 
 .area-label {
-  font-size: 9px;
+  font-size: 11px;
   font-family: inherit;
   font-weight: 500;
   opacity: 0.6;
 
   &--selected {
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 700;
     opacity: 1;
   }
@@ -174,7 +172,7 @@
 }
 
 .now-label {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   fill: var(--color-text);
   font-family: inherit;
