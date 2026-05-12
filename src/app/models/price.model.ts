@@ -34,11 +34,11 @@ export type PriceArea = 'NO1' | 'NO2' | 'NO3' | 'NO4' | 'NO5';
 // | 'NL';
 
 export const PRICE_AREAS: { value: PriceArea; label: string }[] = [
-  { value: 'NO1', label: 'NO1 — Oslo' },
-  { value: 'NO2', label: 'NO2 — Kristiansand' },
-  { value: 'NO3', label: 'NO3 — Trondheim' },
-  { value: 'NO4', label: 'NO4 — Tromsø' },
-  { value: 'NO5', label: 'NO5 — Bergen' },
+  { value: 'NO1', label: 'NO1 — Sørøst-Norge' },
+  { value: 'NO2', label: 'NO2 — Sørvest-Norge' },
+  { value: 'NO3', label: 'NO3 — Midt-Norge' },
+  { value: 'NO4', label: 'NO4 — Nord-Norge' },
+  { value: 'NO5', label: 'NO5 — Vest-Norge' },
   // { value: 'SE1', label: 'SE1 — Luleå' },
   // { value: 'SE2', label: 'SE2 — Sundsvall' },
   // { value: 'SE3', label: 'SE3 — Stockholm' },
@@ -56,14 +56,12 @@ export const PRICE_AREAS: { value: PriceArea; label: string }[] = [
   // { value: 'NL', label: 'NL — Netherlands' },
 ];
 
-// 20 evenly-spaced hues (18° apart) at consistent saturation/lightness
-// so every area has a clearly distinct colour at a glance
 export const AREA_COLORS: Record<PriceArea, string> = {
-  NO1: 'hsl(0,   72%, 62%)',
-  NO2: 'hsl(18,  72%, 62%)',
-  NO3: 'hsl(36,  72%, 62%)',
-  NO4: 'hsl(54,  72%, 62%)',
-  NO5: 'hsl(72,  72%, 62%)',
+  NO1: 'hsl(204, 70%, 68%)',
+  NO2: 'hsl(46,  90%, 62%)',
+  NO3: 'hsl(27,  85%, 62%)',
+  NO4: 'hsl(0,   72%, 65%)',
+  NO5: 'hsl(140, 50%, 54%)',
   // SE1:   'hsl(90,  72%, 55%)',
   // SE2:   'hsl(108, 72%, 55%)',
   // SE3:   'hsl(126, 72%, 55%)',
