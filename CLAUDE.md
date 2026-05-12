@@ -41,11 +41,27 @@ npx prettier --write .  # format all files (printWidth 100, singleQuotes)
 
 Component state uses `signal()` / `effect()` rather than `BehaviorSubject`. Cleanup uses `inject(DestroyRef).onDestroy(...)` instead of `ngOnDestroy`. Store observables (`store.select(...)`) are kept as observables for the template `async` pipe; signals are used for purely local UI state (`chartMode`, `theme`, `isFullscreen`, `tooltipData`, etc.). `@ngrx/entity` is installed but not used.
 
+## Environment
+
+The API base URL is configured via `src/environments/environment.ts` (committed, used in production builds) and `src/environments/environment.local.ts` (gitignored, used automatically in development via `fileReplacements` in `angular.json`).
+
+`npm run dev` runs a `predev` script that creates `environment.local.ts` from `environment.ts` on a fresh clone. Edit `environment.local.ts` to point at a different URL locally without affecting git.
+
+```typescript
+export const environment = {
+  nordpoolApiUrl: '<api-url>',
+};
+```
+
 ## Data source
 
-`https://www.hvakosterstrommen.no/api/v1/prices/{year}/{month}-{day}_{area}.json`
+`{nordpoolApiUrl}?date={YYYY-MM-DD}&market=DayAhead&deliveryArea={AREA,...}&currency=NOK`
 
-Free, no API key. Returns 24 hourly objects with `NOK_per_kWh`, `EUR_per_kWh`, `EXR`, `time_start`, `time_end`. The API supports 20 price areas, but the app currently shows only Norwegian areas: NO1–NO5. Non-Norwegian areas are commented out in the model, PRICE_AREAS list, AREA_COLORS, and location service.
+Free, no API key. Returns 15-minute interval data for all requested areas in one response (`multiAreaEntries`), with prices in `NOK/MWh`. The service maps each 15-min entry directly to `HourlyPrice`, converting `NOK/MWh → øre/kWh` (÷ 10). `time_start`/`time_end` use `localDeliveryStart`/`localDeliveryEnd` (CET/CEST local time, no timezone suffix) — parsed as local time by JS `Date`.
+
+**CORS note:** the proxy is configured for `localhost:3000` — use `npm run dev` for development. Production (GitHub Pages) requires the proxy to also allow the Pages origin. A sample response is at `src/app/assets/nordpool-data.json`.
+
+The app shows only Norwegian areas: NO1–NO5. Non-Norwegian areas are commented out in the model, PRICE_AREAS list, AREA_COLORS, and location service.
 
 ## Architecture
 
@@ -81,7 +97,7 @@ src/app/store/index.ts re-exports all of the above
 
 ### Services
 
-`src/app/services/nordpool.service.ts` — single method `getPrices(date, area)` that builds the URL and calls `HttpClient.get<HourlyPrice[]>`.
+`src/app/services/nordpool.service.ts` — two methods: `getPrices(date, area)` fetches a single area; `getAllAreaPrices(date)` fetches all 5 areas in one request. Both call the proxy, transform 15-min `multiAreaEntries` to 24 hourly `HourlyPrice` objects (average per hour, `/1000` for MWh→kWh).
 
 `src/app/services/location.service.ts` — `detectPriceArea()` wraps `navigator.geolocation.getCurrentPosition` in an Observable, calls `nominatim.openstreetmap.org/reverse` for the country code, then maps to a `PriceArea`:
 - Norway: lat/lon → NO1–NO5 (approximate bidding-zone boundaries)
@@ -89,7 +105,7 @@ src/app/store/index.ts re-exports all of the above
 
 ### Models
 
-`src/app/models/price.model.ts` — `HourlyPrice`, `PricesState`, `PriceArea` union type (currently NO1–NO5 only; other areas commented out), `PRICE_AREAS` display list, `AREA_COLORS` record (5 HSL hues for active areas; remaining 15 commented out).
+`src/app/models/price.model.ts` — `HourlyPrice` (`ore_per_kWh`, `time_start`, `time_end`), `PricesState`, `PriceArea` union type (currently NO1–NO5 only; other areas commented out), `PRICE_AREAS` display list, `AREA_COLORS` record (5 HSL hues for active areas; remaining 15 commented out).
 
 ### Components
 
@@ -183,7 +199,7 @@ Repo must be **public** for GitHub Pages on a free plan.
 - Step chart geometry: two points per hour (left + right edge at same Y) produces correct staircase without any path commands — a plain `<polyline>` is enough.
 - Tooltip uses HTML (not SVG foreignObject) for easy styling and scrollability. Positioned absolute inside `.chart-outer`; `pointer-events: none` so it never blocks mouse events on the SVG. The tooltip is a sibling of `.chart-wrapper` (not inside it) so that `overflow-x: auto` on the scroll container doesn't clip it.
 - `chartMode` lives in the dashboard signal, not the store — it's purely presentational and doesn't need to survive a reload.
-- `loadAllAreaPrices` fires one parallel HTTP request per entry in `PRICE_AREAS`; per-area `catchError` means partial data is shown rather than a full failure.
+- `loadAllAreaPrices` fires a single API request for all 5 areas via `getAllAreaPrices(date)` — the proxy accepts a comma-separated `deliveryArea` list so no parallel requests are needed.
 - Geolocation detection is fire-and-forget: the initial `loadPrices` + `loadAllAreaPrices` dispatch runs immediately with the stored/default area, then if detection succeeds it re-dispatches both for the detected area. No loading gate needed.
 - `404.html` copy pattern handles deep-link / refresh on GitHub Pages without hash routing.
 - `--base-href` is only needed for the Pages build; local dev works without it.

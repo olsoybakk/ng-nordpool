@@ -7,8 +7,13 @@ import { HourlyPrice } from '../../models/price.model';
 import { selectAllPrices, selectCurrentPrice } from '../../store';
 
 interface TableRow extends HourlyPrice {
-  hour: string;
+  time: string;
   isCurrent: boolean;
+}
+
+function toHHMM(isoLocal: string): string {
+  const d = new Date(isoLocal);
+  return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
 }
 
 @Component({
@@ -28,7 +33,7 @@ export class PriceTableComponent {
     map(([prices, current]) =>
       prices.map((p): TableRow => ({
         ...p,
-        hour: new Date(p.time_start).getHours().toString().padStart(2, '0') + ':00',
+        time: toHHMM(p.time_start),
         isCurrent: p === current,
       }))
     )
