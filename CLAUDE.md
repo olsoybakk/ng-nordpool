@@ -14,7 +14,7 @@ Angular 21 app that displays Nordpool day-ahead electricity spot prices.
 
 ## Git workflow
 
-`main` is protected — direct pushes are blocked (enforced on GitHub and by a local pre-push hook in `.githooks/pre-push`). All changes go through a PR. New clones need:
+`main` is protected — direct pushes are blocked (enforced on GitHub and by a local pre-push hook in `.githooks/pre-push`). All changes go through a PR. The repository only allows **squash merges** — use `gh pr merge <number> --squash` when merging. New clones need:
 
 ```bash
 git config core.hooksPath .githooks
