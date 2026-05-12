@@ -39,3 +39,30 @@
     min-width: 220px;
   }
 }
+
+.date-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.nav-btn {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.15s;
+
+  &:hover:not(:disabled) {
+    border-color: var(--color-accent);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+}

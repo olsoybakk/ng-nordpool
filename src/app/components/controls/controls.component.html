@@ -14,12 +14,16 @@
 
   <div class="control-group">
     <label for="date-input">Date</label>
-    <input
-      id="date-input"
-      type="date"
-      [ngModel]="currentDate"
-      [max]="maxDate"
-      (ngModelChange)="onDateChange($event)"
-    />
+    <div class="date-nav">
+      <button class="nav-btn" (click)="stepDate(-1)" aria-label="Previous day">&lsaquo;</button>
+      <input
+        id="date-input"
+        type="date"
+        [ngModel]="currentDate"
+        [max]="maxDate"
+        (ngModelChange)="onDateChange($event)"
+      />
+      <button class="nav-btn" (click)="stepDate(1)" [disabled]="currentDate >= maxDate" aria-label="Next day">&rsaquo;</button>
+    </div>
   </div>
 </div>

@@ -110,17 +110,38 @@
   }
 }
 
-.loading {
+.data-area {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.dashboard__stats--loading,
+.dashboard__table--loading {
+  opacity: 0.4;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.dashboard__chart {
+  position: relative;
+}
+
+.data-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: color-mix(in srgb, var(--color-bg) 55%, transparent);
+  border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  color: var(--color-muted);
-  font-size: 0.9rem;
+  justify-content: center;
+  pointer-events: none;
 }
 
 .spinner {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   border: 2px solid var(--color-border);
   border-top-color: var(--color-accent);
   border-radius: 50%;
