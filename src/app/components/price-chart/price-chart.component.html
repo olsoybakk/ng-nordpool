@@ -1,3 +1,6 @@
+@if (isFullscreen()) {
+  <div class="fullscreen-backdrop" (click)="toggleFullscreen()"></div>
+}
 @if (vm$ | async; as vm) {
   <div class="chart-outer" [class.chart-outer--fullscreen]="isFullscreen()" (mouseleave)="onMouseLeave()">
     <button
@@ -25,7 +28,7 @@
     <div class="chart-wrapper">
     <svg
       class="chart"
-      [attr.viewBox]="viewBox"
+      [attr.viewBox]="dims().viewBox"
       preserveAspectRatio="xMidYMid meet"
       role="img"
       [attr.aria-label]="(chartMode() === 'bar' ? 'Bar' : 'Line') + ' chart of electricity prices in 15-minute intervals'"
@@ -66,7 +69,7 @@
             />
             <text
               [attr.x]="bar.x + vm.barW / 2"
-              [attr.y]="bottomY + 16"
+              [attr.y]="dims().bottomY + 16"
               class="hour-label"
               text-anchor="middle"
             >@if (bar.minute === 0 && bar.hour % 3 === 0) { {{ bar.timeLabel }} }</text>
@@ -107,7 +110,7 @@
           @if (bar.minute === 0 && bar.hour % 3 === 0) {
             <text
               [attr.x]="offsetX + $index * (chartW / 96)"
-              [attr.y]="bottomY + 16"
+              [attr.y]="dims().bottomY + 16"
               class="hour-label"
               text-anchor="middle"
             >{{ bar.timeLabel }}</text>
@@ -121,7 +124,7 @@
           [attr.x]="offsetX + hoveredSlot()! * slotW"
           [attr.y]="offsetY"
           [attr.width]="slotW"
-          [attr.height]="chartH"
+          [attr.height]="dims().chartH"
           class="hover-column"
         />
       }
@@ -132,7 +135,7 @@
           [attr.x1]="vm.nowLineX"
           [attr.y1]="offsetY"
           [attr.x2]="vm.nowLineX"
-          [attr.y2]="bottomY"
+          [attr.y2]="dims().bottomY"
           class="now-line"
         />
         <text
@@ -148,17 +151,17 @@
         [attr.x1]="offsetX"
         [attr.y1]="offsetY"
         [attr.x2]="offsetX"
-        [attr.y2]="bottomY"
+        [attr.y2]="dims().bottomY"
         class="axis-line"
       />
 
       <!-- Y-axis title -->
       <text
         [attr.x]="12"
-        [attr.y]="offsetY + chartH / 2"
+        [attr.y]="offsetY + dims().chartH / 2"
         class="axis-title"
         text-anchor="middle"
-        [attr.transform]="'rotate(-90 12 ' + (offsetY + chartH / 2) + ')'"
+        [attr.transform]="'rotate(-90 12 ' + (offsetY + dims().chartH / 2) + ')'"
       >øre/kWh</text>
     </svg>
     </div>

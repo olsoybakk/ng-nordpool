@@ -1,4 +1,5 @@
-import { Component, ElementRef, HostListener, inject, input, signal } from '@angular/core';
+import { Component, computed, ElementRef, HostListener, inject, input, signal } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
 import { map } from 'rxjs/operators';
@@ -60,9 +61,11 @@ export interface TooltipEntry {
 }
 
 const CHART_W = 1500;
-const CHART_H = 260;
-const PADDING = { top: 16, right: 48, bottom: 32, left: 60 };
+const CHART_H = 380;
+const PADDING = { top: 16, right: 48, bottom: 36, left: 60 };
 const SLOT_COUNT = 96;
+const FULLSCREEN_OUTER = 24; // px — inset from viewport edge to card edge (must match CSS)
+const FULLSCREEN_INNER = 12; // px — padding inside the card (0.75rem, must match CSS)
 
 @Component({
   selector: 'app-price-chart',
@@ -78,15 +81,27 @@ export class PriceChartComponent {
   chartMode = input<ChartMode>('line');
 
   readonly viewBoxW = CHART_W;
-  readonly viewBox = `0 0 ${CHART_W} ${CHART_H + PADDING.top + PADDING.bottom}`;
-  readonly chartH = CHART_H;
   readonly chartW = CHART_W - PADDING.left - PADDING.right;
   readonly offsetX = PADDING.left;
   readonly offsetY = PADDING.top;
-  readonly bottomY = PADDING.top + CHART_H;
   readonly slotW = (CHART_W - PADDING.left - PADDING.right) / SLOT_COUNT;
 
   isFullscreen = signal(false);
+
+  readonly dims = computed(() => {
+    let h = CHART_H;
+    if (this.isFullscreen()) {
+      const edge = 2 * (FULLSCREEN_OUTER + FULLSCREEN_INNER);
+      const availW = window.innerWidth  - edge;
+      const availH = window.innerHeight - edge;
+      h = Math.max(200, Math.round((availH * CHART_W) / availW) - PADDING.top - PADDING.bottom);
+    }
+    return {
+      chartH: h,
+      viewBox: `0 0 ${CHART_W} ${h + PADDING.top + PADDING.bottom}`,
+      bottomY: PADDING.top + h,
+    };
+  });
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
@@ -115,9 +130,10 @@ export class PriceChartComponent {
     this.store.select(selectAllAreaPrices),
     this.store.select(selectSelectedArea),
     this.store.select(selectSelectedDate),
+    toObservable(this.dims),
   ]).pipe(
-    map(([prices, current, allAreaPrices, selectedArea, selectedDate]) =>
-      this.buildViewModel(prices, current, allAreaPrices, selectedArea, selectedDate)
+    map(([prices, current, allAreaPrices, selectedArea, selectedDate, dims]) =>
+      this.buildViewModel(prices, current, allAreaPrices, selectedArea, selectedDate, dims)
     )
   );
 
@@ -149,13 +165,17 @@ export class PriceChartComponent {
     current: HourlyPrice | null,
     allAreaPrices: Partial<Record<PriceArea, HourlyPrice[]>>,
     selectedArea: PriceArea,
-    selectedDate: string
+    selectedDate: string,
+    { chartH, bottomY }: { chartH: number; bottomY: number }
   ) {
     if (!prices.length) return null;
 
+    const snapFloor25 = (v: number) => { const s = Math.floor(v / 25) * 25; return s < v ? s : s - 25; };
+    const snapCeil25  = (v: number) => { const s = Math.ceil(v / 25)  * 25; return s > v ? s : s + 25; };
+
     const values = prices.map((p) => p.ore_per_kWh);
-    const singleMin = Math.min(...values);
-    const singleMax = Math.max(...values);
+    const singleMin = snapFloor25(Math.min(...values) - 5);
+    const singleMax = snapCeil25(Math.max(...values) + 5);
     const singleRange = singleMax - singleMin || 1;
 
     const gap = this.chartW / prices.length;
@@ -163,7 +183,7 @@ export class PriceChartComponent {
 
     const bars: BarData[] = prices.map((p, i) => {
       const normalised = (p.ore_per_kWh - singleMin) / singleRange;
-      const barH = Math.max(2, normalised * CHART_H);
+      const barH = Math.max(2, normalised * chartH);
       const third = singleRange / 3;
       let priceLevel: 'low' | 'mid' | 'high';
       if (p.ore_per_kWh <= singleMin + third) priceLevel = 'low';
@@ -179,29 +199,31 @@ export class PriceChartComponent {
         price: p,
         x: this.offsetX + i * gap + gap * 0.1,
         barHeight: barH,
-        barY: this.offsetY + CHART_H - barH,
+        barY: this.offsetY + chartH - barH,
         isCurrent: p === current,
         priceLevel,
       };
     });
 
-    const yTicks = this.buildYTicks(singleMin, singleMax);
+    const yTicks = this.buildYTicks(singleMin, singleMax, chartH);
 
     const areaEntries = PRICE_AREAS.map(({ value }) => ({
       area: value,
       hourlyPrices: allAreaPrices[value] ?? [],
     })).filter((e) => e.hourlyPrices.length > 0);
 
-    let multiMin = Infinity, multiMax = -Infinity;
+    let rawMultiMin = Infinity, rawMultiMax = -Infinity;
     for (const { hourlyPrices } of areaEntries) {
       for (const p of hourlyPrices) {
-        if (p.ore_per_kWh < multiMin) multiMin = p.ore_per_kWh;
-        if (p.ore_per_kWh > multiMax) multiMax = p.ore_per_kWh;
+        if (p.ore_per_kWh < rawMultiMin) rawMultiMin = p.ore_per_kWh;
+        if (p.ore_per_kWh > rawMultiMax) rawMultiMax = p.ore_per_kWh;
       }
     }
+    const multiMin = snapFloor25(rawMultiMin - 5);
+    const multiMax = snapCeil25(rawMultiMax + 5);
     const multiRange = multiMax - multiMin || 1;
     const toYMulti = (v: number) =>
-      this.offsetY + CHART_H - ((v - multiMin) / multiRange) * CHART_H;
+      this.offsetY + chartH - ((v - multiMin) / multiRange) * chartH;
     const multiGap = this.chartW / SLOT_COUNT;
 
     const areaLines: AreaLine[] = areaEntries.map(({ area, hourlyPrices }) => {
@@ -232,14 +254,14 @@ export class PriceChartComponent {
 
     areaLines.sort((a, b) => (a.isSelected ? 1 : 0) - (b.isSelected ? 1 : 0));
 
-    const multiTicks = this.buildYTicks(multiMin, multiMax);
+    const multiTicks = this.buildYTicks(multiMin, multiMax, chartH);
 
     const lowThreshY = toYMulti(multiMin + multiRange / 3);
     const highThreshY = toYMulti(multiMin + (2 * multiRange) / 3);
     const zones: Zone[] = [
       { y: this.offsetY, height: highThreshY - this.offsetY,  level: 'high', label: 'High' },
       { y: highThreshY,  height: lowThreshY - highThreshY,    level: 'mid',  label: 'Mid'  },
-      { y: lowThreshY,   height: this.bottomY - lowThreshY,   level: 'low',  label: 'Low'  },
+      { y: lowThreshY,   height: bottomY - lowThreshY,        level: 'low',  label: 'Low'  },
     ];
 
     const pricesBySlot: TooltipEntry[][] = Array.from({ length: SLOT_COUNT }, (_, slot) =>
@@ -273,14 +295,14 @@ export class PriceChartComponent {
     return { bars, barW, yTicks, areaLines, multiTicks, zones, pricesBySlot, slotTimes, nowLineX };
   }
 
-  private buildYTicks(min: number, max: number) {
-    const count = 5;
-    const step = (max - min) / (count - 1);
-    return Array.from({ length: count }, (_, i) => {
-      const val = min + i * step;
-      const y = this.offsetY + CHART_H - ((val - min) / (max - min || 1)) * CHART_H;
-      return { val, y };
-    });
+  private buildYTicks(min: number, max: number, chartH: number) {
+    const ticks = [];
+    const range = max - min || 1;
+    for (let val = min; val <= max; val += 50) {
+      const y = this.offsetY + chartH - ((val - min) / range) * chartH;
+      ticks.push({ val, y });
+    }
+    return ticks;
   }
 
   trackByArea(_: number, line: AreaLine) { return line.area; }
