@@ -1,4 +1,4 @@
-import { Component, computed, ElementRef, HostListener, inject, input, signal } from '@angular/core';
+import { Component, computed, DestroyRef, ElementRef, HostListener, inject, input, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
@@ -88,6 +88,14 @@ export class PriceChartComponent {
 
   isFullscreen = signal(false);
 
+  private readonly windowWidth = signal(window.innerWidth);
+
+  constructor() {
+    const onResize = () => this.windowWidth.set(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    inject(DestroyRef).onDestroy(() => window.removeEventListener('resize', onResize));
+  }
+
   readonly dims = computed(() => {
     let h = CHART_H;
     if (this.isFullscreen()) {
@@ -95,6 +103,10 @@ export class PriceChartComponent {
       const availW = window.innerWidth  - edge;
       const availH = window.innerHeight - edge;
       h = Math.max(200, Math.round((availH * CHART_W) / availW) - PADDING.top - PADDING.bottom);
+    } else if (this.windowWidth() < 640) {
+      // On narrow screens target ~65% of viewport width as chart height.
+      // targetH_px = availW * 0.65; solving for h: h = 0.65*CHART_W - PADDING (availW cancels).
+      h = Math.round(0.65 * CHART_W) - PADDING.top - PADDING.bottom; // ≈ 923
     }
     return {
       chartH: h,

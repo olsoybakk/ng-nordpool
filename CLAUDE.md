@@ -164,6 +164,13 @@ src/app/components/
                     and inner padding), so the SVG fills the card without
                     distortion or letterboxing. Escape key exits via
                     @HostListener('document:keydown.escape').
+                  Responsive height: a windowWidth signal (updated via
+                    window resize listener, cleaned up with DestroyRef) feeds
+                    dims(). On screens < 640px the chart targets ~65% of
+                    viewport width as rendered height (h ≈ 923 viewBox units),
+                    giving ~230px on a 390px phone vs ~107px at the default
+                    CHART_H = 380. vm$ includes toObservable(dims) so the chart
+                    re-renders on resize/orientation change.
   price-table/    24-row table. Current hour row highlighted + "Now" badge.
                   Only shown when chartMode === 'bar'.
 
