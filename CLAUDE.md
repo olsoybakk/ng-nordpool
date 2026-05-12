@@ -20,6 +20,13 @@ Angular 21 app that displays Nordpool day-ahead electricity spot prices.
 git config core.hooksPath .githooks
 ```
 
+## Playwright MCP
+
+`.mcp.json` configures the Playwright MCP server (`npx @playwright/mcp@latest`).
+With the dev server running (`npm run dev`), Claude Code can navigate to
+`http://localhost:3000`, take screenshots, click elements, and inspect the live app.
+Restart Claude Code after adding `.mcp.json` for the first time.
+
 ## Commands
 
 ```bash
