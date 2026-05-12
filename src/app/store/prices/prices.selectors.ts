@@ -51,7 +51,7 @@ export const selectCurrentPrice = createSelector(selectAllPrices, (prices) => {
 
 export const selectDailyStats = createSelector(selectAllPrices, (prices) => {
   if (!prices.length) return null;
-  const values = prices.map((p) => p.NOK_per_kWh);
+  const values = prices.map((p) => p.ore_per_kWh);
   return {
     min: Math.min(...values),
     max: Math.max(...values),

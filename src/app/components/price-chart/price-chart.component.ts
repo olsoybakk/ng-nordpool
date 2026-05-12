@@ -15,7 +15,10 @@ import {
 export type ChartMode = 'bar' | 'line';
 
 interface BarData {
+  slot: number;
   hour: number;
+  minute: number;
+  timeLabel: string;
   price: HourlyPrice;
   x: number;
   barHeight: number;
@@ -25,11 +28,11 @@ interface BarData {
 }
 
 interface PointData {
-  hour: number;
+  slot: number;
   cx: number;
   cy: number;
   isCurrent: boolean;
-  nok: number;
+  ore: number;
 }
 
 interface AreaLine {
@@ -51,14 +54,15 @@ interface Zone {
 
 export interface TooltipEntry {
   area: PriceArea;
-  nok: number;
+  ore: number;
   color: string;
   isSelected: boolean;
 }
 
-const CHART_W = 900;
+const CHART_W = 1500;
 const CHART_H = 260;
 const PADDING = { top: 16, right: 48, bottom: 32, left: 60 };
+const SLOT_COUNT = 96;
 
 @Component({
   selector: 'app-price-chart',
@@ -80,7 +84,7 @@ export class PriceChartComponent {
   readonly offsetX = PADDING.left;
   readonly offsetY = PADDING.top;
   readonly bottomY = PADDING.top + CHART_H;
-  readonly hourW = (CHART_W - PADDING.left - PADDING.right) / 24;
+  readonly slotW = (CHART_W - PADDING.left - PADDING.right) / SLOT_COUNT;
 
   isFullscreen = signal(false);
 
@@ -92,7 +96,7 @@ export class PriceChartComponent {
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: Event): void {
     if (!this.elementRef.nativeElement.contains(event.target)) {
-      this.hoveredHour.set(null);
+      this.hoveredSlot.set(null);
     }
   }
 
@@ -100,8 +104,7 @@ export class PriceChartComponent {
     this.isFullscreen.update(v => !v);
   }
 
-  // Hover / tooltip state
-  hoveredHour = signal<number | null>(null);
+  hoveredSlot = signal<number | null>(null);
   tooltipLeft = signal(0);
   tooltipTop = signal(0);
   tooltipFlip = signal(false);
@@ -124,22 +127,21 @@ export class PriceChartComponent {
     const relX = event.clientX - rect.left;
     const relY = event.clientY - rect.top;
 
-    // Convert rendered pixels → viewBox coordinates
     const svgX = relX * (this.viewBoxW / rect.width);
-    const hour = Math.floor((svgX - this.offsetX) / this.hourW);
+    const slot = Math.floor((svgX - this.offsetX) / this.slotW);
 
-    if (hour >= 0 && hour < 24) {
-      this.hoveredHour.set(hour);
+    if (slot >= 0 && slot < SLOT_COUNT) {
+      this.hoveredSlot.set(slot);
       this.tooltipLeft.set(relX);
       this.tooltipTop.set(relY);
       this.tooltipFlip.set(relX > rect.width * 0.6);
     } else {
-      this.hoveredHour.set(null);
+      this.hoveredSlot.set(null);
     }
   }
 
   onMouseLeave(): void {
-    this.hoveredHour.set(null);
+    this.hoveredSlot.set(null);
   }
 
   private buildViewModel(
@@ -151,7 +153,7 @@ export class PriceChartComponent {
   ) {
     if (!prices.length) return null;
 
-    const values = prices.map((p) => p.NOK_per_kWh);
+    const values = prices.map((p) => p.ore_per_kWh);
     const singleMin = Math.min(...values);
     const singleMax = Math.max(...values);
     const singleRange = singleMax - singleMin || 1;
@@ -159,18 +161,21 @@ export class PriceChartComponent {
     const gap = this.chartW / prices.length;
     const barW = gap * 0.8;
 
-    // Bar chart data
     const bars: BarData[] = prices.map((p, i) => {
-      const normalised = (p.NOK_per_kWh - singleMin) / singleRange;
+      const normalised = (p.ore_per_kWh - singleMin) / singleRange;
       const barH = Math.max(2, normalised * CHART_H);
       const third = singleRange / 3;
-      const priceLevel =
-        p.NOK_per_kWh <= singleMin + third ? 'low'
-        : p.NOK_per_kWh <= singleMin + 2 * third ? 'mid'
-        : 'high';
+      let priceLevel: 'low' | 'mid' | 'high';
+      if (p.ore_per_kWh <= singleMin + third) priceLevel = 'low';
+      else if (p.ore_per_kWh <= singleMin + 2 * third) priceLevel = 'mid';
+      else priceLevel = 'high';
 
+      const d = new Date(p.time_start);
       return {
-        hour: new Date(p.time_start).getHours(),
+        slot: i,
+        hour: d.getHours(),
+        minute: d.getMinutes(),
+        timeLabel: d.getHours().toString().padStart(2, '0'),
         price: p,
         x: this.offsetX + i * gap + gap * 0.1,
         barHeight: barH,
@@ -182,7 +187,6 @@ export class PriceChartComponent {
 
     const yTicks = this.buildYTicks(singleMin, singleMax);
 
-    // Multi-area line data
     const areaEntries = PRICE_AREAS.map(({ value }) => ({
       area: value,
       hourlyPrices: allAreaPrices[value] ?? [],
@@ -191,14 +195,14 @@ export class PriceChartComponent {
     let multiMin = Infinity, multiMax = -Infinity;
     for (const { hourlyPrices } of areaEntries) {
       for (const p of hourlyPrices) {
-        if (p.NOK_per_kWh < multiMin) multiMin = p.NOK_per_kWh;
-        if (p.NOK_per_kWh > multiMax) multiMax = p.NOK_per_kWh;
+        if (p.ore_per_kWh < multiMin) multiMin = p.ore_per_kWh;
+        if (p.ore_per_kWh > multiMax) multiMax = p.ore_per_kWh;
       }
     }
     const multiRange = multiMax - multiMin || 1;
     const toYMulti = (v: number) =>
       this.offsetY + CHART_H - ((v - multiMin) / multiRange) * CHART_H;
-    const multiGap = this.chartW / 24;
+    const multiGap = this.chartW / SLOT_COUNT;
 
     const areaLines: AreaLine[] = areaEntries.map(({ area, hourlyPrices }) => {
       const stepPairs: string[] = [];
@@ -207,19 +211,21 @@ export class PriceChartComponent {
       hourlyPrices.forEach((p, i) => {
         const x1 = this.offsetX + i * multiGap;
         const x2 = this.offsetX + (i + 1) * multiGap;
-        const y = toYMulti(p.NOK_per_kWh);
+        const y = toYMulti(p.ore_per_kWh);
         stepPairs.push(`${x1},${y}`, `${x2},${y}`);
-        pts.push({ hour: new Date(p.time_start).getHours(), cx: x1, cy: y, isCurrent: p === current, nok: p.NOK_per_kWh });
+        if (p === current) {
+          pts.push({ slot: i, cx: x1, cy: y, isCurrent: true, ore: p.ore_per_kWh });
+        }
       });
 
-      const lastPrice = hourlyPrices[hourlyPrices.length - 1];
+      const lastPrice = hourlyPrices.at(-1)!;
       return {
         area,
         color: AREA_COLORS[area],
         isSelected: area === selectedArea,
         linePoints: stepPairs.join(' '),
         labelX: this.offsetX + hourlyPrices.length * multiGap + 4,
-        labelY: toYMulti(lastPrice.NOK_per_kWh) + 4,
+        labelY: toYMulti(lastPrice.ore_per_kWh) + 4,
         points: pts,
       };
     });
@@ -236,18 +242,26 @@ export class PriceChartComponent {
       { y: lowThreshY,   height: this.bottomY - lowThreshY,   level: 'low',  label: 'Low'  },
     ];
 
-    // Per-hour tooltip data: all areas sorted cheapest → most expensive
-    const pricesByHour: TooltipEntry[][] = Array.from({ length: 24 }, (_, hour) =>
+    const pricesBySlot: TooltipEntry[][] = Array.from({ length: SLOT_COUNT }, (_, slot) =>
       areaEntries
-        .filter(({ hourlyPrices }) => hourlyPrices[hour] != null)
+        .filter(({ hourlyPrices }) => hourlyPrices[slot] != null)
         .map(({ area, hourlyPrices }) => ({
           area,
-          nok: hourlyPrices[hour].NOK_per_kWh,
+          ore: hourlyPrices[slot].ore_per_kWh,
           color: AREA_COLORS[area],
           isSelected: area === selectedArea,
         }))
-        .sort((a, b) => a.nok - b.nok)
+        .sort((a, b) => a.ore - b.ore)
     );
+
+    const fmtTime = (s: string) => {
+      const d = new Date(s);
+      return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+    };
+    const slotTimes = prices.map((p) => ({
+      start: fmtTime(p.time_start),
+      end: fmtTime(p.time_end),
+    }));
 
     const todayISO = new Date().toISOString().slice(0, 10);
     let nowLineX: number | null = null;
@@ -256,7 +270,7 @@ export class PriceChartComponent {
       nowLineX = this.offsetX + (now.getHours() + now.getMinutes() / 60) * (this.chartW / 24);
     }
 
-    return { bars, barW, yTicks, areaLines, multiTicks, zones, pricesByHour, nowLineX };
+    return { bars, barW, yTicks, areaLines, multiTicks, zones, pricesBySlot, slotTimes, nowLineX };
   }
 
   private buildYTicks(min: number, max: number) {
@@ -270,6 +284,6 @@ export class PriceChartComponent {
   }
 
   trackByArea(_: number, line: AreaLine) { return line.area; }
-  trackByHour(_: number, bar: BarData) { return bar.hour; }
+  trackBySlot(_: number, bar: BarData) { return bar.slot; }
   trackByAreaEntry(_: number, entry: TooltipEntry) { return entry.area; }
 }

@@ -39,6 +39,9 @@ testem.log
 /typings
 __screenshots__/
 
+# Local environment overrides (copy of environment.ts, customise as needed)
+src/environments/environment.local.ts
+
 # System files
 .DS_Store
 Thumbs.db

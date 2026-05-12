@@ -4,6 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "predev": "test -f src/environments/environment.local.ts || cp src/environments/environment.ts src/environments/environment.local.ts",
     "dev": "ng serve --port 3000",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",

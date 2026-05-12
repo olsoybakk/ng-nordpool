@@ -23,7 +23,7 @@ export class ControlsComponent implements OnInit {
   private readonly store = inject(Store);
 
   readonly areas = PRICE_AREAS;
-  readonly maxDate = new Date().toISOString().slice(0, 10);
+  readonly maxDate = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
 
   selectedArea$ = this.store.select(selectSelectedArea);
   selectedDate$ = this.store.select(selectSelectedDate);

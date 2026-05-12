@@ -2,10 +2,9 @@ import { Injectable, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { catchError, map, mergeMap, switchMap, tap, withLatestFrom } from 'rxjs/operators';
-import { EMPTY, forkJoin, of, Observable } from 'rxjs';
+import { EMPTY, of } from 'rxjs';
 import { NordpoolService } from '../../services/nordpool.service';
 import { LocationService } from '../../services/location.service';
-import { PRICE_AREAS, HourlyPrice, PriceArea } from '../../models/price.model';
 import { selectSelectedDate } from './prices.selectors';
 import * as PricesActions from './prices.actions';
 
@@ -63,26 +62,16 @@ export class PricesEffects {
   loadAllAreaPrices$ = createEffect(() =>
     this.actions$.pipe(
       ofType(PricesActions.loadAllAreaPrices),
-      switchMap(({ date }) => {
-        const requests: Record<string, Observable<HourlyPrice[]>> = {};
-        for (const { value } of PRICE_AREAS) {
-          requests[value] = this.nordpoolService.getPrices(date, value).pipe(
-            catchError(() => of([] as HourlyPrice[]))
-          );
-        }
-        return forkJoin(requests).pipe(
-          map((results) =>
-            PricesActions.loadAllAreaPricesSuccess({
-              results: results as Partial<Record<PriceArea, HourlyPrice[]>>,
-            })
-          ),
+      switchMap(({ date }) =>
+        this.nordpoolService.getAllAreaPrices(date).pipe(
+          map((results) => PricesActions.loadAllAreaPricesSuccess({ results })),
           catchError((error) =>
             of(PricesActions.loadAllAreaPricesFailure({
               error: error?.message ?? 'Failed to load all area prices',
             }))
           )
-        );
-      })
+        )
+      )
     )
   );
 }

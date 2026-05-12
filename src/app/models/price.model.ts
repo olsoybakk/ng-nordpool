@@ -1,7 +1,5 @@
 export interface HourlyPrice {
-  NOK_per_kWh: number;
-  EUR_per_kWh: number;
-  EXR: number;
+  ore_per_kWh: number;
   time_start: string;
   time_end: string;
 }

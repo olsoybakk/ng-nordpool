@@ -28,7 +28,7 @@
       [attr.viewBox]="viewBox"
       preserveAspectRatio="xMidYMid meet"
       role="img"
-      [attr.aria-label]="(chartMode() === 'bar' ? 'Bar' : 'Line') + ' chart of hourly electricity prices'"
+      [attr.aria-label]="(chartMode() === 'bar' ? 'Bar' : 'Line') + ' chart of electricity prices in 15-minute intervals'"
       (mousemove)="onMouseMove($event)"
     >
       <!-- Y-axis grid lines and labels -->
@@ -49,15 +49,15 @@
       }
 
       @if (chartMode() === 'bar') {
-        <!-- Bar chart -->
-        @for (bar of vm.bars; track trackByHour($index, bar)) {
+        <!-- Bar chart: 96 bars, label every 3 hours (every 12 slots) -->
+        @for (bar of vm.bars; track trackBySlot($index, bar)) {
           <g class="bar-group" [class.bar-group--current]="bar.isCurrent">
             <rect
               [attr.x]="bar.x"
               [attr.y]="bar.barY"
               [attr.width]="vm.barW"
               [attr.height]="bar.barHeight"
-              [attr.rx]="3"
+              [attr.rx]="2"
               class="bar"
               [class.bar--low]="bar.priceLevel === 'low'"
               [class.bar--mid]="bar.priceLevel === 'mid'"
@@ -69,7 +69,7 @@
               [attr.y]="bottomY + 16"
               class="hour-label"
               text-anchor="middle"
-            >@if (bar.hour % 3 === 0) { {{ bar.hour }} }</text>
+            >@if (bar.minute === 0 && bar.hour % 3 === 0) { {{ bar.timeLabel }} }</text>
           </g>
         }
       } @else {
@@ -82,13 +82,12 @@
               [attr.stroke]="line.color"
             />
             @if (line.isSelected) {
-              @for (pt of line.points; track pt.hour) {
+              @for (pt of line.points; track pt.slot) {
                 <circle
                   [attr.cx]="pt.cx"
                   [attr.cy]="pt.cy"
-                  [attr.r]="pt.isCurrent ? 5 : 3"
-                  class="line-dot"
-                  [class.line-dot--current]="pt.isCurrent"
+                  r="5"
+                  class="line-dot line-dot--current"
                   [attr.fill]="line.color"
                 />
               }
@@ -103,25 +102,25 @@
           </g>
         }
 
-        <!-- Hour labels -->
-        @for (bar of vm.bars; track bar.hour) {
-          @if (bar.hour % 3 === 0) {
+        <!-- Hour labels every 3 hours (every 12 slots) -->
+        @for (bar of vm.bars; track bar.slot) {
+          @if (bar.minute === 0 && bar.hour % 3 === 0) {
             <text
-              [attr.x]="offsetX + $index * (chartW / 24)"
+              [attr.x]="offsetX + $index * (chartW / 96)"
               [attr.y]="bottomY + 16"
               class="hour-label"
               text-anchor="middle"
-            >{{ bar.hour }}</text>
+            >{{ bar.timeLabel }}</text>
           }
         }
       }
 
-      <!-- Hover column highlight (rendered above chart content) -->
-      @if (hoveredHour() !== null) {
+      <!-- Hover column highlight -->
+      @if (hoveredSlot() !== null) {
         <rect
-          [attr.x]="offsetX + hoveredHour()! * hourW"
+          [attr.x]="offsetX + hoveredSlot()! * slotW"
           [attr.y]="offsetY"
-          [attr.width]="hourW"
+          [attr.width]="slotW"
           [attr.height]="chartH"
           class="hover-column"
         />
@@ -160,12 +159,12 @@
         class="axis-title"
         text-anchor="middle"
         [attr.transform]="'rotate(-90 12 ' + (offsetY + chartH / 2) + ')'"
-      >kr/kWh</text>
+      >øre/kWh</text>
     </svg>
     </div>
 
-    <!-- Floating tooltip (outside scroll container to avoid overflow clipping) -->
-    @if (hoveredHour() !== null && vm.pricesByHour[hoveredHour()!].length) {
+    <!-- Floating tooltip -->
+    @if (hoveredSlot() !== null && vm.pricesBySlot[hoveredSlot()!].length) {
       <div
         class="tooltip"
         [style.left.px]="tooltipLeft()"
@@ -173,15 +172,15 @@
         [style.transform]="tooltipFlip() ? 'translate(calc(-100% - 12px), -50%)' : 'translate(12px, -50%)'"
       >
         <div class="tooltip__header">
-          {{ hoveredHour() }}:00 – {{ hoveredHour()! === 23 ? '24' : hoveredHour()! + 1 }}:00
-          <span class="tooltip__unit">kr/kWh</span>
+          {{ vm.slotTimes[hoveredSlot()!].start }} – {{ vm.slotTimes[hoveredSlot()!].end }}
+          <span class="tooltip__unit">øre/kWh</span>
         </div>
         <div class="tooltip__rows">
-          @for (entry of vm.pricesByHour[hoveredHour()!]; track trackByAreaEntry($index, entry)) {
+          @for (entry of vm.pricesBySlot[hoveredSlot()!]; track trackByAreaEntry($index, entry)) {
             <div class="tooltip__row" [class.tooltip__row--selected]="entry.isSelected">
               <span class="tooltip__swatch" [style.background]="entry.color"></span>
               <span class="tooltip__area">{{ entry.area }}</span>
-              <span class="tooltip__price">{{ entry.nok | number: '1.3-3' }}</span>
+              <span class="tooltip__price">{{ entry.ore | number: '1.2-2' }}</span>
             </div>
           }
         </div>
