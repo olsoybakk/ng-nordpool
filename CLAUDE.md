@@ -54,11 +54,7 @@ The API base URL is configured via `src/environments/environment.ts` (committed,
 
 `npm run dev` runs a `predev` script that creates `environment.local.ts` from `environment.ts` on a fresh clone. Edit `environment.local.ts` to point at a different URL locally without affecting git.
 
-```typescript
-export const environment = {
-  nordpoolApiUrl: '<api-url>',
-};
-```
+Both files point at a Netlify CORS proxy. Check `src/environments/environment.ts` for the current URL.
 
 ## Data source
 
@@ -66,7 +62,6 @@ export const environment = {
 
 Free, no API key. Returns 15-minute interval data for all requested areas in one response (`multiAreaEntries`), with prices in `NOK/MWh`. The service maps each 15-min entry directly to `HourlyPrice`, converting `NOK/MWh → øre/kWh` (÷ 10). `time_start`/`time_end` use `localDeliveryStart`/`localDeliveryEnd` (CET/CEST local time, no timezone suffix) — parsed as local time by JS `Date`.
 
-**CORS note:** the proxy is configured for `localhost:3000` — use `npm run dev` for development. Production (GitHub Pages) requires the proxy to also allow the Pages origin.
 The app shows only Norwegian areas: NO1–NO5. Non-Norwegian areas are commented out in the model, PRICE_AREAS list, AREA_COLORS, and location service.
 
 ## Architecture
@@ -128,67 +123,25 @@ src/app/components/
   price-chart/    Pure SVG chart (no charting lib). Accepts chartMode input signal.
                   Also selects selectedDate from store to compute the now-line.
                   Y scale: both modes snap min to floor-25 and max to ceil-25 of
-                    (data ± 5 øre buffer), guaranteeing the snapped bound is
-                    strictly outside the data. Grid lines at every 50 øre.
+                    (data ± 5 øre buffer). Grid lines at every 50 øre.
                   Bar mode: colour-coded bars (low/mid/high by tertile); current
                     hour highlighted. Y scale = single-area snapped min/max.
-                  Line mode: step chart — each price is a flat horizontal segment
-                    from HH:00 to (H+1):00 with vertical steps between hours
-                    (two SVG points per hour: left edge + right edge at same Y).
-                    One polyline per area using AREA_COLORS. Selected area is
-                    3px / 100% opacity with dots at current slot; others are
-                    1.5px / 70%. Y scale = global snapped min/max across all areas.
-                    Selected area sorts last so it renders on top. Area code label
-                    at line end.
-                    Hour labels sit at left edge (HH:00 boundary).
-                  Both modes: dashed vertical "now" line interpolated to
-                    hour + minute/60, with a "now" label. Only shown when
-                    selectedDate === today.
-                  Hover tooltip: mousemove on SVG converts rendered pixels to
-                    viewBox coords (scaleX = viewBoxW / rect.width) to find the
-                    hovered slot. A semi-transparent column rect highlights the
-                    active slot. An HTML div tooltip (pointer-events:none,
-                    position:absolute inside .chart-outer) lists all loaded
-                    areas sorted cheapest→most expensive: colour swatch, area
-                    code, price to 2dp. Selected area row highlighted. Tooltip
-                    flips left when cursor > 60% of SVG width. Data comes from
-                    vm.pricesBySlot[slot] built in buildViewModel. Closes on
-                    mouseleave and on document click outside the component
-                    (@HostListener('document:click')) — covers mobile tap-away.
-                  DOM structure: .chart-outer (card: surface bg, border,
-                    border-radius 8px; position:relative, tooltip anchor) wraps
-                    .chart-wrapper which wraps the SVG. Tooltip is a sibling of
-                    .chart-wrapper inside .chart-outer.
-                  Fullscreen: an expand/compress icon button (position:absolute,
-                    top-right of .chart-outer) toggles isFullscreen signal.
-                    A .fullscreen-backdrop div (position:fixed; inset:0;
-                    backdrop-filter:blur) is rendered as a sibling when fullscreen.
-                    Clicking the backdrop also exits fullscreen.
-                    .chart-outer--fullscreen uses position:fixed; inset:24px;
-                    width:auto; z-index:1000 — card stays on screen with padding.
-                    dims() computed signal recalculates chartH and viewBox to
-                    match the available area (innerWidth/Height minus outer inset
-                    and inner padding), so the SVG fills the card without
-                    distortion or letterboxing. Escape key exits via
-                    @HostListener('document:keydown.escape').
-                  Responsive height: a windowWidth signal (updated via
-                    window resize listener, cleaned up with DestroyRef) feeds
-                    dims(). On screens < 640px the chart targets ~65% of
-                    viewport width as rendered height (h ≈ 923 viewBox units),
-                    giving ~230px on a 390px phone vs ~107px at the default
-                    CHART_H = 380. vm$ includes toObservable(dims) so the chart
-                    re-renders on resize/orientation change.
+                  Line mode: step chart — two SVG points per hour (left + right
+                    edge at same Y) producing a staircase with a plain <polyline>.
+                    One polyline per area; selected area renders on top (sorted last).
+                    Y scale = global snapped min/max across all areas.
+                  Both modes: dashed vertical "now" line (only when selectedDate ===
+                    today); hover tooltip listing all areas sorted cheapest→most
+                    expensive; fullscreen toggle.
+                  Tooltip is an HTML div (not SVG) inside .chart-outer, with
+                    pointer-events:none so it never blocks SVG mouse events.
+                  Fullscreen uses CSS position:fixed (not the browser Fullscreen API).
+                    dims() computed signal recalculates chartH and viewBox to fill
+                    the card. width:auto on .chart-outer--fullscreen is critical —
+                    without it the base width:100% overrides the right inset.
                   Scale-aware font sizing: dims() computes labelSize in SVG user
-                    units (= 10px × CHART_W / renderedWidth) so all axis/hour/
-                    area/now labels render at ~10px on screen regardless of zoom.
-                    Text elements use [attr.font-size] (SVG presentation attr,
-                    not CSS) so CSS classes no longer set font-size. When
-                    labelSize > 15 (viewports narrower than ~890px), y-axis tick
-                    labels move inside the chart (text-anchor:start at offsetX+4)
-                    to avoid left-edge clipping. padBottom in the viewBox grows
-                    with labelSize to keep x-axis hour labels unclipped.
-                    Area label labelX is clamped to CHART_W − labelSize×1.8 − 4
-                    so end-of-line labels stay within the right edge.
+                    units so labels render at ~10px on screen regardless of viewport.
+                    Text elements use [attr.font-size] (not CSS font-size).
   price-table/    Up to 96-row table (one row per 15-min interval). Current
                   interval row highlighted + "Now" badge.
                   Only shown when chartMode === 'bar'.
@@ -217,7 +170,7 @@ Lazy-loads `DashboardComponent` at `''`. Wildcard redirects to `''`.
 
 CSS custom properties in `src/styles.scss`. Dark mode default, light mode via `prefers-color-scheme: light`. Variables: `--color-bg`, `--color-surface`, `--color-border`, `--color-text`, `--color-muted`, `--color-accent`, `--color-low`, `--color-high`.
 
-Theme toggle: `DashboardComponent` holds a `theme` signal (`'dark' | 'light'`) initialised from `window.matchMedia('(prefers-color-scheme: dark)')` on load. An `effect()` writes it to `document.documentElement` as `data-theme`. A `matchMedia` change listener keeps the signal in sync when the OS theme changes while the app is open. The sun/moon button in the header lets the user override manually (a subsequent OS change will reset it). CSS uses `:root:not([data-theme='dark'])` in the media query and explicit `:root[data-theme='light']` / `:root[data-theme='dark']` blocks to handle all three states.
+Theme toggle: `DashboardComponent` holds a `theme` signal (`'dark' | 'light'`) initialised from `window.matchMedia('(prefers-color-scheme: dark)')` on load. An `effect()` writes it to `document.documentElement` as `data-theme`. A `matchMedia` change listener keeps the signal in sync when the OS theme changes while the app is open. CSS uses `:root:not([data-theme='dark'])` in the media query and explicit `:root[data-theme='light']` / `:root[data-theme='dark']` blocks to handle all three states.
 
 ## Deployment
 
@@ -233,12 +186,11 @@ Repo must be **public** for GitHub Pages on a free plan.
 
 - No third-party chart library — SVG rendered directly in the component to keep the bundle small.
 - Step chart geometry: two points per hour (left + right edge at same Y) produces correct staircase without any path commands — a plain `<polyline>` is enough.
-- Tooltip uses HTML (not SVG foreignObject) for easy styling and scrollability. Positioned absolute inside `.chart-outer`; `pointer-events: none` so it never blocks mouse events on the SVG. The tooltip is a sibling of `.chart-wrapper` so it is never clipped by the wrapper.
+- Tooltip uses HTML (not SVG foreignObject) for easy styling. Positioned absolute inside `.chart-outer`; `pointer-events: none` so it never blocks mouse events on the SVG. Sibling of `.chart-wrapper` so it is never clipped by the wrapper.
 - `chartMode` lives in the dashboard signal, not the store — it's purely presentational and doesn't need to survive a reload.
 - `loadAllAreaPrices` fires a single API request for all 5 areas via `getAllAreaPrices(date)` — the proxy accepts a comma-separated `deliveryArea` list so no parallel requests are needed.
 - Geolocation detection is fire-and-forget: the initial `loadPrices` + `loadAllAreaPrices` dispatch runs immediately with the stored/default area, then if detection succeeds it re-dispatches both for the detected area. No loading gate needed.
 - `404.html` copy pattern handles deep-link / refresh on GitHub Pages without hash routing.
 - `--base-href` is only needed for the Pages build; local dev works without it.
 - NgRx Store Devtools enabled in dev mode — works with the Redux DevTools browser extension.
-- Chart fullscreen uses CSS (`position:fixed; inset:24px; width:auto`) not the browser Fullscreen API. `dims()` computed signal recalculates the SVG viewBox to match the card's available area so the chart fills without distortion. `width:auto` is critical — without it, the base `width:100%` on `.chart-outer` overrides the `right` inset and the card overflows.
 - Y-scale bounds are snapped to the nearest 25 øre after adding a 5 øre buffer. The snap helpers guarantee the result is strictly outside the buffered value (not equal), so a data max of exactly 220 øre never produces a scale max of 225.
