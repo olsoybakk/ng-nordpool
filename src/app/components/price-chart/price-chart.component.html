@@ -33,6 +33,9 @@
       role="img"
       [attr.aria-label]="(chartMode() === 'bar' ? 'Bar' : 'Line') + ' chart of electricity prices in 15-minute intervals'"
       (mousemove)="onMouseMove($event)"
+      (touchstart)="onTouchMove($event)"
+      (touchmove)="onTouchMove($event)"
+      (touchend)="onMouseLeave()"
     >
       <!-- Y-axis grid lines and labels -->
       @for (tick of (chartMode() === 'bar' ? vm.yTicks : vm.multiTicks); track tick.y) {
