@@ -66,6 +66,9 @@ const PADDING = { top: 16, right: 48, bottom: 36, left: 60 };
 const SLOT_COUNT = 96;
 const FULLSCREEN_OUTER = 24; // px — inset from viewport edge to card edge (must match CSS)
 const FULLSCREEN_INNER = 12; // px — padding inside the card (0.75rem, must match CSS)
+// Horizontal space consumed by dashboard container padding (2×1.5rem) + card padding (2×0.5rem)
+const DASHBOARD_H_PAD = 64;
+const DASHBOARD_MAX_W = 1100;
 
 @Component({
   selector: 'app-price-chart',
@@ -97,21 +100,41 @@ export class PriceChartComponent {
   }
 
   readonly dims = computed(() => {
+    const ww = this.windowWidth();
     let h = CHART_H;
+    let renderedW: number;
     if (this.isFullscreen()) {
       const edge = 2 * (FULLSCREEN_OUTER + FULLSCREEN_INNER);
-      const availW = window.innerWidth  - edge;
+      renderedW = window.innerWidth - edge;
       const availH = window.innerHeight - edge;
-      h = Math.max(200, Math.round((availH * CHART_W) / availW) - PADDING.top - PADDING.bottom);
-    } else if (this.windowWidth() < 640) {
-      // On narrow screens target ~65% of viewport width as chart height.
-      // targetH_px = availW * 0.65; solving for h: h = 0.65*CHART_W - PADDING (availW cancels).
-      h = Math.round(0.65 * CHART_W) - PADDING.top - PADDING.bottom; // ≈ 923
+      h = Math.max(200, Math.round((availH * CHART_W) / renderedW) - PADDING.top - PADDING.bottom);
+    } else {
+      renderedW = Math.min(DASHBOARD_MAX_W, ww) - DASHBOARD_H_PAD;
+      if (ww < 640) {
+        // On narrow screens target ~65% of viewport width as chart height.
+        // targetH_px = availW * 0.65; solving for h: h = 0.65*CHART_W - PADDING (availW cancels).
+        h = Math.round(0.65 * CHART_W) - PADDING.top - PADDING.bottom; // ≈ 923
+      }
     }
+    // Compute font size in SVG user units to render at ~10px on screen
+    const labelSize = Math.round(10 * CHART_W / Math.max(renderedW, 100));
+    // Bottom padding must fit the x-axis labels
+    const padBottom = Math.max(PADDING.bottom, Math.round(labelSize * 1.5));
+    const chartBottomY = PADDING.top + h;
     return {
       chartH: h,
-      viewBox: `0 0 ${CHART_W} ${h + PADDING.top + PADDING.bottom}`,
-      bottomY: PADDING.top + h,
+      viewBox: `0 0 ${CHART_W} ${PADDING.top + h + padBottom}`,
+      bottomY: chartBottomY,
+      labelSize,
+      // Baseline y for x-axis hour labels (below the axis line)
+      xAxisY: chartBottomY + Math.round(labelSize * 0.9),
+      // Baseline y for "now" label — inside chart top when labelSize > top padding
+      nowLabelY: labelSize > PADDING.top ? PADDING.top + Math.round(labelSize * 0.9) : PADDING.top - 3,
+      // x-centre for the rotated y-axis title — wide enough to avoid left-edge clipping
+      axisTitleX: Math.max(12, Math.ceil(labelSize / 2) + 2),
+      // Move y-axis tick labels inside the chart when they're too wide for the left margin
+      // Labels fit outside when: labelSize * 6 chars * 0.55em ≤ PADDING.left − 8 ≈ 52 SVG units
+      yLabelInside: labelSize > 15,
     };
   });
 
@@ -178,7 +201,7 @@ export class PriceChartComponent {
     allAreaPrices: Partial<Record<PriceArea, HourlyPrice[]>>,
     selectedArea: PriceArea,
     selectedDate: string,
-    { chartH, bottomY }: { chartH: number; bottomY: number }
+    { chartH, bottomY, labelSize }: { chartH: number; bottomY: number; labelSize: number }
   ) {
     if (!prices.length) return null;
 
@@ -253,12 +276,15 @@ export class PriceChartComponent {
       });
 
       const lastPrice = hourlyPrices.at(-1)!;
+      // Clamp so the label fits within the right padding regardless of font size
+      const rawLabelX = this.offsetX + hourlyPrices.length * multiGap + 4;
+      const maxLabelX = CHART_W - Math.round(labelSize * 1.8) - 4;
       return {
         area,
         color: AREA_COLORS[area],
         isSelected: area === selectedArea,
         linePoints: stepPairs.join(' '),
-        labelX: this.offsetX + hourlyPrices.length * multiGap + 4,
+        labelX: Math.min(rawLabelX, maxLabelX),
         labelY: toYMulti(lastPrice.ore_per_kWh) + 4,
         points: pts,
       };

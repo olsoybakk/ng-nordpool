@@ -87,9 +87,9 @@ src/app/store/prices/
                        }
                        selectedArea is hydrated from localStorage on startup.
   prices.effects.ts    loadPrices$ → NordpoolService.getPrices() via switchMap
-                       loadAllAreaPrices$ → forkJoin over PRICE_AREAS (currently 5)
-                         via switchMap; each area uses catchError(() => of([])) so
-                         one failure doesn't cancel the rest
+                       loadAllAreaPrices$ → NordpoolService.getAllAreaPrices() via
+                         switchMap; single API call for all areas; catchError returns
+                         loadAllAreaPricesFailure (does not silently drop partial data)
                        detectLocation$ → LocationService.detectPriceArea(), then
                          mergeMap → of(selectArea, loadPrices, loadAllAreaPrices);
                          catchError → EMPTY (silent fallback, keeps default NO1)
@@ -103,7 +103,7 @@ src/app/store/index.ts re-exports all of the above
 
 ### Services
 
-`src/app/services/nordpool.service.ts` — two methods: `getPrices(date, area)` fetches a single area; `getAllAreaPrices(date)` fetches all 5 areas in one request. Both call the proxy, transform 15-min `multiAreaEntries` to 24 hourly `HourlyPrice` objects (average per hour, `/1000` for MWh→kWh).
+`src/app/services/nordpool.service.ts` — two methods: `getPrices(date, area)` fetches a single area; `getAllAreaPrices(date)` fetches all 5 areas in one request. Both call the proxy and map each 15-min `multiAreaEntries` entry directly to a `HourlyPrice` (÷ 10 for NOK/MWh → øre/kWh), yielding up to 96 entries per area with no per-hour averaging.
 
 `src/app/services/location.service.ts` — `detectPriceArea()` wraps `navigator.geolocation.getCurrentPosition` in an Observable, calls `nominatim.openstreetmap.org/reverse` for the country code, then maps to a `PriceArea`:
 - Norway: lat/lon → NO1–NO5 (approximate bidding-zone boundaries)
@@ -178,7 +178,19 @@ src/app/components/
                     giving ~230px on a 390px phone vs ~107px at the default
                     CHART_H = 380. vm$ includes toObservable(dims) so the chart
                     re-renders on resize/orientation change.
-  price-table/    24-row table. Current hour row highlighted + "Now" badge.
+                  Scale-aware font sizing: dims() computes labelSize in SVG user
+                    units (= 10px × CHART_W / renderedWidth) so all axis/hour/
+                    area/now labels render at ~10px on screen regardless of zoom.
+                    Text elements use [attr.font-size] (SVG presentation attr,
+                    not CSS) so CSS classes no longer set font-size. When
+                    labelSize > 15 (viewports narrower than ~890px), y-axis tick
+                    labels move inside the chart (text-anchor:start at offsetX+4)
+                    to avoid left-edge clipping. padBottom in the viewBox grows
+                    with labelSize to keep x-axis hour labels unclipped.
+                    Area label labelX is clamped to CHART_W − labelSize×1.8 − 4
+                    so end-of-line labels stay within the right edge.
+  price-table/    Up to 96-row table (one row per 15-min interval). Current
+                  interval row highlighted + "Now" badge.
                   Only shown when chartMode === 'bar'.
 
 src/app/pages/

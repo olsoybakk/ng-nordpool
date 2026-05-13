@@ -90,19 +90,16 @@
 }
 
 .axis-label {
-  font-size: 12px;
   fill: var(--color-muted);
   font-family: inherit;
 }
 
 .axis-title {
-  font-size: 12px;
   fill: var(--color-muted);
   font-family: inherit;
 }
 
 .hour-label {
-  font-size: 12px;
   fill: var(--color-muted);
   font-family: inherit;
 }
@@ -162,13 +159,11 @@
 }
 
 .area-label {
-  font-size: 11px;
   font-family: inherit;
   font-weight: 500;
   opacity: 0.6;
 
   &--selected {
-    font-size: 12px;
     font-weight: 700;
     opacity: 1;
   }
@@ -184,7 +179,6 @@
 }
 
 .now-label {
-  font-size: 11px;
   font-weight: 700;
   fill: var(--color-text);
   font-family: inherit;
