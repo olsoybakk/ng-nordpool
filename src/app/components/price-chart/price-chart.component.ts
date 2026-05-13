@@ -1,4 +1,4 @@
-import { Component, computed, DestroyRef, ElementRef, HostListener, inject, input, signal } from '@angular/core';
+import { afterNextRender, Component, computed, DestroyRef, ElementRef, HostListener, inject, input, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
@@ -70,6 +70,8 @@ const FULLSCREEN_INNER = 12; // px — padding inside the card (0.75rem, must ma
 // Horizontal space consumed by dashboard container padding (2×1.5rem) + card padding (2×0.5rem)
 const DASHBOARD_H_PAD = 64;
 const DASHBOARD_MAX_W = 1100;
+// Vertical card padding consumed by .chart-outer (0.75rem top + 0.5rem bottom)
+const CARD_PAD_PX = 20;
 
 @Component({
   selector: 'app-price-chart',
@@ -93,34 +95,55 @@ export class PriceChartComponent {
   isFullscreen = signal(false);
 
   private readonly windowWidth = signal(window.innerWidth);
+  private readonly containerH = signal(0);
 
   constructor() {
+    const destroyRef = inject(DestroyRef);
     const onResize = () => this.windowWidth.set(window.innerWidth);
     window.addEventListener('resize', onResize);
-    inject(DestroyRef).onDestroy(() => window.removeEventListener('resize', onResize));
+    destroyRef.onDestroy(() => window.removeEventListener('resize', onResize));
+
+    afterNextRender(() => {
+      const ro = new ResizeObserver(entries => {
+        const h = entries[0]?.contentRect.height ?? 0;
+        if (h > 0) this.containerH.set(h);
+      });
+      ro.observe(this.elementRef.nativeElement);
+      destroyRef.onDestroy(() => ro.disconnect());
+    });
   }
 
   readonly dims = computed(() => {
     const ww = this.windowWidth();
-    let h = CHART_H;
-    let renderedW: number;
-    if (this.isFullscreen()) {
-      const edge = 2 * (FULLSCREEN_OUTER + FULLSCREEN_INNER);
-      renderedW = window.innerWidth - edge;
-      const availH = window.innerHeight - edge;
-      h = Math.max(200, Math.round((availH * CHART_W) / renderedW) - PADDING.top - PADDING.bottom);
-    } else {
-      renderedW = Math.min(DASHBOARD_MAX_W, ww) - DASHBOARD_H_PAD;
-      if (ww < 640) {
-        // On narrow screens target ~65% of viewport width as chart height.
-        // targetH_px = availW * 0.65; solving for h: h = 0.65*CHART_W - PADDING (availW cancels).
-        h = Math.round(0.65 * CHART_W) - PADDING.top - PADDING.bottom; // ≈ 923
-      }
-    }
+    const ch = this.containerH();
+    const mode = this.chartMode();
+    const fullscreen = this.isFullscreen();
+    const edge = 2 * (FULLSCREEN_OUTER + FULLSCREEN_INNER);
+
+    const renderedW = fullscreen
+      ? window.innerWidth - edge
+      : Math.min(DASHBOARD_MAX_W, ww) - DASHBOARD_H_PAD;
+
     // Compute font size in SVG user units to render at ~10px on screen
     const labelSize = Math.round(10 * CHART_W / Math.max(renderedW, 100));
     // Bottom padding must fit the x-axis labels
     const padBottom = Math.max(PADDING.bottom, Math.round(labelSize * 1.5));
+
+    let h: number;
+    if (fullscreen) {
+      h = Math.max(200, Math.round(((window.innerHeight - edge) * CHART_W) / renderedW) - PADDING.top - padBottom);
+    } else if (ww < 640) {
+      // On narrow screens target ~65% of viewport width as chart height.
+      // targetH_px = availW * 0.65; solving for h: h = 0.65*CHART_W - PADDING (availW cancels).
+      h = Math.round(0.65 * CHART_W) - PADDING.top - padBottom;
+    } else if (ch > 0 && mode === 'line') {
+      // Line mode: parent has a viewport-fill height, so containerH is stable.
+      // Invert rendered-height formula to fill the container exactly.
+      h = Math.max(200, Math.round((ch - CARD_PAD_PX) * CHART_W / renderedW) - PADDING.top - padBottom);
+    } else {
+      h = CHART_H;
+    }
+
     const chartBottomY = PADDING.top + h;
     return {
       chartH: h,
