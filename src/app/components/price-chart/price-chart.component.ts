@@ -311,7 +311,7 @@ export class PriceChartComponent {
           color: AREA_COLORS[area],
           isSelected: area === selectedArea,
         }))
-        .sort((a, b) => a.ore - b.ore)
+        .sort((a, b) => b.ore - a.ore)
     );
 
     const fmtTime = (s: string) => {

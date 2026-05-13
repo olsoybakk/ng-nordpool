@@ -13,6 +13,7 @@
   --color-accent: #4f86f7;
   --color-low: #34d399;
   --color-high: #f87171;
+  --line-drop-shadow: none;
 }
 
 @media (prefers-color-scheme: light) {
@@ -25,6 +26,7 @@
     --color-accent: #3b70e8;
     --color-low: #059669;
     --color-high: #dc2626;
+    --line-drop-shadow: drop-shadow(0 0 0.8px rgba(0, 0, 0, 0.45));
   }
 }
 
@@ -37,6 +39,7 @@
   --color-accent: #3b70e8;
   --color-low: #059669;
   --color-high: #dc2626;
+  --line-drop-shadow: drop-shadow(0 0 0.8px rgba(0, 0, 0, 0.45));
 }
 
 :root[data-theme='dark'] {
@@ -48,6 +51,7 @@
   --color-accent: #4f86f7;
   --color-low: #34d399;
   --color-high: #f87171;
+  --line-drop-shadow: none;
 }
 
 html,

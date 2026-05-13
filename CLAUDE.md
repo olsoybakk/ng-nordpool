@@ -131,8 +131,8 @@ src/app/components/
                     One polyline per area; selected area renders on top (sorted last).
                     Y scale = global snapped min/max across all areas.
                   Both modes: dashed vertical "now" line (only when selectedDate ===
-                    today); hover tooltip listing all areas sorted cheapest→most
-                    expensive; fullscreen toggle.
+                    today); hover tooltip listing all areas sorted most expensive→cheapest;
+                    fullscreen toggle.
                   Tooltip is an HTML div (not SVG) inside .chart-outer, with
                     pointer-events:none so it never blocks SVG mouse events.
                   Fullscreen uses CSS position:fixed (not the browser Fullscreen API).
