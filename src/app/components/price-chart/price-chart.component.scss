@@ -130,10 +130,15 @@
 .area-line {
   .line-path {
     fill: none;
-    stroke-width: 1.5;
+    stroke-width: 2;
     stroke-linejoin: round;
     stroke-linecap: round;
-    opacity: 0.7;
+    opacity: 0.85;
+    // Keep stroke width in screen pixels regardless of SVG viewBox scaling.
+    // Without this, stroke-width is in user units — at 1500-wide viewBox on a
+    // 360px screen the stroke renders at ~0.3px and becomes nearly invisible.
+    vector-effect: non-scaling-stroke;
+    filter: var(--line-drop-shadow);
     transition: opacity 0.15s, stroke-width 0.15s;
   }
 
@@ -143,7 +148,7 @@
   }
 
   &:hover .line-path {
-    opacity: 0.9;
+    opacity: 1;
     stroke-width: 2.5;
   }
 }
