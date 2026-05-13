@@ -5,13 +5,17 @@
 
 A single-page Angular app for browsing Nordpool day-ahead electricity spot prices for Norway. Pick a price area and date to see the full 24-hour price profile in 15-minute intervals, with live highlighting of the current period.
 
+**Live app:** https://olsoybakk.github.io/ng-nordpool/
+
 ## Features
 
-- **5 Norwegian price areas** — NO1–NO5
+- **5 Norwegian price areas** — NO1–NO5, with a custom dropdown showing each area's colour and dimming unselected options
 - **Line chart** — all areas overlaid as a step chart; selected area highlighted
 - **Bar chart** — colour-coded low/mid/high by price tertile; current period highlighted
+- **Hover tooltip** — time range + prices for all areas (line) or selected area only (bar); flips left/right and clamps vertically to stay within the chart
 - **Stats bar** — current, min, avg and max for the selected day (øre/kWh)
 - **15-minute table** — øre/kWh for all 96 intervals (bar mode)
+- **localStorage cache** — last 30 date × area combinations cached so switching between dates is instant
 - **Dark/light mode** — follows system preference automatically; toggle button overrides manually
 - **NgRx store** — all state managed via actions, reducers, effects and selectors
 

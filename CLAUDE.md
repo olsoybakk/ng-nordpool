@@ -104,7 +104,9 @@ src/app/store/index.ts re-exports all of the above
 
 ### Services
 
-`src/app/services/nordpool.service.ts` — two methods: `getPrices(date, area)` fetches a single area; `getAllAreaPrices(date)` fetches all 5 areas in one request. Both call the proxy and map each 15-min `multiAreaEntries` entry directly to a `HourlyPrice` (÷ 10 for NOK/MWh → øre/kWh), yielding up to 96 entries per area with no per-hour averaging.
+`src/app/services/price-cache.service.ts` — FIFO localStorage cache keyed by `date:area` strings (e.g. `"2026-05-13:NO1"`). Holds up to 30 entries; inserting an existing key moves it to the back. Silently falls back to in-memory if `localStorage` is unavailable (quota exceeded, private browsing).
+
+`src/app/services/nordpool.service.ts` — two methods: `getPrices(date, area)` fetches a single area; `getAllAreaPrices(date)` fetches all 5 areas in one request. Both check `PriceCacheService` before making an HTTP call and write results back per-area, so a `getAllAreaPrices` hit warms the `getPrices` cache and vice versa. Both map each 15-min `multiAreaEntries` entry directly to a `HourlyPrice` (÷ 10 for NOK/MWh → øre/kWh), yielding up to 96 entries per area with no per-hour averaging.
 
 `src/app/services/location.service.ts` — `detectPriceArea()` wraps `navigator.geolocation.getCurrentPosition` in an Observable, calls `nominatim.openstreetmap.org/reverse` for the country code, then maps to a `PriceArea`:
 - Norway: lat/lon → NO1–NO5 (approximate bidding-zone boundaries)
@@ -120,14 +122,18 @@ All standalone. No shared module.
 
 ```
 src/app/components/
-  controls/       Area <select> + date <input> with ‹/› prev/next day buttons.
+  controls/       Custom area dropdown + date <input> with ‹/› prev/next day buttons.
                   maxDate is tomorrow (Date.now() + 864e5). stepDate(±1) guards
                   against going past maxDate. Next button disabled at maxDate.
                   Area change → selectArea + loadPrices.
                   Date change → selectDate + loadPrices + loadAllAreaPrices.
-                  A colored dot (AREA_COLORS[currentArea]) overlays the select
-                  via position:absolute inside .select-wrapper — native selects
-                  can't hold custom markup cross-browser.
+                  Custom dropdown (.area-select): replaces the native <select> to
+                  allow per-option styling. Each option shows its area colour dot;
+                  non-selected options at 0.8 opacity, selected at full opacity +
+                  font-weight:600. Opens/closes on click; closes on outside click
+                  (HostListener document:click) or Escape. Arrow Up/Down on the
+                  trigger focuses the first/last option. Options have tabindex=0
+                  with Enter/Space to select.
   stats-bar/      Now / Min / Avg / Max cards derived from store selectors.
   price-chart/    Pure SVG chart (no charting lib). Accepts chartMode input signal.
                   Also selects selectedDate from store to compute the now-line.
@@ -140,12 +146,18 @@ src/app/components/
                     One polyline per area; selected area renders on top (sorted last).
                     Y scale = global snapped min/max across all areas.
                   Both modes: dashed vertical "now" line (only when selectedDate ===
-                    today); hover tooltip listing all areas sorted most expensive→cheapest
-                    with full label (e.g. "NO3 — Midt-Norge"); fullscreen toggle.
+                    today); hover tooltip; fullscreen toggle.
                   Tooltip is an HTML div (not SVG) inside .chart-outer, with
                     pointer-events:none so it never blocks SVG mouse events. Closes
                     on both document:click and document:touchstart (iOS Safari does
                     not reliably bubble click from non-interactive elements).
+                  Tooltip positioning: flips left when cursor is within 240px of the
+                    right edge (rect.width - 240); clamps vertically with a half-height
+                    of 110px (line mode, ~220px tall) or 35px (bar mode, single row).
+                  Tooltip content: line mode lists all areas sorted most→least
+                    expensive with full label; non-selected rows at 0.8 opacity,
+                    selected bold + accent background. Bar mode shows only the
+                    selected area (no opacity/bold treatment, single row).
                   Fullscreen uses CSS position:fixed (not the browser Fullscreen API).
                     dims() computed signal recalculates chartH and viewBox to fill
                     the card. width:auto on .chart-outer--fullscreen is critical —
@@ -180,6 +192,8 @@ Lazy-loads `DashboardComponent` at `''`. Wildcard redirects to `''`.
 
 `selectedArea` is written to `localStorage` by the `persistSelectedArea$` effect and read back in the reducer's `initialState`. The selected date always resets to today on load.
 
+Price data is cached in `localStorage` via `PriceCacheService` (key `nordpool_price_cache`). Up to 30 `date:area` entries are kept; `getAllAreaPrices` stores each area individually so a single all-area fetch warms the per-area cache.
+
 `detectLocation` is only dispatched when `localStorage.getItem('selectedArea')` is null (first visit or cleared storage). Once the area is detected and `selectArea` fires, `persistSelectedArea$` writes it to localStorage so detection never runs again.
 
 ### Styling
@@ -210,8 +224,11 @@ Repo must be **public** for GitHub Pages on a free plan.
 - No third-party chart library — SVG rendered directly in the component to keep the bundle small.
 - Step chart geometry: two points per hour (left + right edge at same Y) produces correct staircase without any path commands — a plain `<polyline>` is enough.
 - Tooltip uses HTML (not SVG foreignObject) for easy styling. Positioned absolute inside `.chart-outer`; `pointer-events: none` so it never blocks mouse events on the SVG. Sibling of `.chart-wrapper` so it is never clipped by the wrapper.
+- Tooltip flip threshold uses absolute pixels (`rect.width - 240`) rather than a percentage so it accounts for the tooltip's actual width.
 - `chartMode` lives in the dashboard signal, not the store — it's purely presentational and doesn't need to survive a reload.
 - `loadAllAreaPrices` fires a single API request for all 5 areas via `getAllAreaPrices(date)` — the proxy accepts a comma-separated `deliveryArea` list so no parallel requests are needed.
+- Price cache is keyed per `date:area` so adding a new area automatically busts the `getAllAreaPrices` cache for all existing dates (the all-cached check requires every currently-known area to be present).
+- Custom dropdown instead of native `<select>` because `<option>` elements do not support opacity or colour cross-browser.
 - Geolocation detection is fire-and-forget: the initial `loadPrices` + `loadAllAreaPrices` dispatch runs immediately with the stored/default area, then if detection succeeds it re-dispatches both for the detected area. No loading gate needed.
 - `404.html` copy pattern handles deep-link / refresh on GitHub Pages without hash routing.
 - `--base-href` is only needed for the Pages build; local dev works without it.
