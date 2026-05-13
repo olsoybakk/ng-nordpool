@@ -3,19 +3,22 @@
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-live-brightgreen?logo=github)](https://olsoybakk.github.io/ng-nordpool/)
 [![Deploy to GitHub Pages](https://github.com/olsoybakk/ng-nordpool/actions/workflows/deploy.yml/badge.svg)](https://github.com/olsoybakk/ng-nordpool/actions/workflows/deploy.yml)
 
-A single-page Angular app for browsing Nordpool day-ahead electricity spot prices for Norway. Pick a price area and date to see the full 24-hour price profile in 15-minute intervals, with live highlighting of the current period.
+A single-page Angular app for browsing Nordpool day-ahead electricity spot prices for Norway. Pick a price area, date and range to see the full price profile in 15-minute intervals, with live highlighting of the current period.
 
 **Live app:** https://olsoybakk.github.io/ng-nordpool/
 
 ## Features
 
 - **5 Norwegian price areas** — NO1–NO5, with a custom dropdown showing each area's colour and dimming unselected options
+- **Date range selector** — view 1–14 days at once; all areas fetched and merged across the selected range
 - **Line chart** — all areas overlaid as a step chart; selected area highlighted
 - **Bar chart** — colour-coded low/mid/high by price tertile; current period highlighted
-- **Hover tooltip** — time range + prices for all areas (line) or selected area only (bar); flips left/right and clamps vertically to stay within the chart
+- **Tax toggle** — apply 25% VAT to all prices (NO4 exempt); off by default
+- **Norgespris reference line** — dashed line at 50 øre/kWh incl. tax for quick comparison
+- **Hover tooltip** — time range (+ date when range > 1 day) + prices for all areas (line) or selected area only (bar); flips left/right and clamps vertically to stay within the chart
 - **Stats bar** — current, min, avg and max for the selected day (øre/kWh)
-- **15-minute table** — øre/kWh for all 96 intervals (bar mode)
-- **localStorage cache** — last 30 date × area combinations cached so switching between dates is instant
+- **15-minute table** — øre/kWh for all 96 intervals (bar mode, single day only)
+- **localStorage cache** — up to 30 full days cached (all areas); switching between dates and ranges is instant
 - **Dark/light mode** — follows system preference automatically; toggle button overrides manually
 - **NgRx store** — all state managed via actions, reducers, effects and selectors
 

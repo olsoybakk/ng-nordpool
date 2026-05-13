@@ -24,11 +24,24 @@ git config core.hooksPath .githooks
 
 ## Playwright MCP
 
-`.mcp.json` configures the Playwright MCP server (`npx @playwright/mcp@latest --output-dir .playwright-mcp`).
+`.mcp.json` configures the Playwright MCP server (`npx @playwright/mcp@latest`).
 With the dev server running (`npm run dev`), Claude Code can navigate to
 `http://localhost:3000`, take screenshots, click elements, and inspect the live app.
 Screenshots and snapshots are written to `.playwright-mcp/`.
 Restart Claude Code after changing `.mcp.json` for the update to take effect.
+
+`.mcp.json` is in `.gitignore` and must never be committed. Default content:
+
+```json
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
+    }
+  }
+}
+```
 
 ## Commands
 
@@ -81,30 +94,38 @@ src/app/store/prices/
   prices.actions.ts    loadPrices / loadPricesSuccess / loadPricesFailure
                        loadAllAreaPrices / loadAllAreaPricesSuccess / loadAllAreaPricesFailure
                        detectLocation
-                       selectArea / selectDate
+                       selectArea / selectDate / setDateRangeDays
+                       setNotification / clearNotification
   prices.reducer.ts    initialState: {
-                         prices[], allAreaPrices{}, selectedArea, selectedDate:today,
-                         loading, allAreasLoading, error
+                         prices[], allAreaPricesByDate{}, selectedArea, selectedDate:today,
+                         dateRangeDays:1, loading, allAreasLoadingCount:0, error, notification:null
                        }
                        selectedArea is hydrated from localStorage on startup.
   prices.effects.ts    loadPrices$ → NordpoolService.getPrices() via switchMap
                        loadAllAreaPrices$ → NordpoolService.getAllAreaPrices() via
-                         switchMap; single API call for all areas; catchError returns
-                         loadAllAreaPricesFailure (does not silently drop partial data)
+                         mergeMap; empty results OR HTTP error → loadAllAreaPricesSuccess
+                         (results:{}) + setNotification (never sets state.error)
+                       clearNotificationAfterDelay$ → switchMap + timer(5000) →
+                         clearNotification (resets timer on each new notification)
+                       loadMultiDayPrices$ → selectDate / setDateRangeDays →
+                         dispatches loadAllAreaPrices only for dates not yet in
+                         allAreaPricesByDate (uses selectLoadedDates to dedup)
                        detectLocation$ → LocationService.detectPriceArea(), then
                          mergeMap → of(selectArea, loadPrices, loadAllAreaPrices);
                          catchError → EMPTY (silent fallback, keeps default NO1)
                        persistSelectedArea$ → tap selectArea, writes to localStorage
                          (dispatch: false)
   prices.selectors.ts  selectAllPrices, selectAllAreaPrices, selectSelectedArea,
-                       selectSelectedDate, selectLoading, selectAllAreasLoading,
-                       selectError, selectCurrentPrice, selectDailyStats
+                       selectSelectedDate, selectDateRangeDays, selectLoading,
+                       selectAllAreasLoading, selectError, selectCurrentPrice,
+                       selectDailyStats, selectNotification, selectLoadedDates,
+                       selectActiveDates, selectMergedAreaPrices
 src/app/store/index.ts re-exports all of the above
 ```
 
 ### Services
 
-`src/app/services/price-cache.service.ts` — FIFO localStorage cache keyed by `date:area` strings (e.g. `"2026-05-13:NO1"`). Holds up to 30 entries; inserting an existing key moves it to the back. Silently falls back to in-memory if `localStorage` is unavailable (quota exceeded, private browsing).
+`src/app/services/price-cache.service.ts` — FIFO localStorage cache keyed by `date:area` strings (e.g. `"2026-05-13:NO1"`). Holds up to `30 × PRICE_AREAS.length` entries (currently 150) so the cache covers 30 full days regardless of area count; inserting an existing key moves it to the back. Silently falls back to in-memory if `localStorage` is unavailable (quota exceeded, private browsing).
 
 `src/app/services/nordpool.service.ts` — two methods: `getPrices(date, area)` fetches a single area; `getAllAreaPrices(date)` fetches all 5 areas in one request. Both check `PriceCacheService` before making an HTTP call and write results back per-area, so a `getAllAreaPrices` hit warms the `getPrices` cache and vice versa. Both map each 15-min `multiAreaEntries` entry directly to a `HourlyPrice` (÷ 10 for NOK/MWh → øre/kWh), yielding up to 96 entries per area with no per-hour averaging.
 
@@ -122,11 +143,14 @@ All standalone. No shared module.
 
 ```
 src/app/components/
-  controls/       Custom area dropdown + date <input> with ‹/› prev/next day buttons.
+  controls/       Custom area dropdown + date <input> with ‹/› prev/next day buttons
+                  + Days stepper (1–14, ‹/› buttons + native <select>).
                   maxDate is tomorrow (Date.now() + 864e5). stepDate(±1) guards
                   against going past maxDate. Next button disabled at maxDate.
                   Area change → selectArea + loadPrices.
-                  Date change → selectDate + loadPrices + loadAllAreaPrices.
+                  Date change → selectDate + loadPrices (loadAllAreaPrices for the
+                    full range is handled by the loadMultiDayPrices$ effect).
+                  Range change → setDateRangeDays (effect handles fetching).
                   Custom dropdown (.area-select): replaces the native <select> to
                   allow per-option styling. Each option shows its area colour dot;
                   non-selected options at 0.8 opacity, selected at full opacity +
@@ -135,8 +159,8 @@ src/app/components/
                   trigger focuses the first/last option. Options have tabindex=0
                   with Enter/Space to select.
   stats-bar/      Now / Min / Avg / Max cards derived from store selectors.
-  price-chart/    Pure SVG chart (no charting lib). Accepts chartMode input signal.
-                  Also selects selectedDate from store to compute the now-line.
+  price-chart/    Pure SVG chart (no charting lib). Inputs: chartMode, includeTax,
+                  showNorgespris. Selects date range from store for multi-day data.
                   Y scale: both modes snap min to floor-25 and max to ceil-25 of
                     (data ± 5 øre buffer). Grid lines at every 50 øre.
                   Bar mode: colour-coded bars (low/mid/high by tertile); current
@@ -145,8 +169,14 @@ src/app/components/
                     edge at same Y) producing a staircase with a plain <polyline>.
                     One polyline per area; selected area renders on top (sorted last).
                     Y scale = global snapped min/max across all areas.
+                    Uses selectMergedAreaPrices for multi-day data across all areas.
                   Both modes: dashed vertical "now" line (only when selectedDate ===
                     today); hover tooltip; fullscreen toggle.
+                  Tax: prices multiplied by 1.25 when includeTax is true (NO4 exempt).
+                  Norgespris: dashed reference line at 50 øre/kWh (incl. tax) when
+                    showNorgespris is true.
+                  X-axis label density adapts to range: 3h / 6h / 12h / 24h steps
+                    for 1 / ≤3 / ≤7 / 14-day ranges.
                   Tooltip is an HTML div (not SVG) inside .chart-outer, with
                     pointer-events:none so it never blocks SVG mouse events. Closes
                     on both document:click and document:touchstart (iOS Safari does
@@ -154,10 +184,10 @@ src/app/components/
                   Tooltip positioning: flips left when cursor is within 240px of the
                     right edge (rect.width - 240); clamps vertically with a half-height
                     of 110px (line mode, ~220px tall) or 35px (bar mode, single row).
-                  Tooltip content: line mode lists all areas sorted most→least
-                    expensive with full label; non-selected rows at 0.8 opacity,
-                    selected bold + accent background. Bar mode shows only the
-                    selected area (no opacity/bold treatment, single row).
+                  Tooltip content: shows date when range > 1 day. Line mode lists all
+                    areas sorted most→least expensive; non-selected rows at 0.8 opacity,
+                    selected bold + accent background. Bar mode shows only the selected
+                    area (no opacity/bold treatment, single row).
                   Fullscreen uses CSS position:fixed (not the browser Fullscreen API).
                     dims() computed signal recalculates chartH and viewBox to fill
                     the card. width:auto on .chart-outer--fullscreen is critical —
@@ -175,13 +205,17 @@ src/app/components/
                   Only shown when chartMode === 'bar'.
 
 src/app/pages/
-  dashboard/      Owns chartMode signal (default: 'line'). Line/Bar toggle in header.
+  dashboard/      Owns chartMode, includeTax, showNorgespris signals. Line/Bar,
+                  Tax, and Norgespris toggles in the header.
                   On init dispatches loadPrices + loadAllAreaPrices via
                   combineLatest + first(). Also dispatches detectLocation if
                   localStorage has no saved area.
                   Loading state: a semi-transparent overlay spinner covers the
                   chart section; stats bar and "All hours" table fade to 40%
                   opacity (pointer-events: none) while loading$ || allAreasLoading$.
+                  Toast: fixed-position notification driven by the notification
+                  signal (toSignal from selectNotification); auto-dismisses after
+                  5 s via clearNotificationAfterDelay$ effect.
 ```
 
 ### Routing
@@ -192,7 +226,7 @@ Lazy-loads `DashboardComponent` at `''`. Wildcard redirects to `''`.
 
 `selectedArea` is written to `localStorage` by the `persistSelectedArea$` effect and read back in the reducer's `initialState`. The selected date always resets to today on load.
 
-Price data is cached in `localStorage` via `PriceCacheService` (key `nordpool_price_cache`). Up to 30 `date:area` entries are kept; `getAllAreaPrices` stores each area individually so a single all-area fetch warms the per-area cache.
+Price data is cached in `localStorage` via `PriceCacheService` (key `nordpool_price_cache`). Up to `30 × PRICE_AREAS.length` entries are kept (currently 150, enough for 30 full days); `getAllAreaPrices` stores each area individually so a single all-area fetch warms the per-area cache.
 
 `detectLocation` is only dispatched when `localStorage.getItem('selectedArea')` is null (first visit or cleared storage). Once the area is detected and `selectArea` fires, `persistSelectedArea$` writes it to localStorage so detection never runs again.
 
@@ -234,3 +268,7 @@ Repo must be **public** for GitHub Pages on a free plan.
 - `--base-href` is only needed for the Pages build; local dev works without it.
 - NgRx Store Devtools enabled in dev mode — works with the Redux DevTools browser extension.
 - Y-scale bounds are snapped to the nearest 25 øre after adding a 5 øre buffer. The snap helpers guarantee the result is strictly outside the buffered value (not equal), so a data max of exactly 220 øre never produces a scale max of 225.
+- Tax toggle (`includeTax`) and Norgespris toggle (`showNorgespris`) are purely presentational signals on the dashboard — not stored in NgRx, not persisted, reset on reload.
+- Multi-day prices are merged via `selectMergedAreaPrices` (selector concatenates `allAreaPricesByDate` entries for the active range). The store keyed by date avoids re-fetching already-loaded days.
+- `loadAllAreaPrices$` treats both HTTP errors and null API responses (HTTP 200 with null body) the same way: dispatch `loadAllAreaPricesSuccess` with empty results + `setNotification`. The Nordpool API returns null for dates outside its ~10-day history window, not a 500.
+- `selectLoadedDates` deduplicates dispatch in `loadMultiDayPrices$` — only dates absent from `allAreaPricesByDate` get a `loadAllAreaPrices` action, preventing redundant fetches when the range changes.
