@@ -71,7 +71,17 @@ export class PricesEffects {
       ofType(PricesActions.loadAllAreaPrices),
       mergeMap(({ date }) =>
         this.nordpoolService.getAllAreaPrices(date).pipe(
-          map((results) => PricesActions.loadAllAreaPricesSuccess({ date, results })),
+          mergeMap((results) => {
+            const noData = Object.keys(results).length === 0;
+            return noData
+              ? of(
+                  PricesActions.loadAllAreaPricesSuccess({ date, results: {} }),
+                  PricesActions.setNotification({
+                    message: 'Price data is not available for all selected dates.',
+                  })
+                )
+              : of(PricesActions.loadAllAreaPricesSuccess({ date, results }));
+          }),
           catchError(() =>
             of(
               PricesActions.loadAllAreaPricesSuccess({ date, results: {} }),
