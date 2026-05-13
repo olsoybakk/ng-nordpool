@@ -55,6 +55,7 @@ interface Zone {
 
 export interface TooltipEntry {
   area: PriceArea;
+  label: string;
   ore: number;
   color: string;
   isSelected: boolean;
@@ -307,6 +308,7 @@ export class PriceChartComponent {
         .filter(({ hourlyPrices }) => hourlyPrices[slot] != null)
         .map(({ area, hourlyPrices }) => ({
           area,
+          label: PRICE_AREAS.find(p => p.value === area)?.label ?? area,
           ore: hourlyPrices[slot].ore_per_kWh,
           color: AREA_COLORS[area],
           isSelected: area === selectedArea,
