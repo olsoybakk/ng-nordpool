@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HourlyPrice } from '../models/price.model';
+import { HourlyPrice, PRICE_AREAS } from '../models/price.model';
 
 interface CacheEntry {
   key: string;
@@ -7,7 +7,7 @@ interface CacheEntry {
 }
 
 const STORAGE_KEY = 'nordpool_price_cache';
-const MAX_ENTRIES = 100;
+const MAX_ENTRIES = 30 * PRICE_AREAS.length;
 
 @Injectable({ providedIn: 'root' })
 export class PriceCacheService {
