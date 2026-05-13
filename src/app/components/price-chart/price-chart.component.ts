@@ -198,22 +198,39 @@ export class PriceChartComponent {
   );
 
   onMouseMove(event: MouseEvent): void {
-    const svg = event.currentTarget as SVGSVGElement;
+    this.updateTooltip(event.currentTarget as SVGSVGElement, event.clientX, event.clientY);
+  }
+
+  onTouchMove(event: TouchEvent): void {
+    const touch = event.touches[0];
+    if (!touch) return;
+    event.preventDefault(); // prevent page scroll while dragging over the chart
+    this.updateTooltip(event.currentTarget as SVGSVGElement, touch.clientX, touch.clientY);
+  }
+
+  private updateTooltip(svg: SVGSVGElement, clientX: number, clientY: number): void {
     const rect = svg.getBoundingClientRect();
-    const relX = event.clientX - rect.left;
-    const relY = event.clientY - rect.top;
+    const relX = clientX - rect.left;
+    const relY = clientY - rect.top;
 
     const svgX = relX * (this.viewBoxW / rect.width);
     const slot = Math.floor((svgX - this.offsetX) / this.slotW);
 
     if (slot >= 0 && slot < SLOT_COUNT) {
       this.hoveredSlot.set(slot);
-      this.tooltipLeft.set(relX);
-      // Clamp vertically so the tooltip stays within the SVG bounds.
-      // Bar mode shows a single row (~55px total), line mode shows all areas (~220px).
+
+      // Horizontal: flip when there isn't room to the right, then clamp so the
+      // tooltip never overflows the left edge on narrow screens either.
+      const TOOLTIP_W = 300; // gap (12) + content (~280px at largest label) + buffer
+      const flip = relX > rect.width - TOOLTIP_W;
+      this.tooltipFlip.set(flip);
+      this.tooltipLeft.set(
+        flip ? Math.max(TOOLTIP_W, relX) : Math.min(relX, rect.width - TOOLTIP_W)
+      );
+
+      // Vertical: clamp so tooltip never renders outside the SVG bounds.
       const HALF_H = this.chartMode() === 'bar' ? 35 : 110;
       this.tooltipTop.set(Math.max(HALF_H, Math.min(relY, rect.height - HALF_H)));
-      this.tooltipFlip.set(relX > rect.width - 240);
     } else {
       this.hoveredSlot.set(null);
     }
