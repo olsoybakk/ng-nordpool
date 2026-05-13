@@ -44,10 +44,12 @@
           class="grid-line"
         />
         <text
-          [attr.x]="offsetX - 8"
-          [attr.y]="tick.y + 4"
+          [attr.x]="dims().yLabelInside ? offsetX + 4 : offsetX - 8"
+          [attr.y]="tick.y"
           class="axis-label"
-          text-anchor="end"
+          [attr.text-anchor]="dims().yLabelInside ? 'start' : 'end'"
+          dominant-baseline="middle"
+          [attr.font-size]="dims().labelSize"
         >{{ tick.val | number: '1.2-2' }}</text>
       }
 
@@ -69,9 +71,10 @@
             />
             <text
               [attr.x]="bar.x + vm.barW / 2"
-              [attr.y]="dims().bottomY + 16"
+              [attr.y]="dims().xAxisY"
               class="hour-label"
               text-anchor="middle"
+              [attr.font-size]="dims().labelSize"
             >@if (bar.minute === 0 && bar.hour % 3 === 0) { {{ bar.timeLabel }} }</text>
           </g>
         }
@@ -101,6 +104,7 @@
               class="area-label"
               [class.area-label--selected]="line.isSelected"
               [attr.fill]="line.color"
+              [attr.font-size]="dims().labelSize"
             >{{ line.area }}</text>
           </g>
         }
@@ -110,9 +114,10 @@
           @if (bar.minute === 0 && bar.hour % 3 === 0) {
             <text
               [attr.x]="offsetX + $index * (chartW / 96)"
-              [attr.y]="dims().bottomY + 16"
+              [attr.y]="dims().xAxisY"
               class="hour-label"
               text-anchor="middle"
+              [attr.font-size]="dims().labelSize"
             >{{ bar.timeLabel }}</text>
           }
         }
@@ -140,9 +145,10 @@
         />
         <text
           [attr.x]="vm.nowLineX"
-          [attr.y]="offsetY - 3"
+          [attr.y]="dims().nowLabelY"
           class="now-label"
           text-anchor="middle"
+          [attr.font-size]="dims().labelSize"
         >now</text>
       }
 
@@ -157,11 +163,12 @@
 
       <!-- Y-axis title -->
       <text
-        [attr.x]="12"
+        [attr.x]="dims().axisTitleX"
         [attr.y]="offsetY + dims().chartH / 2"
         class="axis-title"
         text-anchor="middle"
-        [attr.transform]="'rotate(-90 12 ' + (offsetY + dims().chartH / 2) + ')'"
+        [attr.transform]="'rotate(-90 ' + dims().axisTitleX + ' ' + (offsetY + dims().chartH / 2) + ')'"
+        [attr.font-size]="dims().labelSize"
       >øre/kWh</text>
     </svg>
     </div>
