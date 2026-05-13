@@ -13,6 +13,7 @@ export interface PricesState {
   loading: boolean;
   allAreasLoadingCount: number;
   error: string | null;
+  notification: string | null;
 }
 
 export type PriceArea = 'NO1' | 'NO2' | 'NO3' | 'NO4' | 'NO5';

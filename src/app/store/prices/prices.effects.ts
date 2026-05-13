@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { catchError, map, mergeMap, switchMap, tap, withLatestFrom } from 'rxjs/operators';
-import { EMPTY, from, of } from 'rxjs';
+import { EMPTY, from, of, timer } from 'rxjs';
 import { NordpoolService } from '../../services/nordpool.service';
 import { LocationService } from '../../services/location.service';
 import { selectSelectedDate, selectDateRangeDays, selectLoadedDates } from './prices.selectors';
@@ -73,12 +73,23 @@ export class PricesEffects {
         this.nordpoolService.getAllAreaPrices(date).pipe(
           map((results) => PricesActions.loadAllAreaPricesSuccess({ date, results })),
           catchError(() =>
-            // Treat HTTP errors (e.g. 500 for dates outside API range) as empty data,
-            // not as a user-visible error — the banner is reserved for the primary date.
-            of(PricesActions.loadAllAreaPricesSuccess({ date, results: {} }))
+            of(
+              PricesActions.loadAllAreaPricesSuccess({ date, results: {} }),
+              PricesActions.setNotification({
+                message: 'Price data is not available for all selected dates.',
+              })
+            )
           )
         )
       )
+    )
+  );
+
+  /** Auto-dismiss the notification after 5 s; resets the timer if a new one arrives. */
+  clearNotificationAfterDelay$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(PricesActions.setNotification),
+      switchMap(() => timer(5000).pipe(map(() => PricesActions.clearNotification())))
     )
   );
 

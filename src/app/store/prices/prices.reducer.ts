@@ -14,6 +14,7 @@ export const initialState: PricesState = {
   loading: false,
   allAreasLoadingCount: 0,
   error: null,
+  notification: null,
 };
 
 export const pricesReducer = createReducer(
@@ -67,5 +68,15 @@ export const pricesReducer = createReducer(
   on(PricesActions.setDateRangeDays, (state, { days }) => ({
     ...state,
     dateRangeDays: days,
+  })),
+
+  on(PricesActions.setNotification, (state, { message }) => ({
+    ...state,
+    notification: message,
+  })),
+
+  on(PricesActions.clearNotification, (state) => ({
+    ...state,
+    notification: null,
   }))
 );

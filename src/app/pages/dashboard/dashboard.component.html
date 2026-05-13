@@ -108,3 +108,9 @@
     }
   </div>
 </div>
+
+@if (notification()) {
+  <div class="toast" role="status" aria-live="polite">
+    {{ notification() }}
+  </div>
+}

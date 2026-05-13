@@ -71,6 +71,11 @@ function subtractDays(isoDate: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+export const selectNotification = createSelector(
+  selectPricesState,
+  (state) => state.notification
+);
+
 /** Date strings that have already been fetched and stored. */
 export const selectLoadedDates = createSelector(
   selectPricesState,

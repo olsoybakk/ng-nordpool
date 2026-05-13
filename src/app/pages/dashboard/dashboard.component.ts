@@ -1,4 +1,5 @@
 import { Component, DestroyRef, effect, inject, OnInit, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
 import { combineLatest } from 'rxjs';
@@ -14,6 +15,7 @@ import {
   selectSelectedArea,
   selectSelectedDate,
   selectDateRangeDays,
+  selectNotification,
 } from '../../store';
 import { detectLocation, loadPrices, loadAllAreaPrices } from '../../store/prices/prices.actions';
 
@@ -37,6 +39,7 @@ export class DashboardComponent implements OnInit {
   allAreasLoading$ = this.store.select(selectAllAreasLoading);
   error$ = this.store.select(selectError);
   dateRangeDays$ = this.store.select(selectDateRangeDays);
+  notification = toSignal(this.store.select(selectNotification), { initialValue: null });
 
   chartMode = signal<ChartMode>('line');
   includeTax = signal(false);

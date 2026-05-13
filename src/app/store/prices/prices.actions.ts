@@ -47,3 +47,10 @@ export const setDateRangeDays = createAction(
   '[Prices] Set Date Range Days',
   props<{ days: number }>()
 );
+
+export const setNotification = createAction(
+  '[Prices] Set Notification',
+  props<{ message: string }>()
+);
+
+export const clearNotification = createAction('[Prices] Clear Notification');
