@@ -187,11 +187,15 @@
         </div>
         <div class="tooltip__rows">
           @for (entry of vm.pricesBySlot[hoveredSlot()!]; track trackByAreaEntry($index, entry)) {
-            <div class="tooltip__row" [class.tooltip__row--selected]="entry.isSelected">
-              <span class="tooltip__swatch" [style.background]="entry.color"></span>
-              <span class="tooltip__area">{{ entry.label }}</span>
-              <span class="tooltip__price">{{ entry.ore | number: '1.2-2' }}</span>
-            </div>
+            @if (chartMode() === 'line' || entry.isSelected) {
+              <div class="tooltip__row"
+                [class.tooltip__row--selected]="chartMode() === 'line' && entry.isSelected"
+                [class.tooltip__row--single]="chartMode() === 'bar'">
+                <span class="tooltip__swatch" [style.background]="entry.color"></span>
+                <span class="tooltip__area">{{ entry.label }}</span>
+                <span class="tooltip__price">{{ entry.ore | number: '1.2-2' }}</span>
+              </div>
+            }
           }
         </div>
       </div>
