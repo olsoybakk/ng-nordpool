@@ -71,6 +71,12 @@ function subtractDays(isoDate: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** Date strings that have already been fetched and stored. */
+export const selectLoadedDates = createSelector(
+  selectPricesState,
+  (state) => Object.keys(state.allAreaPricesByDate)
+);
+
 /** ISO date strings for the active range, oldest first. */
 export const selectActiveDates = createSelector(selectPricesState, (state) =>
   Array.from({ length: state.dateRangeDays }, (_, i) =>

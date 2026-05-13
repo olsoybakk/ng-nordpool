@@ -7,7 +7,7 @@ interface CacheEntry {
 }
 
 const STORAGE_KEY = 'nordpool_price_cache';
-const MAX_ENTRIES = 30;
+const MAX_ENTRIES = 100;
 
 @Injectable({ providedIn: 'root' })
 export class PriceCacheService {

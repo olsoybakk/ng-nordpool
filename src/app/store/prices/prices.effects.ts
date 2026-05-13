@@ -5,7 +5,7 @@ import { catchError, map, mergeMap, switchMap, tap, withLatestFrom } from 'rxjs/
 import { EMPTY, from, of } from 'rxjs';
 import { NordpoolService } from '../../services/nordpool.service';
 import { LocationService } from '../../services/location.service';
-import { selectSelectedDate, selectDateRangeDays } from './prices.selectors';
+import { selectSelectedDate, selectDateRangeDays, selectLoadedDates } from './prices.selectors';
 import * as PricesActions from './prices.actions';
 
 function subtractDays(isoDate: string, days: number): string {
@@ -82,16 +82,19 @@ export class PricesEffects {
     )
   );
 
-  /** When date or range changes, dispatch loadAllAreaPrices for every date in the range. */
+  /** When date or range changes, dispatch loadAllAreaPrices only for dates not yet in the store. */
   loadMultiDayPrices$ = createEffect(() =>
     this.actions$.pipe(
       ofType(PricesActions.selectDate, PricesActions.setDateRangeDays),
       withLatestFrom(
         this.store.select(selectSelectedDate),
-        this.store.select(selectDateRangeDays)
+        this.store.select(selectDateRangeDays),
+        this.store.select(selectLoadedDates)
       ),
-      mergeMap(([, date, days]) => {
-        const dates = Array.from({ length: days }, (_, i) => subtractDays(date, i));
+      mergeMap(([, date, days, loadedDates]) => {
+        const loaded = new Set(loadedDates);
+        const dates = Array.from({ length: days }, (_, i) => subtractDays(date, i))
+          .filter((d) => !loaded.has(d));
         return from(dates.map((d) => PricesActions.loadAllAreaPrices({ date: d })));
       })
     )
