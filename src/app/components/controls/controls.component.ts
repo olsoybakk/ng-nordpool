@@ -2,7 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Store } from '@ngrx/store';
-import { PRICE_AREAS, PriceArea } from '../../models/price.model';
+import { AREA_COLORS, PRICE_AREAS, PriceArea } from '../../models/price.model';
 import {
   selectSelectedArea,
   selectSelectedDate,
@@ -23,6 +23,7 @@ export class ControlsComponent implements OnInit {
   private readonly store = inject(Store);
 
   readonly areas = PRICE_AREAS;
+  readonly areaColors = AREA_COLORS;
   readonly maxDate = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
 
   selectedArea$ = this.store.select(selectSelectedArea);

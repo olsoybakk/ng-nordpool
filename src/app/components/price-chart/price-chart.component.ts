@@ -145,7 +145,8 @@ export class PriceChartComponent {
   }
 
   @HostListener('document:click', ['$event'])
-  onDocumentClick(event: Event): void {
+  @HostListener('document:touchstart', ['$event'])
+  onDocumentOutsideTap(event: Event): void {
     if (!this.elementRef.nativeElement.contains(event.target)) {
       this.hoveredSlot.set(null);
     }

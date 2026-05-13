@@ -40,6 +40,26 @@
   }
 }
 
+.select-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+
+  select {
+    padding-left: 1.75rem;
+  }
+}
+
+.area-dot {
+  position: absolute;
+  left: 0.75rem;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
 .date-nav {
   display: flex;
   align-items: center;
