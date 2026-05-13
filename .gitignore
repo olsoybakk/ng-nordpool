@@ -42,6 +42,9 @@ __screenshots__/
 # Local environment overrides (copy of environment.ts, customise as needed)
 src/environments/environment.local.ts
 
+# Local MCP config (contains machine-specific absolute paths)
+.mcp.json
+
 # System files
 .DS_Store
 Thumbs.db
