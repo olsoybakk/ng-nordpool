@@ -18,6 +18,7 @@ import {
   selectNotification,
 } from '../../store';
 import { detectLocation, loadPrices, loadAllAreaPrices } from '../../store/prices/prices.actions';
+import { LanguageService } from '../../services/language.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -34,6 +35,7 @@ import { detectLocation, loadPrices, loadAllAreaPrices } from '../../store/price
 })
 export class DashboardComponent implements OnInit {
   private readonly store = inject(Store);
+  readonly ls = inject(LanguageService);
 
   loading$ = this.store.select(selectLoading);
   allAreasLoading$ = this.store.select(selectAllAreasLoading);

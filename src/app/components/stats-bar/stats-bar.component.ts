@@ -2,6 +2,7 @@ import { Component, inject, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
 import { selectCurrentPrice, selectDailyStats, selectSelectedArea } from '../../store';
+import { LanguageService } from '../../services/language.service';
 
 const TAX_FACTOR = 1.25;
 const NO_TAX_AREAS = new Set(['NO4']);
@@ -15,6 +16,7 @@ const NO_TAX_AREAS = new Set(['NO4']);
 })
 export class StatsBarComponent {
   private readonly store = inject(Store);
+  readonly ls = inject(LanguageService);
 
   includeTax = input(false);
 

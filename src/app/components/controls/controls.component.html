@@ -1,6 +1,6 @@
 <div class="controls">
   <div class="control-group">
-    <label for="area-select">Price area</label>
+    <label for="area-select">{{ ls.t().priceArea }}</label>
     <div class="area-select" [class.area-select--open]="dropdownOpen">
       <button
         id="area-select"
@@ -17,7 +17,7 @@
           <path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
-      <ul class="area-select__options" role="listbox" aria-label="Price area">
+      <ul class="area-select__options" role="listbox" [attr.aria-label]="ls.t().priceArea">
         @for (area of areas; track area.value) {
           <li
             class="area-select__option"
@@ -38,9 +38,9 @@
   </div>
 
   <div class="control-group">
-    <label for="date-input">Date</label>
+    <label for="date-input">{{ ls.t().date }}</label>
     <div class="date-nav">
-      <button class="nav-btn" (click)="stepDate(-1)" aria-label="Previous day">&lsaquo;</button>
+      <button class="nav-btn" (click)="stepDate(-1)" [attr.aria-label]="ls.t().previousDay">&lsaquo;</button>
       <input
         id="date-input"
         type="date"
@@ -48,25 +48,25 @@
         [max]="maxDate"
         (ngModelChange)="onDateChange($event)"
       />
-      <button class="nav-btn" (click)="stepDate(1)" [disabled]="currentDate >= maxDate" aria-label="Next day">&rsaquo;</button>
+      <button class="nav-btn" (click)="stepDate(1)" [disabled]="currentDate >= maxDate" [attr.aria-label]="ls.t().nextDay">&rsaquo;</button>
     </div>
   </div>
 
   <div class="control-group">
-    <label for="range-select">Days</label>
+    <label for="range-select">{{ ls.t().days }}</label>
     <div class="date-nav">
-      <button class="nav-btn" (click)="stepRange(-1)" [disabled]="currentRangeDays <= 1" aria-label="Fewer days">&lsaquo;</button>
+      <button class="nav-btn" (click)="stepRange(-1)" [disabled]="currentRangeDays <= 1" [attr.aria-label]="ls.t().fewerDays">&lsaquo;</button>
       <select
         id="range-select"
         [ngModel]="currentRangeDays"
         (ngModelChange)="setRangeDays($event)"
-        aria-label="Date range in days"
+        [attr.aria-label]="ls.t().dateRangeLabel"
       >
         @for (n of rangeOptions; track n) {
-          <option [ngValue]="n">{{ n }} {{ n === 1 ? 'day' : 'days' }}</option>
+          <option [ngValue]="n">{{ n }} {{ n === 1 ? ls.t().day : ls.t().daysPlural }}</option>
         }
       </select>
-      <button class="nav-btn" (click)="stepRange(1)" [disabled]="currentRangeDays >= maxRangeDays" aria-label="More days">&rsaquo;</button>
+      <button class="nav-btn" (click)="stepRange(1)" [disabled]="currentRangeDays >= maxRangeDays" [attr.aria-label]="ls.t().moreDays">&rsaquo;</button>
     </div>
   </div>
 </div>

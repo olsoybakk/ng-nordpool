@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Store } from '@ngrx/store';
 import { AREA_COLORS, PRICE_AREAS, PriceArea } from '../../models/price.model';
+import { LanguageService } from '../../services/language.service';
 import {
   selectSelectedArea,
   selectSelectedDate,
@@ -23,6 +24,7 @@ import {
 export class ControlsComponent implements OnInit {
   private readonly store = inject(Store);
   private readonly elRef = inject(ElementRef);
+  readonly ls = inject(LanguageService);
 
   readonly areas = PRICE_AREAS;
   readonly areaColors = AREA_COLORS;

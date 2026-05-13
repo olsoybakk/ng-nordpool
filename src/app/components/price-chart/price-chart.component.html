@@ -6,7 +6,7 @@
     <button
       class="fullscreen-btn"
       (click)="toggleFullscreen()"
-      [attr.aria-label]="isFullscreen() ? 'Exit fullscreen' : 'Enter fullscreen'"
+      [attr.aria-label]="isFullscreen() ? ls.t().exitFullscreen : ls.t().enterFullscreen"
     >
       @if (isFullscreen()) {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -31,7 +31,7 @@
       [attr.viewBox]="dims().viewBox"
       preserveAspectRatio="xMidYMid meet"
       role="img"
-      [attr.aria-label]="(chartMode() === 'bar' ? 'Bar' : 'Line') + ' chart of electricity prices in 15-minute intervals'"
+      [attr.aria-label]="chartMode() === 'bar' ? ls.t().barChartAriaLabel : ls.t().lineChartAriaLabel"
       (mousemove)="onMouseMove($event)"
       (touchstart)="onTouchMove($event)"
       (touchmove)="onTouchMove($event)"
@@ -119,7 +119,7 @@
             class="norgespris-label"
             text-anchor="end"
             [attr.font-size]="dims().labelSize"
-          >Norgespris</text>
+          >{{ ls.t().norgesprisLabel }}</text>
         }
 
       } @else {
@@ -199,7 +199,7 @@
             class="norgespris-label"
             text-anchor="end"
             [attr.font-size]="dims().labelSize"
-          >Norgespris</text>
+          >{{ ls.t().norgesprisLabel }}</text>
         }
       }
 
@@ -229,7 +229,7 @@
           class="now-label"
           text-anchor="middle"
           [attr.font-size]="dims().labelSize"
-        >now</text>
+        >{{ ls.t().nowMarker }}</text>
       }
 
       <!-- Y-axis line -->
@@ -287,5 +287,5 @@
     }
   </div>
 } @else {
-  <div class="chart-empty">No data to display</div>
+  <div class="chart-empty">{{ ls.t().noData }}</div>
 }

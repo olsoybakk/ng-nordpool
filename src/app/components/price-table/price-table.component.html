@@ -4,7 +4,7 @@
       <table>
         <thead>
           <tr>
-            <th>Time</th>
+            <th>{{ ls.t().time }}</th>
             <th>øre/kWh</th>
           </tr>
         </thead>
@@ -13,7 +13,7 @@
             <tr [class.row--current]="row.isCurrent">
               <td class="cell--hour">
                 {{ row.time }}
-                @if (row.isCurrent) { <span class="badge">Now</span> }
+                @if (row.isCurrent) { <span class="badge">{{ ls.t().now }}</span> }
               </td>
               <td class="cell--price">{{ row.displayOre | number: '1.2-2' }}</td>
             </tr>

@@ -5,6 +5,7 @@ import { map } from 'rxjs/operators';
 import { combineLatest } from 'rxjs';
 import { HourlyPrice } from '../../models/price.model';
 import { selectAllPrices, selectCurrentPrice, selectSelectedArea } from '../../store';
+import { LanguageService } from '../../services/language.service';
 
 interface TableRow extends HourlyPrice {
   time: string;
@@ -29,6 +30,7 @@ const NO_TAX_AREAS = new Set(['NO4']);
 })
 export class PriceTableComponent {
   private readonly store = inject(Store);
+  readonly ls = inject(LanguageService);
 
   includeTax = input(false);
 
