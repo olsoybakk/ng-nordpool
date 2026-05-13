@@ -95,11 +95,15 @@ export class PriceChartComponent {
   isFullscreen = signal(false);
 
   private readonly windowWidth = signal(window.innerWidth);
+  private readonly windowHeight = signal(window.innerHeight);
   private readonly containerH = signal(0);
 
   constructor() {
     const destroyRef = inject(DestroyRef);
-    const onResize = () => this.windowWidth.set(window.innerWidth);
+    const onResize = () => {
+      this.windowWidth.set(window.innerWidth);
+      this.windowHeight.set(window.innerHeight);
+    };
     window.addEventListener('resize', onResize);
     destroyRef.onDestroy(() => window.removeEventListener('resize', onResize));
 
@@ -115,6 +119,7 @@ export class PriceChartComponent {
 
   readonly dims = computed(() => {
     const ww = this.windowWidth();
+    const wh = this.windowHeight();
     const ch = this.containerH();
     const mode = this.chartMode();
     const fullscreen = this.isFullscreen();
@@ -133,9 +138,9 @@ export class PriceChartComponent {
     if (fullscreen) {
       h = Math.max(200, Math.round(((window.innerHeight - edge) * CHART_W) / renderedW) - PADDING.top - padBottom);
     } else if (ww < 640) {
-      // On narrow screens target ~65% of viewport width as chart height.
-      // targetH_px = availW * 0.65; solving for h: h = 0.65*CHART_W - PADDING (availW cancels).
-      h = Math.round(0.65 * CHART_W) - PADDING.top - padBottom;
+      // On narrow screens target 65% of viewport height so the chart is tall
+      // enough to read in portrait and the page scrolls to reveal it.
+      h = Math.max(200, Math.round(wh * 0.65 * CHART_W / renderedW) - PADDING.top - padBottom);
     } else if (ch > 0 && mode === 'line') {
       // Line mode: parent has a viewport-fill height, so containerH is stable.
       // Invert rendered-height formula to fill the container exactly.
