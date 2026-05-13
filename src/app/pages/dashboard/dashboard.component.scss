@@ -86,6 +86,28 @@
   &:hover { color: var(--color-text); }
 }
 
+// Standalone Tax / Norgespris toggle buttons (outside the segmented chart-toggle)
+.toggle-btn:not(.chart-toggle .toggle-btn) {
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+
+  &:hover { color: var(--color-text); border-color: var(--color-accent); }
+
+  &.toggle-btn--active {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: #fff;
+    box-shadow: none;
+  }
+}
+
 .chart-toggle {
   display: flex;
   gap: 2px;

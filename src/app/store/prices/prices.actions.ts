@@ -23,7 +23,7 @@ export const loadAllAreaPrices = createAction(
 
 export const loadAllAreaPricesSuccess = createAction(
   '[Prices] Load All Area Prices Success',
-  props<{ results: Partial<Record<PriceArea, HourlyPrice[]>> }>()
+  props<{ date: string; results: Partial<Record<PriceArea, HourlyPrice[]>> }>()
 );
 
 export const loadAllAreaPricesFailure = createAction(
@@ -41,4 +41,9 @@ export const selectArea = createAction(
 export const selectDate = createAction(
   '[Prices] Select Date',
   props<{ date: string }>()
+);
+
+export const setDateRangeDays = createAction(
+  '[Prices] Set Date Range Days',
+  props<{ days: number }>()
 );

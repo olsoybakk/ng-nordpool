@@ -36,7 +36,7 @@
   }
 
   select {
-    min-width: 220px;
+    width: auto;
   }
 }
 
@@ -146,6 +146,7 @@
     }
   }
 }
+
 
 .date-nav {
   display: flex;

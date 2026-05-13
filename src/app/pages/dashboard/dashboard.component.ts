@@ -13,6 +13,7 @@ import {
   selectAllAreasLoading,
   selectSelectedArea,
   selectSelectedDate,
+  selectDateRangeDays,
 } from '../../store';
 import { detectLocation, loadPrices, loadAllAreaPrices } from '../../store/prices/prices.actions';
 
@@ -35,7 +36,11 @@ export class DashboardComponent implements OnInit {
   loading$ = this.store.select(selectLoading);
   allAreasLoading$ = this.store.select(selectAllAreasLoading);
   error$ = this.store.select(selectError);
+  dateRangeDays$ = this.store.select(selectDateRangeDays);
+
   chartMode = signal<ChartMode>('line');
+  includeTax = signal(false);
+  showNorgespris = signal(false);
   theme = signal<'dark' | 'light'>(
     window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
   );
@@ -72,5 +77,13 @@ export class DashboardComponent implements OnInit {
 
   toggleTheme(): void {
     this.theme.set(this.theme() === 'dark' ? 'light' : 'dark');
+  }
+
+  toggleTax(): void {
+    this.includeTax.update((v) => !v);
+  }
+
+  toggleNorgespris(): void {
+    this.showNorgespris.update((v) => !v);
   }
 }

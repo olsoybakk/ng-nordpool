@@ -2,11 +2,17 @@ import { Injectable, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { catchError, map, mergeMap, switchMap, tap, withLatestFrom } from 'rxjs/operators';
-import { EMPTY, of } from 'rxjs';
+import { EMPTY, from, of } from 'rxjs';
 import { NordpoolService } from '../../services/nordpool.service';
 import { LocationService } from '../../services/location.service';
-import { selectSelectedDate } from './prices.selectors';
+import { selectSelectedDate, selectDateRangeDays } from './prices.selectors';
 import * as PricesActions from './prices.actions';
+
+function subtractDays(isoDate: string, days: number): string {
+  const d = new Date(isoDate + 'T12:00:00');
+  d.setDate(d.getDate() - days);
+  return d.toISOString().slice(0, 10);
+}
 
 @Injectable()
 export class PricesEffects {
@@ -59,12 +65,13 @@ export class PricesEffects {
     )
   );
 
+  /** Fetch all areas for a single date — mergeMap so concurrent date fetches all complete. */
   loadAllAreaPrices$ = createEffect(() =>
     this.actions$.pipe(
       ofType(PricesActions.loadAllAreaPrices),
-      switchMap(({ date }) =>
+      mergeMap(({ date }) =>
         this.nordpoolService.getAllAreaPrices(date).pipe(
-          map((results) => PricesActions.loadAllAreaPricesSuccess({ results })),
+          map((results) => PricesActions.loadAllAreaPricesSuccess({ date, results })),
           catchError((error) =>
             of(PricesActions.loadAllAreaPricesFailure({
               error: error?.message ?? 'Failed to load all area prices',
@@ -72,6 +79,21 @@ export class PricesEffects {
           )
         )
       )
+    )
+  );
+
+  /** When date or range changes, dispatch loadAllAreaPrices for every date in the range. */
+  loadMultiDayPrices$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(PricesActions.selectDate, PricesActions.setDateRangeDays),
+      withLatestFrom(
+        this.store.select(selectSelectedDate),
+        this.store.select(selectDateRangeDays)
+      ),
+      mergeMap(([, date, days]) => {
+        const dates = Array.from({ length: days }, (_, i) => subtractDays(date, i));
+        return from(dates.map((d) => PricesActions.loadAllAreaPrices({ date: d })));
+      })
     )
   );
 }

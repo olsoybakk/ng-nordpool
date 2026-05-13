@@ -1,19 +1,36 @@
-import { afterNextRender, Component, computed, DestroyRef, ElementRef, HostListener, inject, input, signal } from '@angular/core';
-import { toObservable } from '@angular/core/rxjs-interop';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  DestroyRef,
+  ElementRef,
+  HostListener,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
-import { map } from 'rxjs/operators';
+import { map, tap } from 'rxjs/operators';
 import { combineLatest } from 'rxjs';
 import { AREA_COLORS, HourlyPrice, PRICE_AREAS, PriceArea } from '../../models/price.model';
 import {
-  selectAllPrices,
   selectCurrentPrice,
-  selectAllAreaPrices,
+  selectMergedAreaPrices,
   selectSelectedArea,
   selectSelectedDate,
+  selectDateRangeDays,
 } from '../../store';
 
 export type ChartMode = 'bar' | 'line';
+
+const TAX_FACTOR = 1.25;
+const NO_TAX_AREAS = new Set<PriceArea>(['NO4']);
+
+function displayOre(area: PriceArea, ore: number, includeTax: boolean): number {
+  return includeTax && !NO_TAX_AREAS.has(area) ? ore * TAX_FACTOR : ore;
+}
 
 interface BarData {
   slot: number;
@@ -26,6 +43,8 @@ interface BarData {
   barY: number;
   isCurrent: boolean;
   priceLevel: 'low' | 'mid' | 'high';
+  isDayBoundary: boolean;
+  dayLabel: string;
 }
 
 interface PointData {
@@ -64,14 +83,13 @@ export interface TooltipEntry {
 const CHART_W = 1500;
 const CHART_H = 380;
 const PADDING = { top: 16, right: 48, bottom: 36, left: 60 };
-const SLOT_COUNT = 96;
-const FULLSCREEN_OUTER = 24; // px — inset from viewport edge to card edge (must match CSS)
-const FULLSCREEN_INNER = 12; // px — padding inside the card (0.75rem, must match CSS)
-// Horizontal space consumed by dashboard container padding (2×1.5rem) + card padding (2×0.5rem)
+const SLOT_COUNT = 96; // slots per day
+const FULLSCREEN_OUTER = 24;
+const FULLSCREEN_INNER = 12;
 const DASHBOARD_H_PAD = 64;
 const DASHBOARD_MAX_W = 1100;
-// Vertical card padding consumed by .chart-outer (0.75rem top + 0.5rem bottom)
 const CARD_PAD_PX = 20;
+const NORGESPRIS_ORE_INCL_TAX = 50;
 
 @Component({
   selector: 'app-price-chart',
@@ -85,18 +103,24 @@ export class PriceChartComponent {
   private readonly elementRef = inject(ElementRef);
 
   chartMode = input<ChartMode>('line');
+  includeTax = input(false);
+  showNorgespris = input(false);
 
   readonly viewBoxW = CHART_W;
   readonly chartW = CHART_W - PADDING.left - PADDING.right;
   readonly offsetX = PADDING.left;
   readonly offsetY = PADDING.top;
-  readonly slotW = (CHART_W - PADDING.left - PADDING.right) / SLOT_COUNT;
 
   isFullscreen = signal(false);
 
   private readonly windowWidth = signal(window.innerWidth);
   private readonly windowHeight = signal(window.innerHeight);
   private readonly containerH = signal(0);
+  private readonly dateRangeDays = toSignal(this.store.select(selectDateRangeDays), { initialValue: 1 });
+
+  /** Updated from the view model so updateTooltip always reads the correct slot width. */
+  private readonly _slotCount = signal(SLOT_COUNT);
+  readonly slotW = computed(() => this.chartW / this._slotCount());
 
   constructor() {
     const destroyRef = inject(DestroyRef);
@@ -108,7 +132,7 @@ export class PriceChartComponent {
     destroyRef.onDestroy(() => window.removeEventListener('resize', onResize));
 
     afterNextRender(() => {
-      const ro = new ResizeObserver(entries => {
+      const ro = new ResizeObserver((entries) => {
         const h = entries[0]?.contentRect.height ?? 0;
         if (h > 0) this.containerH.set(h);
       });
@@ -129,21 +153,15 @@ export class PriceChartComponent {
       ? window.innerWidth - edge
       : Math.min(DASHBOARD_MAX_W, ww) - DASHBOARD_H_PAD;
 
-    // Compute font size in SVG user units to render at ~10px on screen
     const labelSize = Math.round(10 * CHART_W / Math.max(renderedW, 100));
-    // Bottom padding must fit the x-axis labels
     const padBottom = Math.max(PADDING.bottom, Math.round(labelSize * 1.5));
 
     let h: number;
     if (fullscreen) {
       h = Math.max(200, Math.round(((window.innerHeight - edge) * CHART_W) / renderedW) - PADDING.top - padBottom);
     } else if (ww < 640) {
-      // On narrow screens target 65% of viewport height so the chart is tall
-      // enough to read in portrait and the page scrolls to reveal it.
       h = Math.max(200, Math.round(wh * 0.65 * CHART_W / renderedW) - PADDING.top - padBottom);
     } else if (ch > 0 && mode === 'line') {
-      // Line mode: parent has a viewport-fill height, so containerH is stable.
-      // Invert rendered-height formula to fill the container exactly.
       h = Math.max(200, Math.round((ch - CARD_PAD_PX) * CHART_W / renderedW) - PADDING.top - padBottom);
     } else {
       h = CHART_H;
@@ -155,14 +173,9 @@ export class PriceChartComponent {
       viewBox: `0 0 ${CHART_W} ${PADDING.top + h + padBottom}`,
       bottomY: chartBottomY,
       labelSize,
-      // Baseline y for x-axis hour labels (below the axis line)
       xAxisY: chartBottomY + Math.round(labelSize * 0.9),
-      // Baseline y for "now" label — inside chart top when labelSize > top padding
       nowLabelY: labelSize > PADDING.top ? PADDING.top + Math.round(labelSize * 0.9) : PADDING.top - 3,
-      // x-centre for the rotated y-axis title — wide enough to avoid left-edge clipping
       axisTitleX: Math.max(12, Math.ceil(labelSize / 2) + 2),
-      // Move y-axis tick labels inside the chart when they're too wide for the left margin
-      // Labels fit outside when: labelSize * 6 chars * 0.55em ≤ PADDING.left − 8 ≈ 52 SVG units
       yLabelInside: labelSize > 15,
     };
   });
@@ -181,7 +194,7 @@ export class PriceChartComponent {
   }
 
   toggleFullscreen(): void {
-    this.isFullscreen.update(v => !v);
+    this.isFullscreen.update((v) => !v);
   }
 
   hoveredSlot = signal<number | null>(null);
@@ -190,16 +203,30 @@ export class PriceChartComponent {
   tooltipFlip = signal(false);
 
   vm$ = combineLatest([
-    this.store.select(selectAllPrices),
     this.store.select(selectCurrentPrice),
-    this.store.select(selectAllAreaPrices),
+    this.store.select(selectMergedAreaPrices),
     this.store.select(selectSelectedArea),
     this.store.select(selectSelectedDate),
+    this.store.select(selectDateRangeDays),
     toObservable(this.dims),
+    toObservable(this.includeTax),
+    toObservable(this.showNorgespris),
   ]).pipe(
-    map(([prices, current, allAreaPrices, selectedArea, selectedDate, dims]) =>
-      this.buildViewModel(prices, current, allAreaPrices, selectedArea, selectedDate, dims)
-    )
+    map(([current, mergedAreaPrices, selectedArea, selectedDate, dateRangeDays, dims, includeTax, showNorgespris]) =>
+      this.buildViewModel(
+        current,
+        mergedAreaPrices,
+        selectedArea,
+        selectedDate,
+        dateRangeDays,
+        dims,
+        includeTax,
+        showNorgespris
+      )
+    ),
+    tap((vm) => {
+      if (vm) this._slotCount.set(vm.slotCount);
+    })
   );
 
   onMouseMove(event: MouseEvent): void {
@@ -209,7 +236,7 @@ export class PriceChartComponent {
   onTouchMove(event: TouchEvent): void {
     const touch = event.touches[0];
     if (!touch) return;
-    event.preventDefault(); // prevent page scroll while dragging over the chart
+    event.preventDefault();
     this.updateTooltip(event.currentTarget as SVGSVGElement, touch.clientX, touch.clientY);
   }
 
@@ -219,21 +246,19 @@ export class PriceChartComponent {
     const relY = clientY - rect.top;
 
     const svgX = relX * (this.viewBoxW / rect.width);
-    const slot = Math.floor((svgX - this.offsetX) / this.slotW);
+    const slot = Math.floor((svgX - this.offsetX) / this.slotW());
 
-    if (slot >= 0 && slot < SLOT_COUNT) {
+    const slotCount = this._slotCount();
+    if (slot >= 0 && slot < slotCount) {
       this.hoveredSlot.set(slot);
 
-      // Horizontal: flip when there isn't room to the right, then clamp so the
-      // tooltip never overflows the left edge on narrow screens either.
-      const TOOLTIP_W = 300; // gap (12) + content (~280px at largest label) + buffer
+      const TOOLTIP_W = 300;
       const flip = relX > rect.width - TOOLTIP_W;
       this.tooltipFlip.set(flip);
       this.tooltipLeft.set(
         flip ? Math.max(TOOLTIP_W, relX) : Math.min(relX, rect.width - TOOLTIP_W)
       );
 
-      // Vertical: clamp so tooltip never renders outside the SVG bounds.
       const HALF_H = this.chartMode() === 'bar' ? 35 : 110;
       this.tooltipTop.set(Math.max(HALF_H, Math.min(relY, rect.height - HALF_H)));
     } else {
@@ -246,36 +271,56 @@ export class PriceChartComponent {
   }
 
   private buildViewModel(
-    prices: HourlyPrice[],
     current: HourlyPrice | null,
     allAreaPrices: Partial<Record<PriceArea, HourlyPrice[]>>,
     selectedArea: PriceArea,
     selectedDate: string,
-    { chartH, bottomY, labelSize }: { chartH: number; bottomY: number; labelSize: number }
+    dateRangeDays: number,
+    { chartH, bottomY, labelSize }: { chartH: number; bottomY: number; labelSize: number },
+    includeTax: boolean,
+    showNorgespris: boolean
   ) {
-    if (!prices.length) return null;
+    const barPrices = allAreaPrices[selectedArea] ?? [];
+    if (!barPrices.length) return null;
 
     const snapFloor25 = (v: number) => { const s = Math.floor(v / 25) * 25; return s < v ? s : s - 25; };
     const snapCeil25  = (v: number) => { const s = Math.ceil(v / 25)  * 25; return s > v ? s : s + 25; };
 
-    const values = prices.map((p) => p.ore_per_kWh);
-    const singleMin = snapFloor25(Math.min(...values) - 5);
-    const singleMax = snapCeil25(Math.max(...values) + 5);
-    const singleRange = singleMax - singleMin || 1;
-
-    const gap = this.chartW / prices.length;
+    const slotCount = barPrices.length;
+    const gap = this.chartW / slotCount;
     const barW = gap * 0.8;
 
-    const bars: BarData[] = prices.map((p, i) => {
-      const normalised = (p.ore_per_kWh - singleMin) / singleRange;
+    // Norgespris value in the display unit (computed early so scale can include it)
+    const norgesprisDisplayOre = showNorgespris
+      ? (includeTax ? NORGESPRIS_ORE_INCL_TAX : NORGESPRIS_ORE_INCL_TAX / TAX_FACTOR)
+      : null;
+
+    // Bar chart: single area, all days in range
+    const singleValues = barPrices.map((p) => displayOre(selectedArea, p.ore_per_kWh, includeTax));
+    const singleMin = snapFloor25(Math.min(...singleValues) - 5);
+    const singleMax = snapCeil25(Math.max(...singleValues) + 5);
+    const singleRange = singleMax - singleMin || 1;
+
+    const hourStep = dateRangeDays === 1 ? 3 : dateRangeDays <= 3 ? 6 : 12;
+    const showDayLabels = dateRangeDays > 1;
+    const slotsPerDay = SLOT_COUNT; // 96
+
+    const bars: BarData[] = barPrices.map((p, i) => {
+      const ore = displayOre(selectedArea, p.ore_per_kWh, includeTax);
+      const normalised = (ore - singleMin) / singleRange;
       const barH = Math.max(2, normalised * chartH);
       const third = singleRange / 3;
       let priceLevel: 'low' | 'mid' | 'high';
-      if (p.ore_per_kWh <= singleMin + third) priceLevel = 'low';
-      else if (p.ore_per_kWh <= singleMin + 2 * third) priceLevel = 'mid';
+      if (ore <= singleMin + third) priceLevel = 'low';
+      else if (ore <= singleMin + 2 * third) priceLevel = 'mid';
       else priceLevel = 'high';
 
       const d = new Date(p.time_start);
+      const isDayBoundary = i % slotsPerDay === 0;
+      const dayLabel = isDayBoundary
+        ? d.toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric' })
+        : '';
+
       return {
         slot: i,
         hour: d.getHours(),
@@ -285,23 +330,27 @@ export class PriceChartComponent {
         x: this.offsetX + i * gap + gap * 0.1,
         barHeight: barH,
         barY: this.offsetY + chartH - barH,
-        isCurrent: p === current,
+        isCurrent: current != null && p.time_start === current.time_start,
         priceLevel,
+        isDayBoundary,
+        dayLabel,
       };
     });
 
     const yTicks = this.buildYTicks(singleMin, singleMax, chartH);
 
+    // Line chart: all areas, all days
     const areaEntries = PRICE_AREAS.map(({ value }) => ({
       area: value,
       hourlyPrices: allAreaPrices[value] ?? [],
     })).filter((e) => e.hourlyPrices.length > 0);
 
     let rawMultiMin = Infinity, rawMultiMax = -Infinity;
-    for (const { hourlyPrices } of areaEntries) {
+    for (const { area, hourlyPrices } of areaEntries) {
       for (const p of hourlyPrices) {
-        if (p.ore_per_kWh < rawMultiMin) rawMultiMin = p.ore_per_kWh;
-        if (p.ore_per_kWh > rawMultiMax) rawMultiMax = p.ore_per_kWh;
+        const v = displayOre(area, p.ore_per_kWh, includeTax);
+        if (v < rawMultiMin) rawMultiMin = v;
+        if (v > rawMultiMax) rawMultiMax = v;
       }
     }
     const multiMin = snapFloor25(rawMultiMin - 5);
@@ -309,24 +358,24 @@ export class PriceChartComponent {
     const multiRange = multiMax - multiMin || 1;
     const toYMulti = (v: number) =>
       this.offsetY + chartH - ((v - multiMin) / multiRange) * chartH;
-    const multiGap = this.chartW / SLOT_COUNT;
+    const multiGap = this.chartW / slotCount;
 
     const areaLines: AreaLine[] = areaEntries.map(({ area, hourlyPrices }) => {
       const stepPairs: string[] = [];
       const pts: PointData[] = [];
 
       hourlyPrices.forEach((p, i) => {
+        const ore = displayOre(area, p.ore_per_kWh, includeTax);
         const x1 = this.offsetX + i * multiGap;
         const x2 = this.offsetX + (i + 1) * multiGap;
-        const y = toYMulti(p.ore_per_kWh);
+        const y = toYMulti(ore);
         stepPairs.push(`${x1},${y}`, `${x2},${y}`);
-        if (p === current) {
-          pts.push({ slot: i, cx: x1, cy: y, isCurrent: true, ore: p.ore_per_kWh });
+        if (current != null && p.time_start === current.time_start) {
+          pts.push({ slot: i, cx: x1, cy: y, isCurrent: true, ore });
         }
       });
 
-      const lastPrice = hourlyPrices.at(-1)!;
-      // Clamp so the label fits within the right padding regardless of font size
+      const lastOre = displayOre(area, hourlyPrices.at(-1)!.ore_per_kWh, includeTax);
       const rawLabelX = this.offsetX + hourlyPrices.length * multiGap + 4;
       const maxLabelX = CHART_W - Math.round(labelSize * 1.8) - 4;
       return {
@@ -335,7 +384,7 @@ export class PriceChartComponent {
         isSelected: area === selectedArea,
         linePoints: stepPairs.join(' '),
         labelX: Math.min(rawLabelX, maxLabelX),
-        labelY: toYMulti(lastPrice.ore_per_kWh) + 4,
+        labelY: toYMulti(lastOre) + 4,
         points: pts,
       };
     });
@@ -352,13 +401,13 @@ export class PriceChartComponent {
       { y: lowThreshY,   height: bottomY - lowThreshY,        level: 'low',  label: 'Low'  },
     ];
 
-    const pricesBySlot: TooltipEntry[][] = Array.from({ length: SLOT_COUNT }, (_, slot) =>
+    const pricesBySlot: TooltipEntry[][] = Array.from({ length: slotCount }, (_, slot) =>
       areaEntries
         .filter(({ hourlyPrices }) => hourlyPrices[slot] != null)
         .map(({ area, hourlyPrices }) => ({
           area,
-          label: PRICE_AREAS.find(p => p.value === area)?.label ?? area,
-          ore: hourlyPrices[slot].ore_per_kWh,
+          label: PRICE_AREAS.find((p) => p.value === area)?.label ?? area,
+          ore: displayOre(area, hourlyPrices[slot].ore_per_kWh, includeTax),
           color: AREA_COLORS[area],
           isSelected: area === selectedArea,
         }))
@@ -369,19 +418,57 @@ export class PriceChartComponent {
       const d = new Date(s);
       return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
     };
-    const slotTimes = prices.map((p) => ({
+    const slotTimes = barPrices.map((p) => ({
       start: fmtTime(p.time_start),
       end: fmtTime(p.time_end),
     }));
 
+    // "Now" line: show only when today is within the active range
     const todayISO = new Date().toISOString().slice(0, 10);
     let nowLineX: number | null = null;
-    if (selectedDate === todayISO) {
+    if (dateRangeDays === 1 && selectedDate === todayISO) {
       const now = new Date();
       nowLineX = this.offsetX + (now.getHours() + now.getMinutes() / 60) * (this.chartW / 24);
+    } else if (dateRangeDays > 1) {
+      // In multi-day, compute the global slot offset for now
+      const oldestDate = new Date(selectedDate + 'T12:00:00');
+      oldestDate.setDate(oldestDate.getDate() - (dateRangeDays - 1));
+      const oldest = oldestDate.toISOString().slice(0, 10);
+      if (oldest <= todayISO && todayISO <= selectedDate) {
+        const dayOffset = Math.round(
+          (new Date(todayISO + 'T12:00:00').getTime() - new Date(oldest + 'T12:00:00').getTime()) /
+          86400000
+        );
+        const now = new Date();
+        const slotOffset = dayOffset * slotsPerDay + (now.getHours() + now.getMinutes() / 60) * 4;
+        nowLineX = this.offsetX + slotOffset * multiGap;
+      }
     }
 
-    return { bars, barW, yTicks, areaLines, multiTicks, zones, pricesBySlot, slotTimes, nowLineX };
+    const clampY = (y: number) => Math.max(this.offsetY, Math.min(bottomY, y));
+    const norgesprisBarY = norgesprisDisplayOre !== null
+      ? clampY(this.offsetY + chartH - ((norgesprisDisplayOre - singleMin) / singleRange) * chartH)
+      : null;
+    const norgesprisLineY = norgesprisDisplayOre !== null
+      ? clampY(toYMulti(norgesprisDisplayOre))
+      : null;
+
+    return {
+      bars,
+      barW,
+      yTicks,
+      areaLines,
+      multiTicks,
+      zones,
+      pricesBySlot,
+      slotTimes,
+      nowLineX,
+      slotCount,
+      hourStep,
+      showDayLabels,
+      norgesprisBarY,
+      norgesprisLineY,
+    };
   }
 
   private buildYTicks(min: number, max: number, chartH: number) {

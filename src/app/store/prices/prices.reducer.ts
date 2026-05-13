@@ -7,11 +7,12 @@ const storedArea = localStorage.getItem('selectedArea') as PriceArea | null;
 
 export const initialState: PricesState = {
   prices: [],
-  allAreaPrices: {},
+  allAreaPricesByDate: {},
   selectedArea: storedArea ?? 'NO1',
   selectedDate: todayISO,
+  dateRangeDays: 1,
   loading: false,
-  allAreasLoading: false,
+  allAreasLoadingCount: 0,
   error: null,
 };
 
@@ -38,19 +39,18 @@ export const pricesReducer = createReducer(
 
   on(PricesActions.loadAllAreaPrices, (state) => ({
     ...state,
-    allAreaPrices: {},
-    allAreasLoading: true,
+    allAreasLoadingCount: state.allAreasLoadingCount + 1,
   })),
 
-  on(PricesActions.loadAllAreaPricesSuccess, (state, { results }) => ({
+  on(PricesActions.loadAllAreaPricesSuccess, (state, { date, results }) => ({
     ...state,
-    allAreaPrices: results,
-    allAreasLoading: false,
+    allAreaPricesByDate: { ...state.allAreaPricesByDate, [date]: results },
+    allAreasLoadingCount: Math.max(0, state.allAreasLoadingCount - 1),
   })),
 
   on(PricesActions.loadAllAreaPricesFailure, (state, { error }) => ({
     ...state,
-    allAreasLoading: false,
+    allAreasLoadingCount: Math.max(0, state.allAreasLoadingCount - 1),
     error,
   })),
 
@@ -62,5 +62,10 @@ export const pricesReducer = createReducer(
   on(PricesActions.selectDate, (state, { date }) => ({
     ...state,
     selectedDate: date,
+  })),
+
+  on(PricesActions.setDateRangeDays, (state, { days }) => ({
+    ...state,
+    dateRangeDays: days,
   }))
 );
