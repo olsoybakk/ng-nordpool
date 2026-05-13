@@ -209,8 +209,11 @@ export class PriceChartComponent {
     if (slot >= 0 && slot < SLOT_COUNT) {
       this.hoveredSlot.set(slot);
       this.tooltipLeft.set(relX);
-      this.tooltipTop.set(relY);
-      this.tooltipFlip.set(relX > rect.width * 0.6);
+      // Clamp vertically so the tooltip (centred on cursor via translateY(-50%))
+      // stays within the SVG bounds. ~110px = half the tooltip's max rendered height.
+      const HALF_H = 110;
+      this.tooltipTop.set(Math.max(HALF_H, Math.min(relY, rect.height - HALF_H)));
+      this.tooltipFlip.set(relX > rect.width - 240);
     } else {
       this.hoveredSlot.set(null);
     }

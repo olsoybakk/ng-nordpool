@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Store } from '@ngrx/store';
@@ -21,6 +21,7 @@ import {
 })
 export class ControlsComponent implements OnInit {
   private readonly store = inject(Store);
+  private readonly elRef = inject(ElementRef);
 
   readonly areas = PRICE_AREAS;
   readonly areaColors = AREA_COLORS;
@@ -31,6 +32,43 @@ export class ControlsComponent implements OnInit {
 
   currentArea: PriceArea = 'NO1';
   currentDate = this.maxDate;
+  dropdownOpen = false;
+
+  get currentAreaLabel(): string {
+    return this.areas.find((a) => a.value === this.currentArea)?.label ?? this.currentArea;
+  }
+
+  @HostListener('document:click', ['$event.target'])
+  onDocumentClick(target: EventTarget | null): void {
+    if (!this.elRef.nativeElement.contains(target)) this.dropdownOpen = false;
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.dropdownOpen = false;
+  }
+
+  toggleDropdown(): void {
+    this.dropdownOpen = !this.dropdownOpen;
+  }
+
+  selectAreaOption(area: PriceArea): void {
+    this.dropdownOpen = false;
+    if (area !== this.currentArea) this.onAreaChange(area);
+  }
+
+  onTriggerKeydown(event: KeyboardEvent): void {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.dropdownOpen = true;
+      const options = (this.elRef.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(
+        '.area-select__option'
+      );
+      if (options.length) {
+        (event.key === 'ArrowDown' ? options[0] : options[options.length - 1]).focus();
+      }
+    }
+  }
 
   ngOnInit(): void {
     this.selectedArea$.subscribe((area) => (this.currentArea = area));

@@ -1,9 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { map, tap } from 'rxjs/operators';
 import { HourlyPrice, PriceArea, PRICE_AREAS } from '../models/price.model';
 import { environment } from '../../environments/environment';
+import { PriceCacheService } from './price-cache.service';
 
 interface NordpoolEntry {
   localDeliveryStart: string;
@@ -18,16 +19,34 @@ interface NordpoolResponse {
 @Injectable({ providedIn: 'root' })
 export class NordpoolService {
   private readonly http = inject(HttpClient);
+  private readonly cache = inject(PriceCacheService);
   private readonly baseUrl = environment.nordpoolApiUrl;
 
   getPrices(date: string, area: PriceArea): Observable<HourlyPrice[]> {
+    const key = `${date}:${area}`;
+    const cached = this.cache.get(key);
+    if (cached) return of(cached);
+
     return this.http
       .get<NordpoolResponse>(this.buildUrl(date, [area]))
-      .pipe(map((r) => this.toIntervalPrices(r.multiAreaEntries, area)));
+      .pipe(
+        map((r) => this.toIntervalPrices(r.multiAreaEntries, area)),
+        tap((prices) => this.cache.set(key, prices))
+      );
   }
 
   getAllAreaPrices(date: string): Observable<Partial<Record<PriceArea, HourlyPrice[]>>> {
     const areas = PRICE_AREAS.map((a) => a.value);
+    const allCached = areas.every((area) => this.cache.get(`${date}:${area}`) !== null);
+
+    if (allCached) {
+      const result: Partial<Record<PriceArea, HourlyPrice[]>> = {};
+      for (const area of areas) {
+        result[area] = this.cache.get(`${date}:${area}`)!;
+      }
+      return of(result);
+    }
+
     return this.http.get<NordpoolResponse>(this.buildUrl(date, areas)).pipe(
       map((r) => {
         const result: Partial<Record<PriceArea, HourlyPrice[]>> = {};
@@ -35,6 +54,11 @@ export class NordpoolService {
           result[area] = this.toIntervalPrices(r.multiAreaEntries, area);
         }
         return result;
+      }),
+      tap((result) => {
+        for (const area of areas) {
+          if (result[area]) this.cache.set(`${date}:${area}`, result[area]!);
+        }
       })
     );
   }
