@@ -24,10 +24,11 @@ git config core.hooksPath .githooks
 
 ## Playwright MCP
 
-`.mcp.json` configures the Playwright MCP server (`npx @playwright/mcp@latest`).
+`.mcp.json` configures the Playwright MCP server (`npx @playwright/mcp@latest --output-dir .playwright-mcp`).
 With the dev server running (`npm run dev`), Claude Code can navigate to
 `http://localhost:3000`, take screenshots, click elements, and inspect the live app.
-Restart Claude Code after adding `.mcp.json` for the first time.
+Screenshots and snapshots are written to `.playwright-mcp/`.
+Restart Claude Code after changing `.mcp.json` for the update to take effect.
 
 ## Commands
 
