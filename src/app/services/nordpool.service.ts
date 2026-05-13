@@ -30,8 +30,8 @@ export class NordpoolService {
     return this.http
       .get<NordpoolResponse>(this.buildUrl(date, [area]))
       .pipe(
-        map((r) => this.toIntervalPrices(r.multiAreaEntries, area)),
-        tap((prices) => this.cache.set(key, prices))
+        map((r) => (r?.multiAreaEntries ? this.toIntervalPrices(r.multiAreaEntries, area) : [])),
+        tap((prices) => { if (prices.length) this.cache.set(key, prices); })
       );
   }
 
@@ -50,14 +50,16 @@ export class NordpoolService {
     return this.http.get<NordpoolResponse>(this.buildUrl(date, areas)).pipe(
       map((r) => {
         const result: Partial<Record<PriceArea, HourlyPrice[]>> = {};
-        for (const area of areas) {
-          result[area] = this.toIntervalPrices(r.multiAreaEntries, area);
+        if (r?.multiAreaEntries) {
+          for (const area of areas) {
+            result[area] = this.toIntervalPrices(r.multiAreaEntries, area);
+          }
         }
         return result;
       }),
       tap((result) => {
         for (const area of areas) {
-          if (result[area]) this.cache.set(`${date}:${area}`, result[area]!);
+          if (result[area]?.length) this.cache.set(`${date}:${area}`, result[area]!);
         }
       })
     );
