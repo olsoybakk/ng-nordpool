@@ -16,6 +16,8 @@ Angular 21 app that displays Nordpool day-ahead electricity spot prices.
 
 `main` is protected — direct pushes are blocked (enforced on GitHub and by a local pre-push hook in `.githooks/pre-push`). All changes go through a PR. The repository only allows **squash merges** — use `gh pr merge <number> --squash` when merging. New clones need:
 
+> **Always ask the user before merging a PR.** Create and push the branch, open the PR, share the URL, then wait for explicit approval before running `gh pr merge`.
+
 ```bash
 git config core.hooksPath .githooks
 ```
@@ -119,6 +121,9 @@ src/app/components/
                   against going past maxDate. Next button disabled at maxDate.
                   Area change → selectArea + loadPrices.
                   Date change → selectDate + loadPrices + loadAllAreaPrices.
+                  A colored dot (AREA_COLORS[currentArea]) overlays the select
+                  via position:absolute inside .select-wrapper — native selects
+                  can't hold custom markup cross-browser.
   stats-bar/      Now / Min / Avg / Max cards derived from store selectors.
   price-chart/    Pure SVG chart (no charting lib). Accepts chartMode input signal.
                   Also selects selectedDate from store to compute the now-line.
@@ -131,10 +136,12 @@ src/app/components/
                     One polyline per area; selected area renders on top (sorted last).
                     Y scale = global snapped min/max across all areas.
                   Both modes: dashed vertical "now" line (only when selectedDate ===
-                    today); hover tooltip listing all areas sorted most expensive→cheapest;
-                    fullscreen toggle.
+                    today); hover tooltip listing all areas sorted most expensive→cheapest
+                    with full label (e.g. "NO3 — Midt-Norge"); fullscreen toggle.
                   Tooltip is an HTML div (not SVG) inside .chart-outer, with
-                    pointer-events:none so it never blocks SVG mouse events.
+                    pointer-events:none so it never blocks SVG mouse events. Closes
+                    on both document:click and document:touchstart (iOS Safari does
+                    not reliably bubble click from non-interactive elements).
                   Fullscreen uses CSS position:fixed (not the browser Fullscreen API).
                     dims() computed signal recalculates chartH and viewBox to fill
                     the card. width:auto on .chart-outer--fullscreen is critical —
@@ -142,6 +149,11 @@ src/app/components/
                   Scale-aware font sizing: dims() computes labelSize in SVG user
                     units so labels render at ~10px on screen regardless of viewport.
                     Text elements use [attr.font-size] (not CSS font-size).
+                  Line visibility: vector-effect:non-scaling-stroke keeps stroke
+                    widths in screen pixels (without it a 1.5-unit stroke at 1500-wide
+                    viewBox renders at ~0.3px on mobile). --line-drop-shadow CSS
+                    variable adds a dark drop-shadow in light mode only, giving
+                    light-coloured lines contrast against the white background.
   price-table/    Up to 96-row table (one row per 15-min interval). Current
                   interval row highlighted + "Now" badge.
                   Only shown when chartMode === 'bar'.
@@ -168,9 +180,16 @@ Lazy-loads `DashboardComponent` at `''`. Wildcard redirects to `''`.
 
 ### Styling
 
-CSS custom properties in `src/styles.scss`. Dark mode default, light mode via `prefers-color-scheme: light`. Variables: `--color-bg`, `--color-surface`, `--color-border`, `--color-text`, `--color-muted`, `--color-accent`, `--color-low`, `--color-high`.
+CSS custom properties in `src/styles.scss`. Dark mode default, light mode via `prefers-color-scheme: light`. Variables: `--color-bg`, `--color-surface`, `--color-border`, `--color-text`, `--color-muted`, `--color-accent`, `--color-low`, `--color-high`, `--line-drop-shadow` (dark shadow in light mode, `none` in dark mode).
 
 Theme toggle: `DashboardComponent` holds a `theme` signal (`'dark' | 'light'`) initialised from `window.matchMedia('(prefers-color-scheme: dark)')` on load. An `effect()` writes it to `document.documentElement` as `data-theme`. A `matchMedia` change listener keeps the signal in sync when the OS theme changes while the app is open. CSS uses `:root:not([data-theme='dark'])` in the media query and explicit `:root[data-theme='light']` / `:root[data-theme='dark']` blocks to handle all three states.
+
+### Public assets
+
+Static files in `public/` are served at the root. Current contents:
+- `favicon.svg` — SVG emoji favicon (`⚡`), works in all modern browsers
+- `apple-touch-icon.png` — 180×180 PNG for iOS home screen shortcuts; generated via canvas with `actualBoundingBox` metrics to visually centre the emoji
+- `favicon.ico` — legacy fallback (kept for older browsers)
 
 ## Deployment
 
