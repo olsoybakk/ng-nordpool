@@ -418,10 +418,16 @@ export class PriceChartComponent {
       const d = new Date(s);
       return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
     };
-    const slotTimes = barPrices.map((p) => ({
-      start: fmtTime(p.time_start),
-      end: fmtTime(p.time_end),
-    }));
+    const slotTimes = barPrices.map((p) => {
+      const d = new Date(p.time_start);
+      return {
+        start: fmtTime(p.time_start),
+        end: fmtTime(p.time_end),
+        date: dateRangeDays > 1
+          ? d.toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short' })
+          : null,
+      };
+    });
 
     // "Now" line: show only when today is within the active range
     const todayISO = new Date().toISOString().slice(0, 10);

@@ -262,8 +262,13 @@
         [style.transform]="tooltipFlip() ? 'translate(calc(-100% - 12px), -50%)' : 'translate(12px, -50%)'"
       >
         <div class="tooltip__header">
-          {{ vm.slotTimes[hoveredSlot()!].start }} – {{ vm.slotTimes[hoveredSlot()!].end }}
-          <span class="tooltip__unit">øre/kWh</span>
+          @if (vm.slotTimes[hoveredSlot()!].date) {
+            <span class="tooltip__date">{{ vm.slotTimes[hoveredSlot()!].date }}</span>
+          }
+          <div class="tooltip__time-row">
+            {{ vm.slotTimes[hoveredSlot()!].start }} – {{ vm.slotTimes[hoveredSlot()!].end }}
+            <span class="tooltip__unit">øre/kWh</span>
+          </div>
         </div>
         <div class="tooltip__rows">
           @for (entry of vm.pricesBySlot[hoveredSlot()!]; track trackByAreaEntry($index, entry)) {
