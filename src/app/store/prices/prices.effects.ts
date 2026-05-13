@@ -5,6 +5,7 @@ import { catchError, map, mergeMap, switchMap, tap, withLatestFrom } from 'rxjs/
 import { EMPTY, from, of, timer } from 'rxjs';
 import { NordpoolService } from '../../services/nordpool.service';
 import { LocationService } from '../../services/location.service';
+import { LanguageService } from '../../services/language.service';
 import { selectSelectedDate, selectDateRangeDays, selectLoadedDates } from './prices.selectors';
 import * as PricesActions from './prices.actions';
 
@@ -20,6 +21,7 @@ export class PricesEffects {
   private readonly store = inject(Store);
   private readonly nordpoolService = inject(NordpoolService);
   private readonly locationService = inject(LocationService);
+  private readonly ls = inject(LanguageService);
 
   persistSelectedArea$ = createEffect(
     () =>
@@ -55,9 +57,9 @@ export class PricesEffects {
       switchMap(({ area, date }) =>
         this.nordpoolService.getPrices(date, area).pipe(
           map((prices) => PricesActions.loadPricesSuccess({ prices })),
-          catchError((error) =>
+          catchError(() =>
             of(PricesActions.loadPricesFailure({
-              error: error?.message ?? 'Failed to load prices',
+              error: this.ls.t().failedToLoad,
             }))
           )
         )
@@ -77,7 +79,7 @@ export class PricesEffects {
               ? of(
                   PricesActions.loadAllAreaPricesSuccess({ date, results: {} }),
                   PricesActions.setNotification({
-                    message: 'Price data is not available for all selected dates.',
+                    message: this.ls.t().dataNotAvailable,
                   })
                 )
               : of(PricesActions.loadAllAreaPricesSuccess({ date, results }));

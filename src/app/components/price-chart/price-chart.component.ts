@@ -22,6 +22,7 @@ import {
   selectSelectedDate,
   selectDateRangeDays,
 } from '../../store';
+import { LanguageService } from '../../services/language.service';
 
 export type ChartMode = 'bar' | 'line';
 
@@ -101,6 +102,7 @@ const NORGESPRIS_ORE_INCL_TAX = 50;
 export class PriceChartComponent {
   private readonly store = inject(Store);
   private readonly elementRef = inject(ElementRef);
+  readonly ls = inject(LanguageService);
 
   chartMode = input<ChartMode>('line');
   includeTax = input(false);

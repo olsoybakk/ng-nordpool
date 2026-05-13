@@ -3,20 +3,20 @@
     <div class="stats-bar">
       @if (currentPrice$ | async; as current) {
         <div class="stat stat--current">
-          <span class="stat__label">Now</span>
+          <span class="stat__label">{{ ls.t().now }}</span>
           <span class="stat__value">{{ current.ore_per_kWh * taxFactor(area) | number: '1.2-2' }} øre/kWh</span>
         </div>
       }
       <div class="stat">
-        <span class="stat__label">Min</span>
+        <span class="stat__label">{{ ls.t().min }}</span>
         <span class="stat__value stat__value--low">{{ stats.min * taxFactor(area) | number: '1.2-2' }} øre/kWh</span>
       </div>
       <div class="stat">
-        <span class="stat__label">Avg</span>
+        <span class="stat__label">{{ ls.t().avg }}</span>
         <span class="stat__value">{{ stats.avg * taxFactor(area) | number: '1.2-2' }} øre/kWh</span>
       </div>
       <div class="stat">
-        <span class="stat__label">Max</span>
+        <span class="stat__label">{{ ls.t().max }}</span>
         <span class="stat__value stat__value--high">{{ stats.max * taxFactor(area) | number: '1.2-2' }} øre/kWh</span>
       </div>
     </div>

@@ -2,13 +2,13 @@
   <header class="dashboard__header">
     <div class="dashboard__title-row">
       <h1 class="dashboard__title">
-        <span class="dashboard__logo">⚡</span> Nordpool Spot Prices
+        <span class="dashboard__logo">⚡</span> {{ ls.t().title }}
       </h1>
       <div class="dashboard__header-actions">
         <button
           class="theme-btn"
           (click)="toggleTheme()"
-          [attr.aria-label]="theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+          [attr.aria-label]="theme() === 'dark' ? ls.t().switchToLight : ls.t().switchToDark"
         >
           @if (theme() === 'dark') {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -23,52 +23,58 @@
         </button>
 
         <button
+          class="lang-btn"
+          (click)="ls.toggleLang()"
+          [attr.aria-label]="ls.lang() === 'nb' ? ls.t().switchToEnglish : ls.t().switchToNorwegian"
+        >{{ ls.lang() === 'nb' ? 'EN' : 'NO' }}</button>
+
+        <button
           class="toggle-btn"
           [class.toggle-btn--active]="includeTax()"
           (click)="toggleTax()"
           [attr.aria-pressed]="includeTax()"
-          aria-label="Toggle tax (25% VAT)"
-          title="Include 25% VAT (NO4 exempt)"
-        >Tax</button>
+          [attr.aria-label]="ls.t().taxAriaLabel"
+          [attr.title]="ls.t().taxTitle"
+        >{{ ls.t().taxBtn }}</button>
 
         <button
           class="toggle-btn"
           [class.toggle-btn--active]="showNorgespris()"
           (click)="toggleNorgespris()"
           [attr.aria-pressed]="showNorgespris()"
-          aria-label="Toggle Norgespris reference line"
-          title="Show Norgespris (50 øre/kWh incl. tax)"
+          [attr.aria-label]="ls.t().norgesprisAriaLabel"
+          [attr.title]="ls.t().norgesprisTitle"
         >Norgespris</button>
 
-        <div class="chart-toggle" role="group" aria-label="Chart type">
+        <div class="chart-toggle" role="group" [attr.aria-label]="ls.t().chartTypeLabel">
           <button
             class="toggle-btn"
             [class.toggle-btn--active]="chartMode() === 'line'"
             (click)="setChartMode('line')"
-            aria-label="Line chart"
+            [attr.aria-label]="ls.t().lineAriaLabel"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
               <polyline points="1,13 5,7 9,9 13,3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
             </svg>
-            Line
+            {{ ls.t().lineBtn }}
           </button>
           <button
             class="toggle-btn"
             [class.toggle-btn--active]="chartMode() === 'bar'"
             (click)="setChartMode('bar')"
-            aria-label="Bar chart"
+            [attr.aria-label]="ls.t().barAriaLabel"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
               <rect x="1" y="6" width="3" height="9" rx="1"/>
               <rect x="6" y="3" width="3" height="12" rx="1"/>
               <rect x="11" y="8" width="3" height="7" rx="1"/>
             </svg>
-            Bar
+            {{ ls.t().barBtn }}
           </button>
         </div>
       </div>
     </div>
-    <p class="dashboard__subtitle">Day-ahead electricity prices</p>
+    <p class="dashboard__subtitle">{{ ls.t().subtitle }}</p>
   </header>
 
   <section class="dashboard__controls">
@@ -78,7 +84,7 @@
   <div class="data-area">
     @if (error$ | async; as error) {
       <div class="error-banner" role="alert">
-        <strong>Error:</strong> {{ error }}
+        <strong>{{ ls.t().errorPrefix }}</strong> {{ error }}
       </div>
     }
 
@@ -92,7 +98,7 @@
           <div class="spinner"></div>
         </div>
       }
-      <h2 class="section-title">Hourly prices</h2>
+      <h2 class="section-title">{{ ls.t().hourlyPrices }}</h2>
       <app-price-chart
         [chartMode]="chartMode()"
         [includeTax]="includeTax()"
@@ -102,7 +108,7 @@
 
     @if (chartMode() === 'bar' && (dateRangeDays$ | async) === 1) {
       <section class="dashboard__table" [class.dashboard__table--loading]="(loading$ | async) || (allAreasLoading$ | async)">
-        <h2 class="section-title">All hours</h2>
+        <h2 class="section-title">{{ ls.t().allHours }}</h2>
         <app-price-table [includeTax]="includeTax()" />
       </section>
     }
