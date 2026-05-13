@@ -72,10 +72,10 @@ export class PricesEffects {
       mergeMap(({ date }) =>
         this.nordpoolService.getAllAreaPrices(date).pipe(
           map((results) => PricesActions.loadAllAreaPricesSuccess({ date, results })),
-          catchError((error) =>
-            of(PricesActions.loadAllAreaPricesFailure({
-              error: error?.message ?? 'Failed to load all area prices',
-            }))
+          catchError(() =>
+            // Treat HTTP errors (e.g. 500 for dates outside API range) as empty data,
+            // not as a user-visible error — the banner is reserved for the primary date.
+            of(PricesActions.loadAllAreaPricesSuccess({ date, results: {} }))
           )
         )
       )
