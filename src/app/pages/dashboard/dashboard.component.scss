@@ -227,13 +227,14 @@
   left: 50%;
   transform: translateX(-50%);
   z-index: 9000;
-  padding: 0.6rem 1.1rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  padding: 0.55rem 1rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-accent);
   border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-  color: var(--color-muted);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  color: var(--color-text);
   font-size: 0.85rem;
+  font-weight: 500;
   white-space: nowrap;
   animation: toast-in 0.2s ease-out;
 }
