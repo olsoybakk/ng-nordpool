@@ -228,7 +228,7 @@
   border: 1px solid var(--color-border);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-  min-width: 180px;
+  min-width: 210px;
   max-height: 380px;
   overflow: hidden;
   display: flex;
@@ -264,11 +264,17 @@
     align-items: center;
     gap: 0.4rem;
     padding: 0.2rem 0.75rem;
-    font-size: 0.75rem;
+    font-size: 0.9rem;
+    opacity: 0.8;
 
     &--selected {
       background: color-mix(in srgb, var(--color-accent) 8%, transparent);
       font-weight: 600;
+      opacity: 1;
+    }
+
+    &--single {
+      opacity: 1;
     }
   }
 
@@ -280,8 +286,8 @@
   }
 
   &__area {
-    color: var(--color-muted);
-    font-size: 0.7rem;
+    color: var(--color-text);
+    white-space: nowrap;
   }
 
   &__price {

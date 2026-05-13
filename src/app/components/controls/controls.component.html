@@ -1,17 +1,39 @@
 <div class="controls">
   <div class="control-group">
     <label for="area-select">Price area</label>
-    <div class="select-wrapper">
-      <span class="area-dot" [style.background]="areaColors[currentArea]"></span>
-      <select
+    <div class="area-select" [class.area-select--open]="dropdownOpen">
+      <button
         id="area-select"
-        [ngModel]="currentArea"
-        (ngModelChange)="onAreaChange($event)"
+        type="button"
+        class="area-select__trigger"
+        [attr.aria-expanded]="dropdownOpen"
+        aria-haspopup="listbox"
+        (click)="toggleDropdown()"
+        (keydown)="onTriggerKeydown($event)"
       >
+        <span class="area-dot" [style.background]="areaColors[currentArea]"></span>
+        <span class="area-select__label">{{ currentAreaLabel }}</span>
+        <svg class="area-select__chevron" viewBox="0 0 10 6" aria-hidden="true" width="10" height="6">
+          <path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <ul class="area-select__options" role="listbox" aria-label="Price area">
         @for (area of areas; track area.value) {
-          <option [value]="area.value">{{ area.label }}</option>
+          <li
+            class="area-select__option"
+            role="option"
+            [attr.aria-selected]="area.value === currentArea"
+            [class.area-select__option--selected]="area.value === currentArea"
+            tabindex="0"
+            (click)="selectAreaOption(area.value)"
+            (keydown.enter)="selectAreaOption(area.value)"
+            (keydown.space)="selectAreaOption(area.value)"
+          >
+            <span class="area-dot area-dot--inline" [style.background]="areaColors[area.value]"></span>
+            {{ area.label }}
+          </li>
         }
-      </select>
+      </ul>
     </div>
   </div>
 

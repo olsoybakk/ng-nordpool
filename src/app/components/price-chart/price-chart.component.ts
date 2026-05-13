@@ -209,8 +209,11 @@ export class PriceChartComponent {
     if (slot >= 0 && slot < SLOT_COUNT) {
       this.hoveredSlot.set(slot);
       this.tooltipLeft.set(relX);
-      this.tooltipTop.set(relY);
-      this.tooltipFlip.set(relX > rect.width * 0.6);
+      // Clamp vertically so the tooltip stays within the SVG bounds.
+      // Bar mode shows a single row (~55px total), line mode shows all areas (~220px).
+      const HALF_H = this.chartMode() === 'bar' ? 35 : 110;
+      this.tooltipTop.set(Math.max(HALF_H, Math.min(relY, rect.height - HALF_H)));
+      this.tooltipFlip.set(relX > rect.width - 240);
     } else {
       this.hoveredSlot.set(null);
     }
