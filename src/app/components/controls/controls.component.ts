@@ -6,10 +6,11 @@ import { AREA_COLORS, PRICE_AREAS, PriceArea } from '../../models/price.model';
 import {
   selectSelectedArea,
   selectSelectedDate,
+  selectDateRangeDays,
   loadPrices,
-  loadAllAreaPrices,
   selectArea,
   selectDate,
+  setDateRangeDays,
 } from '../../store';
 
 @Component({
@@ -26,12 +27,16 @@ export class ControlsComponent implements OnInit {
   readonly areas = PRICE_AREAS;
   readonly areaColors = AREA_COLORS;
   readonly maxDate = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
+  readonly rangeOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
+  readonly maxRangeDays = 14;
 
   selectedArea$ = this.store.select(selectSelectedArea);
   selectedDate$ = this.store.select(selectSelectedDate);
+  dateRangeDays$ = this.store.select(selectDateRangeDays);
 
   currentArea: PriceArea = 'NO1';
   currentDate = this.maxDate;
+  currentRangeDays = 1;
   dropdownOpen = false;
 
   get currentAreaLabel(): string {
@@ -73,6 +78,7 @@ export class ControlsComponent implements OnInit {
   ngOnInit(): void {
     this.selectedArea$.subscribe((area) => (this.currentArea = area));
     this.selectedDate$.subscribe((date) => (this.currentDate = date));
+    this.dateRangeDays$.subscribe((days) => (this.currentRangeDays = days));
   }
 
   onAreaChange(area: PriceArea): void {
@@ -83,7 +89,7 @@ export class ControlsComponent implements OnInit {
   onDateChange(date: string): void {
     this.store.dispatch(selectDate({ date }));
     this.store.dispatch(loadPrices({ area: this.currentArea, date }));
-    this.store.dispatch(loadAllAreaPrices({ date }));
+    // loadAllAreaPrices for the full range is handled by the loadMultiDayPrices$ effect
   }
 
   stepDate(days: number): void {
@@ -91,5 +97,16 @@ export class ControlsComponent implements OnInit {
     d.setDate(d.getDate() + days);
     const next = d.toISOString().slice(0, 10);
     if (next <= this.maxDate) this.onDateChange(next);
+  }
+
+  setRangeDays(days: number): void {
+    if (days !== this.currentRangeDays) {
+      this.store.dispatch(setDateRangeDays({ days }));
+    }
+  }
+
+  stepRange(delta: number): void {
+    const next = Math.min(this.maxRangeDays, Math.max(1, this.currentRangeDays + delta));
+    this.setRangeDays(next);
   }
 }

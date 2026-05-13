@@ -202,6 +202,31 @@
   }
 }
 
+// Day boundary labels (multi-day x-axis)
+.day-label {
+  fill: var(--color-text);
+  font-family: inherit;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+// Norgespris reference line
+.norgespris-line {
+  stroke: var(--color-norgespris);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+  opacity: 0.85;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.norgespris-label {
+  fill: var(--color-norgespris);
+  font-family: inherit;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
 // Current-time marker
 .now-line {
   stroke: var(--color-text);
@@ -237,15 +262,27 @@
 
   &__header {
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.5rem;
+    flex-direction: column;
+    gap: 0.1rem;
     padding: 0.5rem 0.75rem 0.35rem;
     font-size: 0.8rem;
     font-weight: 700;
     color: var(--color-text);
     border-bottom: 1px solid var(--color-border);
     flex-shrink: 0;
+  }
+
+  &__date {
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--color-muted);
+  }
+
+  &__time-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
   }
 
   &__unit {

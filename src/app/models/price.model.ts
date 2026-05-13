@@ -6,12 +6,14 @@ export interface HourlyPrice {
 
 export interface PricesState {
   prices: HourlyPrice[];
-  allAreaPrices: Partial<Record<PriceArea, HourlyPrice[]>>;
+  allAreaPricesByDate: Record<string, Partial<Record<PriceArea, HourlyPrice[]>>>;
   selectedArea: PriceArea;
   selectedDate: string;
+  dateRangeDays: number;
   loading: boolean;
-  allAreasLoading: boolean;
+  allAreasLoadingCount: number;
   error: string | null;
+  notification: string | null;
 }
 
 export type PriceArea = 'NO1' | 'NO2' | 'NO3' | 'NO4' | 'NO5';

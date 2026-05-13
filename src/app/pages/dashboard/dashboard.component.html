@@ -21,6 +21,25 @@
             </svg>
           }
         </button>
+
+        <button
+          class="toggle-btn"
+          [class.toggle-btn--active]="includeTax()"
+          (click)="toggleTax()"
+          [attr.aria-pressed]="includeTax()"
+          aria-label="Toggle tax (25% VAT)"
+          title="Include 25% VAT (NO4 exempt)"
+        >Tax</button>
+
+        <button
+          class="toggle-btn"
+          [class.toggle-btn--active]="showNorgespris()"
+          (click)="toggleNorgespris()"
+          [attr.aria-pressed]="showNorgespris()"
+          aria-label="Toggle Norgespris reference line"
+          title="Show Norgespris (50 øre/kWh incl. tax)"
+        >Norgespris</button>
+
         <div class="chart-toggle" role="group" aria-label="Chart type">
           <button
             class="toggle-btn"
@@ -64,7 +83,7 @@
     }
 
     <section class="dashboard__stats" [class.dashboard__stats--loading]="(loading$ | async) || (allAreasLoading$ | async)">
-      <app-stats-bar />
+      <app-stats-bar [includeTax]="includeTax()" />
     </section>
 
     <section class="dashboard__chart">
@@ -74,14 +93,24 @@
         </div>
       }
       <h2 class="section-title">Hourly prices</h2>
-      <app-price-chart [chartMode]="chartMode()" />
+      <app-price-chart
+        [chartMode]="chartMode()"
+        [includeTax]="includeTax()"
+        [showNorgespris]="showNorgespris()"
+      />
     </section>
 
-    @if (chartMode() === 'bar') {
+    @if (chartMode() === 'bar' && (dateRangeDays$ | async) === 1) {
       <section class="dashboard__table" [class.dashboard__table--loading]="(loading$ | async) || (allAreasLoading$ | async)">
         <h2 class="section-title">All hours</h2>
-        <app-price-table />
+        <app-price-table [includeTax]="includeTax()" />
       </section>
     }
   </div>
 </div>
+
+@if (notification()) {
+  <div class="toast" role="status" aria-live="polite">
+    {{ notification() }}
+  </div>
+}

@@ -2,11 +2,17 @@ import { Injectable, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { catchError, map, mergeMap, switchMap, tap, withLatestFrom } from 'rxjs/operators';
-import { EMPTY, of } from 'rxjs';
+import { EMPTY, from, of, timer } from 'rxjs';
 import { NordpoolService } from '../../services/nordpool.service';
 import { LocationService } from '../../services/location.service';
-import { selectSelectedDate } from './prices.selectors';
+import { selectSelectedDate, selectDateRangeDays, selectLoadedDates } from './prices.selectors';
 import * as PricesActions from './prices.actions';
+
+function subtractDays(isoDate: string, days: number): string {
+  const d = new Date(isoDate + 'T12:00:00');
+  d.setDate(d.getDate() - days);
+  return d.toISOString().slice(0, 10);
+}
 
 @Injectable()
 export class PricesEffects {
@@ -59,19 +65,59 @@ export class PricesEffects {
     )
   );
 
+  /** Fetch all areas for a single date — mergeMap so concurrent date fetches all complete. */
   loadAllAreaPrices$ = createEffect(() =>
     this.actions$.pipe(
       ofType(PricesActions.loadAllAreaPrices),
-      switchMap(({ date }) =>
+      mergeMap(({ date }) =>
         this.nordpoolService.getAllAreaPrices(date).pipe(
-          map((results) => PricesActions.loadAllAreaPricesSuccess({ results })),
-          catchError((error) =>
-            of(PricesActions.loadAllAreaPricesFailure({
-              error: error?.message ?? 'Failed to load all area prices',
-            }))
+          mergeMap((results) => {
+            const noData = Object.keys(results).length === 0;
+            return noData
+              ? of(
+                  PricesActions.loadAllAreaPricesSuccess({ date, results: {} }),
+                  PricesActions.setNotification({
+                    message: 'Price data is not available for all selected dates.',
+                  })
+                )
+              : of(PricesActions.loadAllAreaPricesSuccess({ date, results }));
+          }),
+          catchError(() =>
+            of(
+              PricesActions.loadAllAreaPricesSuccess({ date, results: {} }),
+              PricesActions.setNotification({
+                message: 'Price data is not available for all selected dates.',
+              })
+            )
           )
         )
       )
+    )
+  );
+
+  /** Auto-dismiss the notification after 5 s; resets the timer if a new one arrives. */
+  clearNotificationAfterDelay$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(PricesActions.setNotification),
+      switchMap(() => timer(5000).pipe(map(() => PricesActions.clearNotification())))
+    )
+  );
+
+  /** When date or range changes, dispatch loadAllAreaPrices only for dates not yet in the store. */
+  loadMultiDayPrices$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(PricesActions.selectDate, PricesActions.setDateRangeDays),
+      withLatestFrom(
+        this.store.select(selectSelectedDate),
+        this.store.select(selectDateRangeDays),
+        this.store.select(selectLoadedDates)
+      ),
+      mergeMap(([, date, days, loadedDates]) => {
+        const loaded = new Set(loadedDates);
+        const dates = Array.from({ length: days }, (_, i) => subtractDays(date, i))
+          .filter((d) => !loaded.has(d));
+        return from(dates.map((d) => PricesActions.loadAllAreaPrices({ date: d })));
+      })
     )
   );
 }

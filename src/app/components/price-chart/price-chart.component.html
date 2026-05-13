@@ -57,7 +57,7 @@
       }
 
       @if (chartMode() === 'bar') {
-        <!-- Bar chart: 96 bars, label every 3 hours (every 12 slots) -->
+        <!-- Bar chart bars -->
         @for (bar of vm.bars; track trackBySlot($index, bar)) {
           <g class="bar-group" [class.bar-group--current]="bar.isCurrent">
             <rect
@@ -72,15 +72,56 @@
               [class.bar--high]="bar.priceLevel === 'high'"
               [class.bar--current]="bar.isCurrent"
             />
-            <text
-              [attr.x]="bar.x + vm.barW / 2"
-              [attr.y]="dims().xAxisY"
-              class="hour-label"
-              text-anchor="middle"
-              [attr.font-size]="dims().labelSize"
-            >@if (bar.minute === 0 && bar.hour % 3 === 0) { {{ bar.timeLabel }} }</text>
+            <!-- Day boundary label -->
+            @if (vm.showDayLabels && bar.isDayBoundary) {
+              <text
+                [attr.x]="bar.x"
+                [attr.y]="dims().xAxisY"
+                class="day-label"
+                text-anchor="start"
+                [attr.font-size]="dims().labelSize"
+              >{{ bar.dayLabel }}</text>
+            }
+            <!-- Hour label (skip midnight on multi-day, handled by day label) -->
+            @if (!vm.showDayLabels && bar.minute === 0 && bar.hour % vm.hourStep === 0) {
+              <text
+                [attr.x]="bar.x + vm.barW / 2"
+                [attr.y]="dims().xAxisY"
+                class="hour-label"
+                text-anchor="middle"
+                [attr.font-size]="dims().labelSize"
+              >{{ bar.timeLabel }}</text>
+            }
+            @if (vm.showDayLabels && bar.minute === 0 && bar.hour % vm.hourStep === 0 && !bar.isDayBoundary) {
+              <text
+                [attr.x]="bar.x + vm.barW / 2"
+                [attr.y]="dims().xAxisY"
+                class="hour-label"
+                text-anchor="middle"
+                [attr.font-size]="dims().labelSize"
+              >{{ bar.timeLabel }}</text>
+            }
           </g>
         }
+
+        <!-- Norgespris reference line (bar mode) -->
+        @if (vm.norgesprisBarY !== null) {
+          <line
+            [attr.x1]="offsetX"
+            [attr.y1]="vm.norgesprisBarY"
+            [attr.x2]="offsetX + chartW"
+            [attr.y2]="vm.norgesprisBarY"
+            class="norgespris-line"
+          />
+          <text
+            [attr.x]="offsetX + chartW - 2"
+            [attr.y]="vm.norgesprisBarY - 4"
+            class="norgespris-label"
+            text-anchor="end"
+            [attr.font-size]="dims().labelSize"
+          >Norgespris</text>
+        }
+
       } @else {
         <!-- Multi-area step line chart -->
         @for (line of vm.areaLines; track trackByArea($index, line)) {
@@ -112,11 +153,29 @@
           </g>
         }
 
-        <!-- Hour labels every 3 hours (every 12 slots) -->
+        <!-- X-axis labels (line mode) -->
         @for (bar of vm.bars; track bar.slot) {
-          @if (bar.minute === 0 && bar.hour % 3 === 0) {
+          @if (vm.showDayLabels && bar.isDayBoundary) {
             <text
-              [attr.x]="offsetX + $index * (chartW / 96)"
+              [attr.x]="offsetX + $index * (chartW / vm.slotCount)"
+              [attr.y]="dims().xAxisY"
+              class="day-label"
+              text-anchor="start"
+              [attr.font-size]="dims().labelSize"
+            >{{ bar.dayLabel }}</text>
+          }
+          @if (!vm.showDayLabels && bar.minute === 0 && bar.hour % vm.hourStep === 0) {
+            <text
+              [attr.x]="offsetX + $index * (chartW / vm.slotCount)"
+              [attr.y]="dims().xAxisY"
+              class="hour-label"
+              text-anchor="middle"
+              [attr.font-size]="dims().labelSize"
+            >{{ bar.timeLabel }}</text>
+          }
+          @if (vm.showDayLabels && bar.minute === 0 && bar.hour % vm.hourStep === 0 && !bar.isDayBoundary) {
+            <text
+              [attr.x]="offsetX + $index * (chartW / vm.slotCount)"
               [attr.y]="dims().xAxisY"
               class="hour-label"
               text-anchor="middle"
@@ -124,14 +183,32 @@
             >{{ bar.timeLabel }}</text>
           }
         }
+
+        <!-- Norgespris reference line (line mode) -->
+        @if (vm.norgesprisLineY !== null) {
+          <line
+            [attr.x1]="offsetX"
+            [attr.y1]="vm.norgesprisLineY"
+            [attr.x2]="offsetX + chartW"
+            [attr.y2]="vm.norgesprisLineY"
+            class="norgespris-line"
+          />
+          <text
+            [attr.x]="offsetX + chartW - 2"
+            [attr.y]="vm.norgesprisLineY - 4"
+            class="norgespris-label"
+            text-anchor="end"
+            [attr.font-size]="dims().labelSize"
+          >Norgespris</text>
+        }
       }
 
       <!-- Hover column highlight -->
       @if (hoveredSlot() !== null) {
         <rect
-          [attr.x]="offsetX + hoveredSlot()! * slotW"
+          [attr.x]="offsetX + hoveredSlot()! * slotW()"
           [attr.y]="offsetY"
-          [attr.width]="slotW"
+          [attr.width]="slotW()"
           [attr.height]="dims().chartH"
           class="hover-column"
         />
@@ -177,7 +254,7 @@
     </div>
 
     <!-- Floating tooltip -->
-    @if (hoveredSlot() !== null && vm.pricesBySlot[hoveredSlot()!].length) {
+    @if (hoveredSlot() !== null && vm.pricesBySlot[hoveredSlot()!]?.length) {
       <div
         class="tooltip"
         [style.left.px]="tooltipLeft()"
@@ -185,8 +262,13 @@
         [style.transform]="tooltipFlip() ? 'translate(calc(-100% - 12px), -50%)' : 'translate(12px, -50%)'"
       >
         <div class="tooltip__header">
-          {{ vm.slotTimes[hoveredSlot()!].start }} – {{ vm.slotTimes[hoveredSlot()!].end }}
-          <span class="tooltip__unit">øre/kWh</span>
+          @if (vm.slotTimes[hoveredSlot()!].date) {
+            <span class="tooltip__date">{{ vm.slotTimes[hoveredSlot()!].date }}</span>
+          }
+          <div class="tooltip__time-row">
+            {{ vm.slotTimes[hoveredSlot()!].start }} – {{ vm.slotTimes[hoveredSlot()!].end }}
+            <span class="tooltip__unit">øre/kWh</span>
+          </div>
         </div>
         <div class="tooltip__rows">
           @for (entry of vm.pricesBySlot[hoveredSlot()!]; track trackByAreaEntry($index, entry)) {
