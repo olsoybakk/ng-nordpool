@@ -301,7 +301,7 @@ export class PriceChartComponent {
     const singleMax = snapCeil25(Math.max(...singleValues) + 5);
     const singleRange = singleMax - singleMin || 1;
 
-    const hourStep = dateRangeDays === 1 ? 3 : dateRangeDays <= 3 ? 6 : 12;
+    const hourStep = dateRangeDays === 1 ? 3 : dateRangeDays <= 3 ? 6 : dateRangeDays <= 7 ? 12 : 24;
     const showDayLabels = dateRangeDays > 1;
     const slotsPerDay = SLOT_COUNT; // 96
 

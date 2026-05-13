@@ -27,8 +27,8 @@ export class ControlsComponent implements OnInit {
   readonly areas = PRICE_AREAS;
   readonly areaColors = AREA_COLORS;
   readonly maxDate = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
-  readonly rangeOptions = [1, 2, 3, 4, 5, 6, 7];
-  readonly maxRangeDays = 7;
+  readonly rangeOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
+  readonly maxRangeDays = 14;
 
   selectedArea$ = this.store.select(selectSelectedArea);
   selectedDate$ = this.store.select(selectSelectedDate);
