@@ -36,10 +36,13 @@ Restart Claude Code after changing `.mcp.json` for the update to take effect.
 npm start          # dev server at http://localhost:4200
 npm run dev        # dev server at http://localhost:3000
 npm run build      # production build → dist/ng-nordpool/browser/
+npm run watch      # incremental dev build (watch mode)
 npm test           # all unit tests (vitest via @angular/build:unit-test)
 ng test --include="**/app.spec.ts"  # single test file (currently the only spec)
-npx prettier --write .  # format all files (printWidth 100, singleQuotes)
+npx prettier --write .  # format all files
 ```
+
+There is no linter configured (no ESLint or similar). Prettier config is in `package.json` (`printWidth: 100`, `singleQuote: true`, `angular` HTML parser).
 
 > **Note:** `app.spec.ts` has a stale "render title" test that expects `<h1>Hello, ng-nordpool</h1>` — the `App` component only renders `<router-outlet />`, so that assertion always fails. The "should create the app" test passes fine.
 
