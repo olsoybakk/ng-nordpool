@@ -27,51 +27,6 @@
           (click)="ls.toggleLang()"
           [attr.aria-label]="ls.lang() === 'nb' ? ls.t().switchToEnglish : ls.t().switchToNorwegian"
         >{{ ls.lang() === 'nb' ? 'EN' : 'NO' }}</button>
-
-        <button
-          class="toggle-btn"
-          [class.toggle-btn--active]="includeTax()"
-          (click)="toggleTax()"
-          [attr.aria-pressed]="includeTax()"
-          [attr.aria-label]="ls.t().taxAriaLabel"
-          [attr.title]="ls.t().taxTitle"
-        >{{ ls.t().taxBtn }}</button>
-
-        <button
-          class="toggle-btn"
-          [class.toggle-btn--active]="showNorgespris()"
-          (click)="toggleNorgespris()"
-          [attr.aria-pressed]="showNorgespris()"
-          [attr.aria-label]="ls.t().norgesprisAriaLabel"
-          [attr.title]="ls.t().norgesprisTitle"
-        >Norgespris</button>
-
-        <div class="chart-toggle" role="group" [attr.aria-label]="ls.t().chartTypeLabel">
-          <button
-            class="toggle-btn"
-            [class.toggle-btn--active]="chartMode() === 'line'"
-            (click)="setChartMode('line')"
-            [attr.aria-label]="ls.t().lineAriaLabel"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-              <polyline points="1,13 5,7 9,9 13,3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
-            </svg>
-            {{ ls.t().lineBtn }}
-          </button>
-          <button
-            class="toggle-btn"
-            [class.toggle-btn--active]="chartMode() === 'bar'"
-            (click)="setChartMode('bar')"
-            [attr.aria-label]="ls.t().barAriaLabel"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-              <rect x="1" y="6" width="3" height="9" rx="1"/>
-              <rect x="6" y="3" width="3" height="12" rx="1"/>
-              <rect x="11" y="8" width="3" height="7" rx="1"/>
-            </svg>
-            {{ ls.t().barBtn }}
-          </button>
-        </div>
       </div>
     </div>
     <p class="dashboard__subtitle">{{ ls.t().subtitle }}</p>
@@ -98,7 +53,55 @@
           <div class="spinner"></div>
         </div>
       }
-      <h2 class="section-title">{{ ls.t().hourlyPrices }}</h2>
+      <div class="chart-header">
+        <h2 class="section-title">{{ ls.t().hourlyPrices }}</h2>
+        <div class="chart-controls">
+          <button
+            class="toggle-btn"
+            [class.toggle-btn--active]="includeTax()"
+            (click)="toggleTax()"
+            [attr.aria-pressed]="includeTax()"
+            [attr.aria-label]="ls.t().taxAriaLabel"
+            [attr.title]="ls.t().taxTitle"
+          >{{ ls.t().taxBtn }}</button>
+
+          <button
+            class="toggle-btn"
+            [class.toggle-btn--active]="showNorgespris()"
+            (click)="toggleNorgespris()"
+            [attr.aria-pressed]="showNorgespris()"
+            [attr.aria-label]="ls.t().norgesprisAriaLabel"
+            [attr.title]="ls.t().norgesprisTitle"
+          >Norgespris</button>
+
+          <div class="chart-toggle" role="group" [attr.aria-label]="ls.t().chartTypeLabel">
+            <button
+              class="toggle-btn"
+              [class.toggle-btn--active]="chartMode() === 'line'"
+              (click)="setChartMode('line')"
+              [attr.aria-label]="ls.t().lineAriaLabel"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                <polyline points="1,13 5,7 9,9 13,3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+              </svg>
+              {{ ls.t().lineBtn }}
+            </button>
+            <button
+              class="toggle-btn"
+              [class.toggle-btn--active]="chartMode() === 'bar'"
+              (click)="setChartMode('bar')"
+              [attr.aria-label]="ls.t().barAriaLabel"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                <rect x="1" y="6" width="3" height="9" rx="1"/>
+                <rect x="6" y="3" width="3" height="12" rx="1"/>
+                <rect x="11" y="8" width="3" height="7" rx="1"/>
+              </svg>
+              {{ ls.t().barBtn }}
+            </button>
+          </div>
+        </div>
+      </div>
       <app-price-chart
         [chartMode]="chartMode()"
         [includeTax]="includeTax()"
