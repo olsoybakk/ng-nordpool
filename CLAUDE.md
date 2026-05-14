@@ -18,6 +18,8 @@ Angular 21 app that displays Nordpool day-ahead electricity spot prices.
 
 > **Always ask the user before merging a PR.** Create and push the branch, open the PR, share the URL, then wait for explicit approval before running `gh pr merge`.
 
+> **After merging, always delete the branch** — both remote (`git push origin --delete <branch>`) and local (`git branch -D <branch>`). Then run `git checkout main && git pull`.
+
 ```bash
 git config core.hooksPath .githooks
 ```
