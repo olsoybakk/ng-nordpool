@@ -20,6 +20,8 @@ Angular 21 app that displays Nordpool day-ahead electricity spot prices.
 
 > **After merging, always delete the branch** — both remote (`git push origin --delete <branch>`) and local (`git branch -D <branch>`). Then run `git checkout main && git pull`.
 
+> **After merging, always clean up `.playwright-mcp/`** — run `rm -rf .playwright-mcp/` to remove screenshots and snapshots left from Playwright MCP sessions.
+
 ```bash
 git config core.hooksPath .githooks
 ```
