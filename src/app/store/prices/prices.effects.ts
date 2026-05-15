@@ -8,12 +8,7 @@ import { LocationService } from '../../services/location.service';
 import { LanguageService } from '../../services/language.service';
 import { selectSelectedDate, selectDateRangeDays, selectLoadedDates } from './prices.selectors';
 import * as PricesActions from './prices.actions';
-
-function subtractDays(isoDate: string, days: number): string {
-  const d = new Date(isoDate + 'T12:00:00');
-  d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0, 10);
-}
+import { subtractDays } from '../../utils/date';
 
 @Injectable()
 export class PricesEffects {
