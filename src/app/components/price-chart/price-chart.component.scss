@@ -160,8 +160,16 @@
 // Hover column
 .hover-column {
   fill: var(--color-text);
-  opacity: 0.06;
+  opacity: 0.1;
   pointer-events: none;
+}
+
+.hover-line {
+  stroke: var(--color-text);
+  stroke-width: 1;
+  opacity: 0.3;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
 }
 
 // Bar chart

@@ -216,6 +216,13 @@
           [attr.height]="dims().chartH"
           class="hover-column"
         />
+        <line
+          [attr.x1]="offsetX + hoveredSlot()! * slotW() + slotW() / 2"
+          [attr.y1]="offsetY"
+          [attr.x2]="offsetX + hoveredSlot()! * slotW() + slotW() / 2"
+          [attr.y2]="dims().bottomY"
+          class="hover-line"
+        />
       }
 
       <!-- Current-time marker -->
