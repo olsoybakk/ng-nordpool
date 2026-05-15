@@ -43,9 +43,11 @@ export class DashboardComponent implements OnInit {
   dateRangeDays$ = this.store.select(selectDateRangeDays);
   notification = toSignal(this.store.select(selectNotification), { initialValue: null });
 
-  chartMode = signal<ChartMode>('line');
-  includeTax = signal(false);
-  showNorgespris = signal(false);
+  chartMode = signal<ChartMode>(
+    (localStorage.getItem('chartMode') as ChartMode | null) ?? 'line',
+  );
+  includeTax = signal(localStorage.getItem('includeTax') === 'true');
+  showNorgespris = signal(localStorage.getItem('showNorgespris') === 'true');
   theme = signal<'dark' | 'light'>(
     window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
   );
@@ -53,6 +55,15 @@ export class DashboardComponent implements OnInit {
   constructor() {
     effect(() => {
       document.documentElement.setAttribute('data-theme', this.theme());
+    });
+    effect(() => {
+      localStorage.setItem('chartMode', this.chartMode());
+    });
+    effect(() => {
+      localStorage.setItem('includeTax', String(this.includeTax()));
+    });
+    effect(() => {
+      localStorage.setItem('showNorgespris', String(this.showNorgespris()));
     });
 
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
