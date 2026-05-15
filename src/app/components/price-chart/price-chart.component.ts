@@ -320,7 +320,7 @@ export class PriceChartComponent {
       // Tooltip is position:fixed so coordinates are viewport-relative.
       // relX/relY are only used for slot detection and flip threshold.
       const TOOLTIP_W = 300;
-      const flip = relX > rect.width - TOOLTIP_W;
+      const flip = clientX > window.innerWidth - TOOLTIP_W;
       this.tooltipFlip.set(flip);
       this.tooltipLeft.set(
         flip ? Math.max(TOOLTIP_W, clientX) : Math.min(clientX, window.innerWidth - TOOLTIP_W)
