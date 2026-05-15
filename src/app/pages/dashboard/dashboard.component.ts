@@ -19,6 +19,7 @@ import {
 } from '../../store';
 import { detectLocation, loadPrices, loadAllAreaPrices } from '../../store/prices/prices.actions';
 import { LanguageService } from '../../services/language.service';
+import { subtractDays } from '../../utils/date';
 
 @Component({
   selector: 'app-dashboard',
@@ -76,14 +77,17 @@ export class DashboardComponent implements OnInit {
     combineLatest([
       this.store.select(selectSelectedArea),
       this.store.select(selectSelectedDate),
+      this.store.select(selectDateRangeDays),
     ])
       .pipe(first())
-      .subscribe(([area, date]) => {
+      .subscribe(([area, date, days]) => {
         if (!localStorage.getItem('selectedArea')) {
           this.store.dispatch(detectLocation());
         }
         this.store.dispatch(loadPrices({ area, date }));
-        this.store.dispatch(loadAllAreaPrices({ date }));
+        for (let i = 0; i < days; i++) {
+          this.store.dispatch(loadAllAreaPrices({ date: subtractDays(date, i) }));
+        }
       });
   }
 
