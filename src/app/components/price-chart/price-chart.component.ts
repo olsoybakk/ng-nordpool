@@ -74,11 +74,12 @@ interface Zone {
 }
 
 export interface TooltipEntry {
-  area: PriceArea;
+  area: string;
   label: string;
   ore: number;
   color: string;
   isSelected: boolean;
+  isNorgespris?: boolean;
 }
 
 const CHART_W = 1500;
@@ -482,8 +483,8 @@ export class PriceChartComponent {
       { y: lowThreshY,   height: bottomY - lowThreshY,        level: 'low',  label: 'Low'  },
     ];
 
-    const pricesBySlot: TooltipEntry[][] = Array.from({ length: slotCount }, (_, slot) =>
-      areaEntries
+    const pricesBySlot: TooltipEntry[][] = Array.from({ length: slotCount }, (_, slot) => {
+      const entries: TooltipEntry[] = areaEntries
         .filter(({ hourlyPrices }) => hourlyPrices[slot] != null)
         .map(({ area, hourlyPrices }) => ({
           area,
@@ -492,8 +493,24 @@ export class PriceChartComponent {
           color: AREA_COLORS[area],
           isSelected: area === selectedArea,
         }))
-        .sort((a, b) => b.ore - a.ore)
-    );
+        .sort((a, b) => b.ore - a.ore);
+
+      if (norgesprisDisplayOre !== null) {
+        const nEntry: TooltipEntry = {
+          area: 'norgespris',
+          label: 'Norgespris',
+          ore: norgesprisDisplayOre,
+          color: 'var(--color-norgespris)',
+          isSelected: false,
+          isNorgespris: true,
+        };
+        const idx = entries.findIndex((e) => e.ore < norgesprisDisplayOre!);
+        if (idx === -1) entries.push(nEntry);
+        else entries.splice(idx, 0, nEntry);
+      }
+
+      return entries;
+    });
 
     const fmtTime = (s: string) => {
       const d = new Date(s);
