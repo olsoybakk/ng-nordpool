@@ -560,6 +560,7 @@ export class PriceChartComponent {
       showDayLabels,
       norgesprisBarY,
       norgesprisLineY,
+      norgesprisOre: norgesprisDisplayOre,
     };
   }
 

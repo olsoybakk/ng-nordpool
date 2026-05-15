@@ -346,6 +346,20 @@
     height: 8px;
     border-radius: 50%;
     flex-shrink: 0;
+
+    &--dashed {
+      border-radius: 0;
+      height: 2px;
+      background: none !important;
+      border-top: 2px dashed var(--color-norgespris);
+    }
+  }
+
+  &__row--norgespris {
+    opacity: 0.85;
+    border-top: 1px solid var(--color-border);
+    margin-top: 0.1rem;
+    padding-top: 0.3rem;
   }
 
   &__area {

@@ -288,6 +288,13 @@
               </div>
             }
           }
+          @if (vm.norgesprisOre !== null) {
+            <div class="tooltip__row tooltip__row--norgespris">
+              <span class="tooltip__swatch tooltip__swatch--dashed"></span>
+              <span class="tooltip__area">{{ ls.t().norgesprisLabel }}</span>
+              <span class="tooltip__price">{{ vm.norgesprisOre | number: '1.2-2' }}</span>
+            </div>
+          }
         </div>
       </div>
     }
