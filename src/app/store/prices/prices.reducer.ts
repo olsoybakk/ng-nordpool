@@ -1,8 +1,9 @@
 import { createReducer, on } from '@ngrx/store';
 import { PriceArea, PricesState } from '../../models/price.model';
 import * as PricesActions from './prices.actions';
+import { localISODate } from '../../utils/date';
 
-const todayISO = new Date().toISOString().slice(0, 10);
+const todayISO = localISODate();
 const storedArea = localStorage.getItem('selectedArea') as PriceArea | null;
 const storedDays = Math.min(14, Math.max(1, parseInt(localStorage.getItem('dateRangeDays') ?? '1', 10)));
 
