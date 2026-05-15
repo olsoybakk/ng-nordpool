@@ -327,11 +327,19 @@ export class PriceChartComponent {
       );
 
       const HALF_H = this.chartMode() === 'bar' ? 35 : 110;
+      const tooltipH = HALF_H * 2;
       if (isTouch) {
-        // Show tooltip above finger; fall back to below when too close to the top
-        const anchor = relY >= HALF_H * 2 + 44 ? 'above' : 'below';
+        // Anchor based on viewport space (clientY), not SVG-relative position.
+        // Prefer 'above' (user said overlapping content above the chart is fine);
+        // fall back to 'below' only when too close to the top of the viewport.
+        // Clamp 'below' so the tooltip never exits the viewport bottom.
+        const hasSpaceAbove = clientY >= tooltipH + 44;
+        const anchor = hasSpaceAbove ? 'above' : 'below';
         this.tooltipAnchor.set(anchor);
-        this.tooltipTop.set(clientY);
+        const top = anchor === 'below'
+          ? Math.min(clientY, window.innerHeight - tooltipH - 44)
+          : clientY;
+        this.tooltipTop.set(top);
       } else {
         this.tooltipAnchor.set('center');
         this.tooltipTop.set(Math.max(HALF_H, Math.min(clientY, window.innerHeight - HALF_H)));
