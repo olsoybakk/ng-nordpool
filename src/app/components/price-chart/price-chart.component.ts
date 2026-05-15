@@ -204,6 +204,10 @@ export class PriceChartComponent {
   tooltipTop = signal(0);
   tooltipFlip = signal(false);
   tooltipAnchor = signal<'center' | 'above' | 'below'>('center');
+  zoomRange = signal<[number, number] | null>(null);
+
+  private _totalSlotCount = signal(SLOT_COUNT);
+  private _pinchState: { dist: number; range: [number, number]; centerSlot: number } | null = null;
 
   vm$ = combineLatest([
     this.store.select(selectCurrentPrice),
@@ -214,8 +218,9 @@ export class PriceChartComponent {
     toObservable(this.dims),
     toObservable(this.includeTax),
     toObservable(this.showNorgespris),
+    toObservable(this.zoomRange),
   ]).pipe(
-    map(([current, mergedAreaPrices, selectedArea, selectedDate, dateRangeDays, dims, includeTax, showNorgespris]) =>
+    map(([current, mergedAreaPrices, selectedArea, selectedDate, dateRangeDays, dims, includeTax, showNorgespris, zoom]) =>
       this.buildViewModel(
         current,
         mergedAreaPrices,
@@ -224,11 +229,15 @@ export class PriceChartComponent {
         dateRangeDays,
         dims,
         includeTax,
-        showNorgespris
+        showNorgespris,
+        zoom as [number, number] | null
       )
     ),
     tap((vm) => {
-      if (vm) this._slotCount.set(vm.slotCount);
+      if (vm) {
+        this._slotCount.set(vm.slotCount);
+        this._totalSlotCount.set(vm.totalSlotCount);
+      }
     })
   );
 
@@ -236,11 +245,63 @@ export class PriceChartComponent {
     this.updateTooltip(event.currentTarget as SVGSVGElement, event.clientX, event.clientY, false);
   }
 
+  onTouchStart(event: TouchEvent): void {
+    if (event.touches.length !== 2) return;
+    event.preventDefault();
+    const dist = this.pinchDist(event.touches);
+    const rect = (event.currentTarget as SVGSVGElement).getBoundingClientRect();
+    const centerClientX = (event.touches[0].clientX + event.touches[1].clientX) / 2;
+    const svgX = (centerClientX - rect.left) * (CHART_W / rect.width);
+    const zoom = this.zoomRange();
+    const total = this._totalSlotCount();
+    const [zs, ze] = zoom ?? [0, total - 1];
+    const visGap = this.chartW / (ze - zs + 1);
+    const centerSlot = zs + (svgX - this.offsetX) / visGap;
+    this._pinchState = { dist, range: zoom ?? [0, total - 1], centerSlot };
+  }
+
   onTouchMove(event: TouchEvent): void {
+    if (event.touches.length === 2) {
+      event.preventDefault();
+      if (!this._pinchState) return;
+      const dist = this.pinchDist(event.touches);
+      const scale = dist / this._pinchState.dist;
+      const total = this._totalSlotCount();
+      const initVisible = this._pinchState.range[1] - this._pinchState.range[0] + 1;
+      const newVisible = Math.round(initVisible / scale);
+      const clamped = Math.min(total, Math.max(8, newVisible));
+      if (clamped >= total) {
+        this.zoomRange.set(null);
+      } else {
+        const center = this._pinchState.centerSlot;
+        let start = Math.round(center - clamped / 2);
+        let end = start + clamped - 1;
+        if (start < 0) { start = 0; end = Math.min(clamped - 1, total - 1); }
+        if (end >= total) { end = total - 1; start = Math.max(0, end - clamped + 1); }
+        this.zoomRange.set([start, end]);
+      }
+      return;
+    }
     const touch = event.touches[0];
     if (!touch) return;
     event.preventDefault();
     this.updateTooltip(event.currentTarget as SVGSVGElement, touch.clientX, touch.clientY, true);
+  }
+
+  onTouchEnd(event: TouchEvent): void {
+    if (event.touches.length < 2) this._pinchState = null;
+    if (event.touches.length === 0) this.hoveredSlot.set(null);
+  }
+
+  resetZoom(): void {
+    this.zoomRange.set(null);
+  }
+
+  private pinchDist(touches: TouchList): number {
+    return Math.hypot(
+      touches[1].clientX - touches[0].clientX,
+      touches[1].clientY - touches[0].clientY
+    );
   }
 
   private updateTooltip(svg: SVGSVGElement, clientX: number, clientY: number, isTouch: boolean): void {
@@ -289,15 +350,22 @@ export class PriceChartComponent {
     dateRangeDays: number,
     { chartH, bottomY, labelSize }: { chartH: number; bottomY: number; labelSize: number },
     includeTax: boolean,
-    showNorgespris: boolean
+    showNorgespris: boolean,
+    zoom: [number, number] | null
   ) {
-    const barPrices = allAreaPrices[selectedArea] ?? [];
-    if (!barPrices.length) return null;
+    const allBarPrices = allAreaPrices[selectedArea] ?? [];
+    if (!allBarPrices.length) return null;
 
     const snapFloor25 = (v: number) => { const s = Math.floor(v / 25) * 25; return s < v ? s : s - 25; };
     const snapCeil25  = (v: number) => { const s = Math.ceil(v / 25)  * 25; return s > v ? s : s + 25; };
 
+    const totalSlotCount = allBarPrices.length;
+    const zStart = Math.max(0, zoom ? zoom[0] : 0);
+    const zEnd = Math.min(totalSlotCount - 1, zoom ? zoom[1] : totalSlotCount - 1);
+    const barPrices = allBarPrices.slice(zStart, zEnd + 1);
     const slotCount = barPrices.length;
+    if (!slotCount) return null;
+
     const gap = this.chartW / slotCount;
     const barW = gap * 0.8;
 
@@ -306,13 +374,15 @@ export class PriceChartComponent {
       ? (includeTax ? NORGESPRIS_ORE_INCL_TAX : NORGESPRIS_ORE_INCL_TAX / TAX_FACTOR)
       : null;
 
-    // Bar chart: single area, all days in range
+    // Bar chart: single area, visible slots
     const singleValues = barPrices.map((p) => displayOre(selectedArea, p.ore_per_kWh, includeTax));
     const singleMin = snapFloor25(Math.min(...singleValues) - 5);
     const singleMax = snapCeil25(Math.max(...singleValues) + 5);
     const singleRange = singleMax - singleMin || 1;
 
-    const hourStep = dateRangeDays === 1 ? 3 : dateRangeDays <= 3 ? 6 : dateRangeDays <= 7 ? 12 : 24;
+    const visibleHours = slotCount / 4;
+    const baseHourStep = dateRangeDays === 1 ? 3 : dateRangeDays <= 3 ? 6 : dateRangeDays <= 7 ? 12 : 24;
+    const hourStep = visibleHours <= 6 ? 1 : visibleHours <= 12 ? 2 : baseHourStep;
     const showDayLabels = dateRangeDays > 1;
     const slotsPerDay = SLOT_COUNT; // 96
 
@@ -327,7 +397,8 @@ export class PriceChartComponent {
       else priceLevel = 'high';
 
       const d = new Date(p.time_start);
-      const isDayBoundary = i % slotsPerDay === 0;
+      const absoluteSlot = zStart + i;
+      const isDayBoundary = absoluteSlot % slotsPerDay === 0;
       const dayLabel = isDayBoundary
         ? d.toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric' })
         : '';
@@ -350,10 +421,10 @@ export class PriceChartComponent {
 
     const yTicks = this.buildYTicks(singleMin, singleMax, chartH);
 
-    // Line chart: all areas, all days
+    // Line chart: all areas, visible slots
     const areaEntries = PRICE_AREAS.map(({ value }) => ({
       area: value,
-      hourlyPrices: allAreaPrices[value] ?? [],
+      hourlyPrices: (allAreaPrices[value] ?? []).slice(zStart, zEnd + 1),
     })).filter((e) => e.hourlyPrices.length > 0);
 
     let rawMultiMin = Infinity, rawMultiMax = -Infinity;
@@ -369,7 +440,6 @@ export class PriceChartComponent {
     const multiRange = multiMax - multiMin || 1;
     const toYMulti = (v: number) =>
       this.offsetY + chartH - ((v - multiMin) / multiRange) * chartH;
-    const multiGap = this.chartW / slotCount;
 
     const areaLines: AreaLine[] = areaEntries.map(({ area, hourlyPrices }) => {
       const stepPairs: string[] = [];
@@ -377,8 +447,8 @@ export class PriceChartComponent {
 
       hourlyPrices.forEach((p, i) => {
         const ore = displayOre(area, p.ore_per_kWh, includeTax);
-        const x1 = this.offsetX + i * multiGap;
-        const x2 = this.offsetX + (i + 1) * multiGap;
+        const x1 = this.offsetX + i * gap;
+        const x2 = this.offsetX + (i + 1) * gap;
         const y = toYMulti(ore);
         stepPairs.push(`${x1},${y}`, `${x2},${y}`);
         if (current != null && p.time_start === current.time_start) {
@@ -387,7 +457,7 @@ export class PriceChartComponent {
       });
 
       const lastOre = displayOre(area, hourlyPrices.at(-1)!.ore_per_kWh, includeTax);
-      const rawLabelX = this.offsetX + hourlyPrices.length * multiGap + 4;
+      const rawLabelX = this.offsetX + hourlyPrices.length * gap + 4;
       const maxLabelX = CHART_W - Math.round(labelSize * 1.8) - 4;
       return {
         area,
@@ -440,14 +510,13 @@ export class PriceChartComponent {
       };
     });
 
-    // "Now" line: show only when today is within the active range
+    // "Now" line: compute absolute slot fraction, then map to visible x
     const todayISO = new Date().toISOString().slice(0, 10);
-    let nowLineX: number | null = null;
+    let nowAbsoluteSlotFrac: number | null = null;
     if (dateRangeDays === 1 && selectedDate === todayISO) {
       const now = new Date();
-      nowLineX = this.offsetX + (now.getHours() + now.getMinutes() / 60) * (this.chartW / 24);
+      nowAbsoluteSlotFrac = (now.getHours() + now.getMinutes() / 60) * 4;
     } else if (dateRangeDays > 1) {
-      // In multi-day, compute the global slot offset for now
       const oldestDate = new Date(selectedDate + 'T12:00:00');
       oldestDate.setDate(oldestDate.getDate() - (dateRangeDays - 1));
       const oldest = oldestDate.toISOString().slice(0, 10);
@@ -457,9 +526,14 @@ export class PriceChartComponent {
           86400000
         );
         const now = new Date();
-        const slotOffset = dayOffset * slotsPerDay + (now.getHours() + now.getMinutes() / 60) * 4;
-        nowLineX = this.offsetX + slotOffset * multiGap;
+        nowAbsoluteSlotFrac = dayOffset * slotsPerDay + (now.getHours() + now.getMinutes() / 60) * 4;
       }
+    }
+
+    let nowLineX: number | null = null;
+    if (nowAbsoluteSlotFrac !== null &&
+        nowAbsoluteSlotFrac >= zStart && nowAbsoluteSlotFrac <= zEnd + 1) {
+      nowLineX = this.offsetX + (nowAbsoluteSlotFrac - zStart) * gap;
     }
 
     const clampY = (y: number) => Math.max(this.offsetY, Math.min(bottomY, y));
@@ -481,6 +555,7 @@ export class PriceChartComponent {
       slotTimes,
       nowLineX,
       slotCount,
+      totalSlotCount,
       hourStep,
       showDayLabels,
       norgesprisBarY,
