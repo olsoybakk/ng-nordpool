@@ -1,7 +1,17 @@
 .stats-bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 1rem;
-  flex-wrap: wrap;
+
+  // 3-item state (Now hidden): make the first card (Avg) span both columns so
+  // Min and Max share the second row rather than Max being alone at the bottom.
+  @media (max-width: 640px) {
+    grid-template-columns: repeat(2, 1fr);
+
+    .stat:first-child:nth-last-child(3) {
+      grid-column: 1 / -1;
+    }
+  }
 }
 
 .stat {
@@ -12,8 +22,7 @@
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 0.75rem 1.25rem;
-  min-width: 130px;
-  flex: 1;
+  min-width: 0;
 
   @media (max-width: 640px) {
     padding: 0.5rem 0.75rem;
