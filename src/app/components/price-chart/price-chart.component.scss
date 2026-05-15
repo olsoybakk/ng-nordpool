@@ -278,10 +278,10 @@
   letter-spacing: 0.05em;
 }
 
-// Tooltip
+// Tooltip — position:fixed so it is never clipped by overflow:hidden on .chart-outer
 .tooltip {
-  position: absolute;
-  z-index: 10;
+  position: fixed;
+  z-index: 1001;
   pointer-events: none;
   background: var(--color-surface);
   border: 1px solid var(--color-border);

@@ -295,7 +295,7 @@ Repo must be **public** for GitHub Pages on a free plan.
 
 - No third-party chart library — SVG rendered directly in the component to keep the bundle small.
 - Step chart geometry: two points per hour (left + right edge at same Y) produces correct staircase without any path commands — a plain `<polyline>` is enough.
-- Tooltip uses HTML (not SVG foreignObject) for easy styling. Positioned absolute inside `.chart-outer`; `pointer-events: none` so it never blocks mouse events on the SVG. Sibling of `.chart-wrapper` so it is never clipped by the wrapper.
+- Tooltip uses HTML (not SVG foreignObject) for easy styling. Uses `position: fixed` (not `absolute`) so it is never clipped by `overflow: hidden` on `.chart-outer`. Coordinates in `updateTooltip` are therefore viewport-relative (`clientX/clientY`); `relX/relY` are only used for slot detection and the flip threshold. `pointer-events: none` so it never blocks mouse events on the SVG.
 - Tooltip flip threshold uses absolute pixels (`rect.width - 240`) rather than a percentage so it accounts for the tooltip's actual width.
 - `chartMode` lives in the dashboard signal, not the store — it's purely presentational. It (along with `includeTax` and `showNorgespris`) is persisted to localStorage via `effect()` in the dashboard so settings survive a reload without polluting NgRx state.
 - `loadAllAreaPrices` fires a single API request for all 5 areas via `getAllAreaPrices(date)` — the proxy accepts a comma-separated `deliveryArea` list so no parallel requests are needed.

@@ -317,11 +317,13 @@ export class PriceChartComponent {
     if (slot >= 0 && slot < slotCount) {
       this.hoveredSlot.set(slot);
 
+      // Tooltip is position:fixed so coordinates are viewport-relative.
+      // relX/relY are only used for slot detection and flip threshold.
       const TOOLTIP_W = 300;
       const flip = relX > rect.width - TOOLTIP_W;
       this.tooltipFlip.set(flip);
       this.tooltipLeft.set(
-        flip ? Math.max(TOOLTIP_W, relX) : Math.min(relX, rect.width - TOOLTIP_W)
+        flip ? Math.max(TOOLTIP_W, clientX) : Math.min(clientX, window.innerWidth - TOOLTIP_W)
       );
 
       const HALF_H = this.chartMode() === 'bar' ? 35 : 110;
@@ -329,10 +331,10 @@ export class PriceChartComponent {
         // Show tooltip above finger; fall back to below when too close to the top
         const anchor = relY >= HALF_H * 2 + 44 ? 'above' : 'below';
         this.tooltipAnchor.set(anchor);
-        this.tooltipTop.set(relY);
+        this.tooltipTop.set(clientY);
       } else {
         this.tooltipAnchor.set('center');
-        this.tooltipTop.set(Math.max(HALF_H, Math.min(relY, rect.height - HALF_H)));
+        this.tooltipTop.set(Math.max(HALF_H, Math.min(clientY, window.innerHeight - HALF_H)));
       }
     } else {
       this.hoveredSlot.set(null);
