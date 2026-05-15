@@ -4,13 +4,14 @@ import * as PricesActions from './prices.actions';
 
 const todayISO = new Date().toISOString().slice(0, 10);
 const storedArea = localStorage.getItem('selectedArea') as PriceArea | null;
+const storedDays = Math.min(14, Math.max(1, parseInt(localStorage.getItem('dateRangeDays') ?? '1', 10)));
 
 export const initialState: PricesState = {
   prices: [],
   allAreaPricesByDate: {},
   selectedArea: storedArea ?? 'NO1',
   selectedDate: todayISO,
-  dateRangeDays: 1,
+  dateRangeDays: isNaN(storedDays) ? 1 : storedDays,
   loading: false,
   allAreasLoadingCount: 0,
   error: null,

@@ -162,7 +162,7 @@ export class PriceChartComponent {
     if (fullscreen) {
       h = Math.max(200, Math.round(((window.innerHeight - edge) * CHART_W) / renderedW) - PADDING.top - padBottom);
     } else if (ww < 640) {
-      h = Math.max(200, Math.round(wh * 0.65 * CHART_W / renderedW) - PADDING.top - padBottom);
+      h = Math.max(200, Math.round(wh * 0.45 * CHART_W / renderedW) - PADDING.top - padBottom);
     } else if (ch > 0 && mode === 'line') {
       h = Math.max(200, Math.round((ch - CARD_PAD_PX) * CHART_W / renderedW) - PADDING.top - padBottom);
     } else {

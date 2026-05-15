@@ -32,6 +32,15 @@ export class PricesEffects {
     { dispatch: false }
   );
 
+  persistDateRangeDays$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(PricesActions.setDateRangeDays),
+        tap(({ days }) => localStorage.setItem('dateRangeDays', String(days)))
+      ),
+    { dispatch: false }
+  );
+
   detectLocation$ = createEffect(() =>
     this.actions$.pipe(
       ofType(PricesActions.detectLocation),
