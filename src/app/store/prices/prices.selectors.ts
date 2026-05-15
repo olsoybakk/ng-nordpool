@@ -1,5 +1,6 @@
 import { createFeatureSelector, createSelector } from '@ngrx/store';
 import { HourlyPrice, PriceArea, PricesState } from '../../models/price.model';
+import { localISODate } from '../../utils/date';
 
 export const selectPricesState = createFeatureSelector<PricesState>('prices');
 
@@ -63,7 +64,7 @@ export const selectCurrentPrice = createSelector(selectAllPrices, (prices) => {
  */
 export const selectCurrentPriceInRange = createSelector(selectPricesState, (state) => {
   const now = new Date();
-  const todayISO = now.toISOString().slice(0, 10);
+  const todayISO = localISODate(now);
   const { selectedDate, dateRangeDays, selectedArea } = state;
   const oldestDate = subtractDays(selectedDate, dateRangeDays - 1);
   if (todayISO < oldestDate || todayISO > selectedDate) return null;

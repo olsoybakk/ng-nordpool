@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Store } from '@ngrx/store';
 import { AREA_COLORS, PRICE_AREAS, PriceArea } from '../../models/price.model';
 import { LanguageService } from '../../services/language.service';
+import { localISODate } from '../../utils/date';
 import {
   selectSelectedArea,
   selectSelectedDate,
@@ -28,7 +29,7 @@ export class ControlsComponent implements OnInit {
 
   readonly areas = PRICE_AREAS;
   readonly areaColors = AREA_COLORS;
-  readonly maxDate = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
+  readonly maxDate = localISODate(new Date(Date.now() + 864e5));
   readonly rangeOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
   readonly maxRangeDays = 14;
 

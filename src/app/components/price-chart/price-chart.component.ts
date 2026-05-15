@@ -15,6 +15,7 @@ import { Store } from '@ngrx/store';
 import { map, tap } from 'rxjs/operators';
 import { combineLatest } from 'rxjs';
 import { AREA_COLORS, HourlyPrice, PRICE_AREAS, PriceArea } from '../../models/price.model';
+import { localISODate } from '../../utils/date';
 import {
   selectCurrentPrice,
   selectMergedAreaPrices,
@@ -538,7 +539,7 @@ export class PriceChartComponent {
     });
 
     // "Now" line: compute absolute slot fraction, then map to visible x
-    const todayISO = new Date().toISOString().slice(0, 10);
+    const todayISO = localISODate();
     let nowAbsoluteSlotFrac: number | null = null;
     if (dateRangeDays === 1 && selectedDate === todayISO) {
       const now = new Date();

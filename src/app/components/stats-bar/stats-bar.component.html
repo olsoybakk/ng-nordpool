@@ -8,12 +8,12 @@
         </div>
       }
       <div class="stat">
-        <span class="stat__label">{{ ls.t().min }}</span>
-        <span class="stat__value stat__value--low">{{ stats.min * taxFactor(area) | number: '1.2-2' }} øre/kWh</span>
-      </div>
-      <div class="stat">
         <span class="stat__label">{{ ls.t().avg }}</span>
         <span class="stat__value">{{ stats.avg * taxFactor(area) | number: '1.2-2' }} øre/kWh</span>
+      </div>
+      <div class="stat">
+        <span class="stat__label">{{ ls.t().min }}</span>
+        <span class="stat__value stat__value--low">{{ stats.min * taxFactor(area) | number: '1.2-2' }} øre/kWh</span>
       </div>
       <div class="stat">
         <span class="stat__label">{{ ls.t().max }}</span>
