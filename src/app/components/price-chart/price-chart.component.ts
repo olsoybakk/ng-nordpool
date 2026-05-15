@@ -317,22 +317,32 @@ export class PriceChartComponent {
     if (slot >= 0 && slot < slotCount) {
       this.hoveredSlot.set(slot);
 
+      // Tooltip is position:fixed so coordinates are viewport-relative.
+      // relX/relY are only used for slot detection and flip threshold.
       const TOOLTIP_W = 300;
-      const flip = relX > rect.width - TOOLTIP_W;
+      const flip = clientX > window.innerWidth - TOOLTIP_W;
       this.tooltipFlip.set(flip);
       this.tooltipLeft.set(
-        flip ? Math.max(TOOLTIP_W, relX) : Math.min(relX, rect.width - TOOLTIP_W)
+        flip ? Math.max(TOOLTIP_W, clientX) : Math.min(clientX, window.innerWidth - TOOLTIP_W)
       );
 
       const HALF_H = this.chartMode() === 'bar' ? 35 : 110;
+      const tooltipH = HALF_H * 2;
       if (isTouch) {
-        // Show tooltip above finger; fall back to below when too close to the top
-        const anchor = relY >= HALF_H * 2 + 44 ? 'above' : 'below';
+        // Anchor based on viewport space (clientY), not SVG-relative position.
+        // Prefer 'above' (user said overlapping content above the chart is fine);
+        // fall back to 'below' only when too close to the top of the viewport.
+        // Clamp 'below' so the tooltip never exits the viewport bottom.
+        const hasSpaceAbove = clientY >= tooltipH + 44;
+        const anchor = hasSpaceAbove ? 'above' : 'below';
         this.tooltipAnchor.set(anchor);
-        this.tooltipTop.set(relY);
+        const top = anchor === 'below'
+          ? Math.min(clientY, window.innerHeight - tooltipH - 44)
+          : clientY;
+        this.tooltipTop.set(top);
       } else {
         this.tooltipAnchor.set('center');
-        this.tooltipTop.set(Math.max(HALF_H, Math.min(relY, rect.height - HALF_H)));
+        this.tooltipTop.set(Math.max(HALF_H, Math.min(clientY, window.innerHeight - HALF_H)));
       }
     } else {
       this.hoveredSlot.set(null);
