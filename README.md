@@ -15,9 +15,11 @@ A single-page Angular app for browsing Nordpool day-ahead electricity spot price
 - **Bar chart** — colour-coded low/mid/high by price tertile; current period highlighted
 - **Tax toggle** — apply 25% VAT to all prices (NO4 exempt); off by default
 - **Norgespris reference line** — dashed line at 50 øre/kWh incl. tax for quick comparison
-- **Hover tooltip** — time range (+ date when range > 1 day) + prices for all areas (line) or selected area only (bar); flips left/right and clamps vertically to stay within the chart
-- **Stats bar** — current, min, avg and max for the selected day (øre/kWh)
+- **Hover tooltip** — time range (+ date when range > 1 day) + prices for all areas sorted by value (line) or selected area only (bar); Norgespris shown inline when active; flips left/right, appears above fingertip on touch
+- **Pinch-to-zoom** — two-finger pinch zooms into a time window; ↺ button resets; page zoom is disabled so the gesture is captured by the chart
+- **Stats bar** — current, min, avg and max (øre/kWh); "Now" visible whenever today falls within the selected date range
 - **15-minute table** — øre/kWh for all 96 intervals (bar mode, single day only)
+- **Persistent settings** — language, chart mode, tax, Norgespris and date range survive page reloads; area is remembered and auto-detected on first visit
 - **localStorage cache** — up to 30 full days cached (all areas); switching between dates and ranges is instant
 - **Dark/light mode** — follows system preference automatically; toggle button overrides manually
 - **NgRx store** — all state managed via actions, reducers, effects and selectors

@@ -3,6 +3,9 @@
 }
 @if (vm$ | async; as vm) {
   <div class="chart-outer" [class.chart-outer--fullscreen]="isFullscreen()" (mouseleave)="onMouseLeave()">
+    @if (zoomRange()) {
+      <button class="reset-zoom-btn" (click)="resetZoom()" [attr.aria-label]="ls.t().resetZoom">↺</button>
+    }
     <button
       class="fullscreen-btn"
       (click)="toggleFullscreen()"
@@ -33,9 +36,10 @@
       role="img"
       [attr.aria-label]="chartMode() === 'bar' ? ls.t().barChartAriaLabel : ls.t().lineChartAriaLabel"
       (mousemove)="onMouseMove($event)"
-      (touchstart)="onTouchMove($event)"
+      (touchstart)="onTouchStart($event)"
       (touchmove)="onTouchMove($event)"
-      (touchend)="onMouseLeave()"
+      (touchend)="onTouchEnd($event)"
+      (touchcancel)="onTouchEnd($event)"
     >
       <!-- Y-axis grid lines and labels -->
       @for (tick of (chartMode() === 'bar' ? vm.yTicks : vm.multiTicks); track tick.y) {
@@ -212,6 +216,13 @@
           [attr.height]="dims().chartH"
           class="hover-column"
         />
+        <line
+          [attr.x1]="offsetX + hoveredSlot()! * slotW() + slotW() / 2"
+          [attr.y1]="offsetY"
+          [attr.x2]="offsetX + hoveredSlot()! * slotW() + slotW() / 2"
+          [attr.y2]="dims().bottomY"
+          class="hover-line"
+        />
       }
 
       <!-- Current-time marker -->
@@ -274,12 +285,15 @@
         </div>
         <div class="tooltip__rows">
           @for (entry of vm.pricesBySlot[hoveredSlot()!]; track trackByAreaEntry($index, entry)) {
-            @if (chartMode() === 'line' || entry.isSelected) {
+            @if (chartMode() === 'line' || entry.isSelected || entry.isNorgespris) {
               <div class="tooltip__row"
                 [class.tooltip__row--selected]="chartMode() === 'line' && entry.isSelected"
-                [class.tooltip__row--single]="chartMode() === 'bar'">
-                <span class="tooltip__swatch" [style.background]="entry.color"></span>
-                <span class="tooltip__area">{{ entry.label }}</span>
+                [class.tooltip__row--single]="chartMode() === 'bar'"
+                [class.tooltip__row--norgespris]="entry.isNorgespris">
+                <span class="tooltip__swatch"
+                  [class.tooltip__swatch--dashed]="entry.isNorgespris"
+                  [style.background]="entry.isNorgespris ? null : entry.color"></span>
+                <span class="tooltip__area">{{ entry.isNorgespris ? ls.t().norgesprisLabel : entry.label }}</span>
                 <span class="tooltip__price">{{ entry.ore | number: '1.2-2' }}</span>
               </div>
             }

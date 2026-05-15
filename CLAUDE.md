@@ -119,11 +119,17 @@ src/app/store/prices/
                          catchError → EMPTY (silent fallback, keeps default NO1)
                        persistSelectedArea$ → tap selectArea, writes to localStorage
                          (dispatch: false)
+                       persistDateRangeDays$ → tap setDateRangeDays, writes to
+                         localStorage (dispatch: false)
   prices.selectors.ts  selectAllPrices, selectAllAreaPrices, selectSelectedArea,
                        selectSelectedDate, selectDateRangeDays, selectLoading,
                        selectAllAreasLoading, selectError, selectCurrentPrice,
-                       selectDailyStats, selectNotification, selectLoadedDates,
-                       selectActiveDates, selectMergedAreaPrices
+                       selectCurrentPriceInRange, selectDailyStats, selectNotification,
+                       selectLoadedDates, selectActiveDates, selectMergedAreaPrices
+                       selectCurrentPriceInRange: like selectCurrentPrice but checks
+                         allAreaPricesByDate[today][selectedArea] — returns the current
+                         slot whenever today falls within the active date range, even
+                         when selectedDate is not today (e.g. tomorrow + multi-day)
 src/app/store/index.ts re-exports all of the above
 ```
 
@@ -163,6 +169,8 @@ src/app/components/
                   trigger focuses the first/last option. Options have tabindex=0
                   with Enter/Space to select.
   stats-bar/      Now / Min / Avg / Max cards derived from store selectors.
+                  "Now" uses selectCurrentPriceInRange so it appears whenever the
+                  now-line is visible in the chart (not only when selectedDate === today).
   price-chart/    Pure SVG chart (no charting lib). Inputs: chartMode, includeTax,
                   showNorgespris. Selects date range from store for multi-day data.
                   Y scale: both modes snap min to floor-25 and max to ceil-25 of
@@ -174,24 +182,43 @@ src/app/components/
                     One polyline per area; selected area renders on top (sorted last).
                     Y scale = global snapped min/max across all areas.
                     Uses selectMergedAreaPrices for multi-day data across all areas.
-                  Both modes: dashed vertical "now" line (only when selectedDate ===
-                    today); hover tooltip; fullscreen toggle.
+                  Both modes: dashed vertical "now" line shown whenever today falls
+                    within the visible date range (single-day: selectedDate === today;
+                    multi-day: oldest date ≤ today ≤ selectedDate); hover tooltip;
+                    fullscreen toggle; pinch-to-zoom.
+                  Mobile chart height: 45% of viewport height (desktop uses container
+                    height in line mode, fixed CHART_H in bar mode).
                   Tax: prices multiplied by 1.25 when includeTax is true (NO4 exempt).
                   Norgespris: dashed reference line at 50 øre/kWh (incl. tax) when
-                    showNorgespris is true.
+                    showNorgespris is true. Also injected into the tooltip as a
+                    TooltipEntry (isNorgespris: true) sorted by price value alongside
+                    the other areas (not always at the bottom).
+                  Pinch-to-zoom: two-touch gesture slices the visible slot range
+                    (zoomRange signal → [startSlot, endSlot]). buildViewModel re-maps
+                    the visible window to fill the full chart width; y-scale, x-labels,
+                    now-line, and hourStep all adapt. A ↺ reset button appears above
+                    the chart when zoomed. zoomRange is a 9th source in the combineLatest
+                    vm$ stream. Slot-range slicing avoids viewBox manipulation so the
+                    y-axis remains intact.
                   X-axis label density adapts to range: 3h / 6h / 12h / 24h steps
-                    for 1 / ≤3 / ≤7 / 14-day ranges.
+                    for 1 / ≤3 / ≤7 / 14-day ranges; further tightened when pinch-
+                    zoomed to show 1h or 2h steps for short visible windows.
+                  Hover column: semi-transparent fill (0.10 opacity) + a 1px center
+                    line (0.30 opacity, vector-effect:non-scaling-stroke) to mark the
+                    exact active slot.
                   Tooltip is an HTML div (not SVG) inside .chart-outer, with
                     pointer-events:none so it never blocks SVG mouse events. Closes
                     on both document:click and document:touchstart (iOS Safari does
                     not reliably bubble click from non-interactive elements).
                   Tooltip positioning: flips left when cursor is within 240px of the
-                    right edge (rect.width - 240); clamps vertically with a half-height
-                    of 110px (line mode, ~220px tall) or 35px (bar mode, single row).
+                    right edge (rect.width - 240). Mouse: clamps vertically with a
+                    half-height of 110px (line) / 35px (bar). Touch: three-state
+                    anchor signal — 'above' (default, tooltip above fingertip) or
+                    'below' (fallback when touch is within ~264px of the top).
                   Tooltip content: shows date when range > 1 day. Line mode lists all
-                    areas sorted most→least expensive; non-selected rows at 0.8 opacity,
-                    selected bold + accent background. Bar mode shows only the selected
-                    area (no opacity/bold treatment, single row).
+                    areas + Norgespris (when active) sorted most→least expensive;
+                    non-selected rows at 0.8 opacity, selected bold + accent background.
+                    Bar mode shows only the selected area and Norgespris (when active).
                   Fullscreen uses CSS position:fixed (not the browser Fullscreen API).
                     dims() computed signal recalculates chartH and viewBox to fill
                     the card. width:auto on .chart-outer--fullscreen is critical —
@@ -211,6 +238,9 @@ src/app/components/
 src/app/pages/
   dashboard/      Owns chartMode, includeTax, showNorgespris signals. Line/Bar,
                   Tax, and Norgespris toggles in the header.
+                  All three signals are initialised from localStorage on load and
+                  written back via effect() on every change (keys: 'chartMode',
+                  'includeTax', 'showNorgespris').
                   On init dispatches loadPrices + loadAllAreaPrices via
                   combineLatest + first(). Also dispatches detectLocation if
                   localStorage has no saved area.
@@ -229,6 +259,10 @@ Lazy-loads `DashboardComponent` at `''`. Wildcard redirects to `''`.
 ### Persistence
 
 `selectedArea` is written to `localStorage` by the `persistSelectedArea$` effect and read back in the reducer's `initialState`. The selected date always resets to today on load.
+
+`dateRangeDays` is written to `localStorage` by the `persistDateRangeDays$` effect and read back in the reducer's `initialState` (clamped 1–14, defaults to 1 if invalid).
+
+`chartMode`, `includeTax`, and `showNorgespris` are written to `localStorage` by `effect()` calls in `DashboardComponent` and read back on component init.
 
 Price data is cached in `localStorage` via `PriceCacheService` (key `nordpool_price_cache`). Up to `30 × PRICE_AREAS.length` entries are kept (currently 150, enough for 30 full days); `getAllAreaPrices` stores each area individually so a single all-area fetch warms the per-area cache.
 
@@ -263,7 +297,7 @@ Repo must be **public** for GitHub Pages on a free plan.
 - Step chart geometry: two points per hour (left + right edge at same Y) produces correct staircase without any path commands — a plain `<polyline>` is enough.
 - Tooltip uses HTML (not SVG foreignObject) for easy styling. Positioned absolute inside `.chart-outer`; `pointer-events: none` so it never blocks mouse events on the SVG. Sibling of `.chart-wrapper` so it is never clipped by the wrapper.
 - Tooltip flip threshold uses absolute pixels (`rect.width - 240`) rather than a percentage so it accounts for the tooltip's actual width.
-- `chartMode` lives in the dashboard signal, not the store — it's purely presentational and doesn't need to survive a reload.
+- `chartMode` lives in the dashboard signal, not the store — it's purely presentational. It (along with `includeTax` and `showNorgespris`) is persisted to localStorage via `effect()` in the dashboard so settings survive a reload without polluting NgRx state.
 - `loadAllAreaPrices` fires a single API request for all 5 areas via `getAllAreaPrices(date)` — the proxy accepts a comma-separated `deliveryArea` list so no parallel requests are needed.
 - Price cache is keyed per `date:area` so adding a new area automatically busts the `getAllAreaPrices` cache for all existing dates (the all-cached check requires every currently-known area to be present).
 - Custom dropdown instead of native `<select>` because `<option>` elements do not support opacity or colour cross-browser.
@@ -272,7 +306,10 @@ Repo must be **public** for GitHub Pages on a free plan.
 - `--base-href` is only needed for the Pages build; local dev works without it.
 - NgRx Store Devtools enabled in dev mode — works with the Redux DevTools browser extension.
 - Y-scale bounds are snapped to the nearest 25 øre after adding a 5 øre buffer. The snap helpers guarantee the result is strictly outside the buffered value (not equal), so a data max of exactly 220 øre never produces a scale max of 225.
-- Tax toggle (`includeTax`) and Norgespris toggle (`showNorgespris`) are purely presentational signals on the dashboard — not stored in NgRx, not persisted, reset on reload.
+- Pinch-to-zoom uses slot-range slicing (`zoomRange` signal → `[startSlot, endSlot]`) rather than SVG viewBox manipulation, so the y-axis label column is never clipped and y-scale / x-labels / now-line all adapt naturally to the visible window.
+- Touch tooltip uses a three-state anchor signal (`'above'` / `'below'` / `'center'`) instead of a boolean. On touch the tooltip appears above the fingertip; it flips to below when the touch is within ~264px of the top of the chart.
+- `selectCurrentPriceInRange` is used by the stats-bar instead of `selectCurrentPrice` so the "Now" card appears whenever the now-line is visible (today within the active range), not only when `selectedDate === today`.
+- Norgespris is injected into `pricesBySlot` as a `TooltipEntry` (`isNorgespris: true`) and sorted by price value alongside the other areas, rather than always appended at the bottom. `TooltipEntry.area` is `string` (not `PriceArea`) to accommodate the `'norgespris'` key.
 - Multi-day prices are merged via `selectMergedAreaPrices` (selector concatenates `allAreaPricesByDate` entries for the active range). The store keyed by date avoids re-fetching already-loaded days.
 - `loadAllAreaPrices$` treats both HTTP errors and null API responses (HTTP 200 with null body) the same way: dispatch `loadAllAreaPricesSuccess` with empty results + `setNotification`. The Nordpool API returns null for dates outside its ~10-day history window, not a 500.
 - `selectLoadedDates` deduplicates dispatch in `loadMultiDayPrices$` — only dates absent from `allAreaPricesByDate` get a `loadAllAreaPrices` action, preventing redundant fetches when the range changes.

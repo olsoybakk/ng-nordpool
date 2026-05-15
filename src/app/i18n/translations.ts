@@ -41,6 +41,7 @@ export interface Translations {
   time: string;
   enterFullscreen: string;
   exitFullscreen: string;
+  resetZoom: string;
   noData: string;
   failedToLoad: string;
   dataNotAvailable: string;
@@ -88,6 +89,7 @@ export const translations: Record<Lang, Translations> = {
     time: 'Time',
     enterFullscreen: 'Enter fullscreen',
     exitFullscreen: 'Exit fullscreen',
+    resetZoom: 'Reset zoom',
     noData: 'No data to display',
     failedToLoad: 'Failed to load prices',
     dataNotAvailable: 'Price data is not available for all selected dates.',
@@ -133,6 +135,7 @@ export const translations: Record<Lang, Translations> = {
     time: 'Tid',
     enterFullscreen: 'Åpne fullskjerm',
     exitFullscreen: 'Lukk fullskjerm',
+    resetZoom: 'Tilbakestill zoom',
     noData: 'Ingen data å vise',
     failedToLoad: 'Kunne ikke laste priser',
     dataNotAvailable: 'Prisdata er ikke tilgjengelig for alle valgte datoer.',
