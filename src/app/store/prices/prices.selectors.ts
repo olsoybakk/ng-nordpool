@@ -55,6 +55,32 @@ export const selectCurrentPrice = createSelector(selectAllPrices, (prices) => {
   );
 });
 
+/**
+ * Current price for the selected area whenever today falls within the active date range —
+ * works even when selectedDate is not today (e.g. tomorrow selected, multi-day range
+ * includes today). Used by the stats-bar so the "Now" card appears whenever the "now"
+ * marker is visible in the chart.
+ */
+export const selectCurrentPriceInRange = createSelector(selectPricesState, (state) => {
+  const now = new Date();
+  const todayISO = now.toISOString().slice(0, 10);
+  const { selectedDate, dateRangeDays, selectedArea } = state;
+  const oldestDate = subtractDays(selectedDate, dateRangeDays - 1);
+  if (todayISO < oldestDate || todayISO > selectedDate) return null;
+
+  const todayPrices =
+    state.allAreaPricesByDate[todayISO]?.[selectedArea] ??
+    (selectedDate === todayISO ? state.prices : []);
+
+  return (
+    todayPrices.find((p) => {
+      const start = new Date(p.time_start);
+      const end = new Date(p.time_end);
+      return now >= start && now < end;
+    }) ?? null
+  );
+});
+
 export const selectDailyStats = createSelector(selectAllPrices, (prices) => {
   if (!prices.length) return null;
   const values = prices.map((p) => p.ore_per_kWh);
