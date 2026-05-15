@@ -203,6 +203,7 @@ export class PriceChartComponent {
   tooltipLeft = signal(0);
   tooltipTop = signal(0);
   tooltipFlip = signal(false);
+  tooltipAnchor = signal<'center' | 'above' | 'below'>('center');
 
   vm$ = combineLatest([
     this.store.select(selectCurrentPrice),
@@ -232,17 +233,17 @@ export class PriceChartComponent {
   );
 
   onMouseMove(event: MouseEvent): void {
-    this.updateTooltip(event.currentTarget as SVGSVGElement, event.clientX, event.clientY);
+    this.updateTooltip(event.currentTarget as SVGSVGElement, event.clientX, event.clientY, false);
   }
 
   onTouchMove(event: TouchEvent): void {
     const touch = event.touches[0];
     if (!touch) return;
     event.preventDefault();
-    this.updateTooltip(event.currentTarget as SVGSVGElement, touch.clientX, touch.clientY);
+    this.updateTooltip(event.currentTarget as SVGSVGElement, touch.clientX, touch.clientY, true);
   }
 
-  private updateTooltip(svg: SVGSVGElement, clientX: number, clientY: number): void {
+  private updateTooltip(svg: SVGSVGElement, clientX: number, clientY: number, isTouch: boolean): void {
     const rect = svg.getBoundingClientRect();
     const relX = clientX - rect.left;
     const relY = clientY - rect.top;
@@ -262,7 +263,15 @@ export class PriceChartComponent {
       );
 
       const HALF_H = this.chartMode() === 'bar' ? 35 : 110;
-      this.tooltipTop.set(Math.max(HALF_H, Math.min(relY, rect.height - HALF_H)));
+      if (isTouch) {
+        // Show tooltip above finger; fall back to below when too close to the top
+        const anchor = relY >= HALF_H * 2 + 44 ? 'above' : 'below';
+        this.tooltipAnchor.set(anchor);
+        this.tooltipTop.set(relY);
+      } else {
+        this.tooltipAnchor.set('center');
+        this.tooltipTop.set(Math.max(HALF_H, Math.min(relY, rect.height - HALF_H)));
+      }
     } else {
       this.hoveredSlot.set(null);
     }

@@ -259,7 +259,9 @@
         class="tooltip"
         [style.left.px]="tooltipLeft()"
         [style.top.px]="tooltipTop()"
-        [style.transform]="tooltipFlip() ? 'translate(calc(-100% - 12px), -50%)' : 'translate(12px, -50%)'"
+        [style.transform]="tooltipFlip()
+          ? (tooltipAnchor() === 'above' ? 'translate(calc(-100% - 12px), calc(-100% - 44px))' : tooltipAnchor() === 'below' ? 'translate(calc(-100% - 12px), 44px)' : 'translate(calc(-100% - 12px), -50%)')
+          : (tooltipAnchor() === 'above' ? 'translate(12px, calc(-100% - 44px))' : tooltipAnchor() === 'below' ? 'translate(12px, 44px)' : 'translate(12px, -50%)')"
       >
         <div class="tooltip__header">
           @if (vm.slotTimes[hoveredSlot()!].date) {
