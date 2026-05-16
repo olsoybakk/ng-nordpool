@@ -13,6 +13,9 @@ export interface Translations {
   norgesprisAriaLabel: string;
   norgesprisTitle: string;
   norgesprisLabel: string;
+  stromstotteAriaLabel: string;
+  stromstotteTitle: string;
+  stromstotteLabel: string;
   chartTypeLabel: string;
   lineBtn: string;
   lineAriaLabel: string;
@@ -61,6 +64,9 @@ export const translations: Record<Lang, Translations> = {
     norgesprisAriaLabel: 'Toggle Norgespris reference line',
     norgesprisTitle: 'Show Norgespris (50 øre/kWh incl. tax)',
     norgesprisLabel: 'Norgespris',
+    stromstotteAriaLabel: 'Toggle electricity support (strømstøtte)',
+    stromstotteTitle: 'Show effective prices after strømstøtte (90% above 77 øre/kWh excl. VAT)',
+    stromstotteLabel: 'Strømstøtte',
     chartTypeLabel: 'Chart type',
     lineBtn: 'Line',
     lineAriaLabel: 'Line chart',
@@ -107,6 +113,10 @@ export const translations: Record<Lang, Translations> = {
     norgesprisAriaLabel: 'Slå av/på Norgespris-linje',
     norgesprisTitle: 'Vis Norgespris (50 øre/kWh inkl. moms)',
     norgesprisLabel: 'Norgespris',
+    stromstotteAriaLabel: 'Slå av/på strømstøtte',
+    stromstotteTitle:
+      'Vis effektiv pris etter strømstøtte (90% av beløp over 77 øre/kWh ekskl. moms)',
+    stromstotteLabel: 'Strømstøtte',
     chartTypeLabel: 'Diagramtype',
     lineBtn: 'Linje',
     lineAriaLabel: 'Linjediagram',

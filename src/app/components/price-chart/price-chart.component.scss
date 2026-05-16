@@ -76,7 +76,9 @@
   color: var(--color-muted);
   font-size: 0.75rem;
   cursor: pointer;
-  transition: color 0.15s, box-shadow 0.15s;
+  transition:
+    color 0.15s,
+    box-shadow 0.15s;
 
   &:hover {
     color: var(--color-text);
@@ -101,7 +103,9 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   color: var(--color-muted);
   cursor: pointer;
-  transition: color 0.15s, box-shadow 0.15s;
+  transition:
+    color 0.15s,
+    box-shadow 0.15s;
 
   svg {
     width: 12px;
@@ -175,9 +179,15 @@
 // Bar chart
 .bar {
   transition: opacity 0.15s;
-  &--low  { fill: var(--color-low); }
-  &--mid  { fill: var(--color-accent); }
-  &--high { fill: var(--color-high); }
+  &--low {
+    fill: var(--color-low);
+  }
+  &--mid {
+    fill: var(--color-accent);
+  }
+  &--high {
+    fill: var(--color-high);
+  }
   &--current {
     stroke: var(--color-text);
     stroke-width: 1.5;
@@ -185,7 +195,9 @@
   }
 }
 
-.bar-group:hover .bar { opacity: 0.8; }
+.bar-group:hover .bar {
+  opacity: 0.8;
+}
 
 // Multi-area step line chart
 .area-line {
@@ -200,7 +212,9 @@
     // 360px screen the stroke renders at ~0.3px and becomes nearly invisible.
     vector-effect: non-scaling-stroke;
     filter: var(--line-drop-shadow);
-    transition: opacity 0.15s, stroke-width 0.15s;
+    transition:
+      opacity 0.15s,
+      stroke-width 0.15s;
   }
 
   &--selected .line-path {
@@ -254,6 +268,23 @@
 }
 
 .norgespris-label {
+  fill: var(--color-norgespris);
+  font-family: inherit;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+// Strømstøtte threshold line
+.stromstotte-line {
+  stroke: var(--color-norgespris);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+  opacity: 0.85;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.stromstotte-label {
   fill: var(--color-norgespris);
   font-family: inherit;
   font-weight: 600;
