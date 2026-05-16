@@ -205,8 +205,11 @@ src/app/components/
                     buildViewModel re-maps the visible window to fill the full chart
                     width; y-scale, x-labels, now-line, and hourStep all adapt. A ↺
                     reset button appears above the chart when zoomed.
-                    Pinch-to-zoom: two-finger gesture on mobile centers on the midpoint
-                    of the two fingers.
+                    Pinch-to-zoom: two-finger gesture on mobile. Uses the same
+                    floor-based formula as scroll-zoom (centerFrac =
+                    (centerSlot - initZs) / initVisible) to keep the slot under
+                    the pinch midpoint fixed. Tooltip and hover line are hidden
+                    during the gesture.
                     Scroll-to-zoom: mouse wheel / trackpad on desktop. Uses
                     Math.pow(1.003, deltaY) so trackpad (small deltaY) feels smooth
                     and mouse wheel (large deltaY) snaps. Uses floor-based formula
