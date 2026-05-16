@@ -370,6 +370,58 @@ export class PriceChartComponent {
     this._zoomRange$.next([start, start + visible - 1]);
   }
 
+  onScrollThumbTouchStart(event: TouchEvent): void {
+    if (event.touches.length !== 1) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const touch = event.touches[0];
+    const track = (event.currentTarget as HTMLElement).parentElement!;
+    this._scrollDragState = {
+      startX: touch.clientX,
+      startRange: this._zoomRange$.getValue()!,
+      trackW: track.getBoundingClientRect().width,
+    };
+    const onMove = (e: TouchEvent) => {
+      if (!this._scrollDragState || e.touches.length !== 1) return;
+      const { startX, startRange, trackW } = this._scrollDragState;
+      const total = this._totalSlotCount();
+      const visible = startRange[1] - startRange[0] + 1;
+      const slotDelta = Math.round(((e.touches[0].clientX - startX) / trackW) * total);
+      let start = startRange[0] + slotDelta;
+      let end = start + visible - 1;
+      if (start < 0) { start = 0; end = visible - 1; }
+      if (end >= total) { end = total - 1; start = total - visible; }
+      this._zoomRange$.next([start, end]);
+    };
+    const onEnd = () => {
+      this._scrollDragState = null;
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onEnd);
+    };
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend', onEnd);
+  }
+
+  onScrollTrackTouchStart(event: TouchEvent): void {
+    const track = event.currentTarget as HTMLElement;
+    const touch = event.touches[0];
+    const rect = track.getBoundingClientRect();
+    const clickFrac = (touch.clientX - rect.left) / rect.width;
+    const total = this._totalSlotCount();
+    const zoom = this._zoomRange$.getValue();
+    if (!zoom) return;
+    const [zs, ze] = zoom;
+    const visible = ze - zs + 1;
+    const clickSlot = clickFrac * total;
+    let start: number;
+    if (clickSlot < zs) {
+      start = Math.max(0, zs - visible);
+    } else {
+      start = Math.min(total - visible, ze + 1);
+    }
+    this._zoomRange$.next([start, start + visible - 1]);
+  }
+
   private pinchDist(touches: TouchList): number {
     return Math.hypot(
       touches[1].clientX - touches[0].clientX,
