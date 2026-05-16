@@ -16,6 +16,8 @@ Angular 21 app that displays Nordpool day-ahead electricity spot prices.
 
 `main` is protected — direct pushes are blocked (enforced on GitHub and by a local pre-push hook in `.githooks/pre-push`). All changes go through a PR. The repository only allows **squash merges** — use `gh pr merge <number> --squash` when merging. New clones need:
 
+> **Never commit directly to `main`.** Always create a branch first, commit there, then open a PR.
+
 > **Always ask the user before merging a PR.** Create and push the branch, open the PR, share the URL, then wait for explicit approval before running `gh pr merge`.
 
 > **After merging, always delete the branch** — both remote (`git push origin --delete <branch>`) and local (`git branch -D <branch>`). Then run `git checkout main && git pull`.
