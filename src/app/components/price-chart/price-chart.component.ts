@@ -284,6 +284,7 @@ export class PriceChartComponent {
   onTouchMove(event: TouchEvent): void {
     if (event.touches.length === 2) {
       event.preventDefault();
+      this.hoveredSlot.set(null);
       if (!this._pinchState) return;
       const dist = this.pinchDist(event.touches);
       const scale = dist / this._pinchState.dist;
@@ -295,7 +296,9 @@ export class PriceChartComponent {
         this._zoomRange$.next(null);
       } else {
         const center = this._pinchState.centerSlot;
-        let start = Math.round(center - clamped / 2);
+        const centerFrac = (center - this._pinchState.range[0]) / initVisible;
+        // floor-based formula: same guarantee as scroll-zoom — slot under pinch center stays fixed
+        let start = Math.floor(center) - Math.floor(centerFrac * clamped);
         let end = start + clamped - 1;
         if (start < 0) { start = 0; end = Math.min(clamped - 1, total - 1); }
         if (end >= total) { end = total - 1; start = Math.max(0, end - clamped + 1); }
