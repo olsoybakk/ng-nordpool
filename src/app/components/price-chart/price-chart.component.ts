@@ -13,7 +13,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
 import { map, tap } from 'rxjs/operators';
-import { combineLatest } from 'rxjs';
+import { BehaviorSubject, combineLatest } from 'rxjs';
 import { AREA_COLORS, HourlyPrice, PRICE_AREAS, PriceArea } from '../../models/price.model';
 import { localISODate } from '../../utils/date';
 import {
@@ -136,11 +136,15 @@ export class PriceChartComponent {
     destroyRef.onDestroy(() => window.removeEventListener('resize', onResize));
 
     afterNextRender(() => {
+      // Observe chart-wrapper, not the host, so the scrollbar appearing/disappearing
+      // below the chart never changes containerH and triggers an extra vm$ emission.
+      const target = this.elementRef.nativeElement.querySelector('.chart-wrapper')
+        ?? this.elementRef.nativeElement;
       const ro = new ResizeObserver((entries) => {
         const h = entries[0]?.contentRect.height ?? 0;
         if (h > 0) this.containerH.set(h);
       });
-      ro.observe(this.elementRef.nativeElement);
+      ro.observe(target);
       destroyRef.onDestroy(() => ro.disconnect());
     });
   }
@@ -206,10 +210,25 @@ export class PriceChartComponent {
   tooltipTop = signal(0);
   tooltipFlip = signal(false);
   tooltipAnchor = signal<'center' | 'above' | 'below'>('center');
-  zoomRange = signal<[number, number] | null>(null);
+
+  // BehaviorSubject so combineLatest (vm$) receives the new value synchronously
+  // within the same event handler, eliminating the intermediate render that causes flicker.
+  private readonly _zoomRange$ = new BehaviorSubject<[number, number] | null>(null);
+  readonly zoomRange = toSignal(this._zoomRange$, { initialValue: null as [number, number] | null });
 
   private _totalSlotCount = signal(SLOT_COUNT);
   private _pinchState: { dist: number; range: [number, number]; centerSlot: number } | null = null;
+  private _scrollDragState: { startX: number; startRange: [number, number]; trackW: number } | null = null;
+
+  readonly scrollThumbLeft = computed(() => {
+    const zoom = this.zoomRange();
+    return zoom ? (zoom[0] / this._totalSlotCount()) * 100 : 0;
+  });
+
+  readonly scrollThumbWidth = computed(() => {
+    const zoom = this.zoomRange();
+    return zoom ? ((zoom[1] - zoom[0] + 1) / this._totalSlotCount()) * 100 : 100;
+  });
 
   vm$ = combineLatest([
     this.store.select(selectCurrentPrice),
@@ -220,7 +239,7 @@ export class PriceChartComponent {
     toObservable(this.dims),
     toObservable(this.includeTax),
     toObservable(this.showNorgespris),
-    toObservable(this.zoomRange),
+    this._zoomRange$,
   ]).pipe(
     map(([current, mergedAreaPrices, selectedArea, selectedDate, dateRangeDays, dims, includeTax, showNorgespris, zoom]) =>
       this.buildViewModel(
@@ -254,7 +273,7 @@ export class PriceChartComponent {
     const rect = (event.currentTarget as SVGSVGElement).getBoundingClientRect();
     const centerClientX = (event.touches[0].clientX + event.touches[1].clientX) / 2;
     const svgX = (centerClientX - rect.left) * (CHART_W / rect.width);
-    const zoom = this.zoomRange();
+    const zoom = this._zoomRange$.getValue();
     const total = this._totalSlotCount();
     const [zs, ze] = zoom ?? [0, total - 1];
     const visGap = this.chartW / (ze - zs + 1);
@@ -273,14 +292,14 @@ export class PriceChartComponent {
       const newVisible = Math.round(initVisible / scale);
       const clamped = Math.min(total, Math.max(8, newVisible));
       if (clamped >= total) {
-        this.zoomRange.set(null);
+        this._zoomRange$.next(null);
       } else {
         const center = this._pinchState.centerSlot;
         let start = Math.round(center - clamped / 2);
         let end = start + clamped - 1;
         if (start < 0) { start = 0; end = Math.min(clamped - 1, total - 1); }
         if (end >= total) { end = total - 1; start = Math.max(0, end - clamped + 1); }
-        this.zoomRange.set([start, end]);
+        this._zoomRange$.next([start, end]);
       }
       return;
     }
@@ -296,7 +315,56 @@ export class PriceChartComponent {
   }
 
   resetZoom(): void {
-    this.zoomRange.set(null);
+    this._zoomRange$.next(null);
+  }
+
+  onScrollThumbDown(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    const track = (event.currentTarget as HTMLElement).parentElement!;
+    this._scrollDragState = {
+      startX: event.clientX,
+      startRange: this._zoomRange$.getValue()!,
+      trackW: track.getBoundingClientRect().width,
+    };
+    const onMove = (e: MouseEvent) => {
+      if (!this._scrollDragState) return;
+      const { startX, startRange, trackW } = this._scrollDragState;
+      const total = this._totalSlotCount();
+      const visible = startRange[1] - startRange[0] + 1;
+      const slotDelta = Math.round(((e.clientX - startX) / trackW) * total);
+      let start = startRange[0] + slotDelta;
+      let end = start + visible - 1;
+      if (start < 0) { start = 0; end = visible - 1; }
+      if (end >= total) { end = total - 1; start = total - visible; }
+      this._zoomRange$.next([start, end]);
+    };
+    const onUp = () => {
+      this._scrollDragState = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  onScrollTrackDown(event: MouseEvent): void {
+    const track = event.currentTarget as HTMLElement;
+    const rect = track.getBoundingClientRect();
+    const clickFrac = (event.clientX - rect.left) / rect.width;
+    const total = this._totalSlotCount();
+    const zoom = this._zoomRange$.getValue();
+    if (!zoom) return;
+    const [zs, ze] = zoom;
+    const visible = ze - zs + 1;
+    const clickSlot = clickFrac * total;
+    let start: number;
+    if (clickSlot < zs) {
+      start = Math.max(0, zs - visible);
+    } else {
+      start = Math.min(total - visible, ze + 1);
+    }
+    this._zoomRange$.next([start, start + visible - 1]);
   }
 
   private pinchDist(touches: TouchList): number {
@@ -352,6 +420,39 @@ export class PriceChartComponent {
 
   onMouseLeave(): void {
     this.hoveredSlot.set(null);
+  }
+
+  onWheel(event: WheelEvent): void {
+    event.preventDefault();
+    this.hoveredSlot.set(null);
+    const svg = event.currentTarget as SVGSVGElement;
+    const rect = svg.getBoundingClientRect();
+    const svgX = (event.clientX - rect.left) * (CHART_W / rect.width);
+
+    const total = this._totalSlotCount();
+    const zoom = this._zoomRange$.getValue();
+    const [zs, ze] = zoom ?? [0, total - 1];
+    const visible = ze - zs + 1;
+
+    // Scale zoom by delta magnitude so trackpad feels smooth and mouse wheel snaps.
+    const factor = Math.pow(1.003, event.deltaY);
+    const newVisible = Math.round(visible * factor);
+    const clamped = Math.min(total, Math.max(8, newVisible));
+
+    if (clamped >= total) {
+      this._zoomRange$.next(null);
+      return;
+    }
+
+    const visGap = this.chartW / visible;
+    const cursorSlot = zs + (svgX - this.offsetX) / visGap;
+    const cursorFrac = (cursorSlot - zs) / visible;
+    // floor-based formula guarantees floor(cursorSlot) stays under cursor after zoom
+    let start = Math.floor(cursorSlot) - Math.floor(cursorFrac * clamped);
+    let end = start + clamped - 1;
+    if (start < 0) { start = 0; end = Math.min(clamped - 1, total - 1); }
+    if (end >= total) { end = total - 1; start = Math.max(0, end - clamped + 1); }
+    this._zoomRange$.next([start, end]);
   }
 
   private buildViewModel(

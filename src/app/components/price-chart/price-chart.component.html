@@ -36,6 +36,7 @@
       role="img"
       [attr.aria-label]="chartMode() === 'bar' ? ls.t().barChartAriaLabel : ls.t().lineChartAriaLabel"
       (mousemove)="onMouseMove($event)"
+      (wheel)="onWheel($event)"
       (touchstart)="onTouchStart($event)"
       (touchmove)="onTouchMove($event)"
       (touchend)="onTouchEnd($event)"
@@ -263,6 +264,19 @@
       >øre/kWh</text>
     </svg>
     </div>
+
+    @if (zoomRange()) {
+      <div class="scroll-bar" (mouseenter)="hoveredSlot.set(null)">
+        <div class="scroll-track" (mousedown)="onScrollTrackDown($event)">
+          <div
+            class="scroll-thumb"
+            [style.left.%]="scrollThumbLeft()"
+            [style.width.%]="scrollThumbWidth()"
+            (mousedown)="onScrollThumbDown($event)"
+          ></div>
+        </div>
+      </div>
+    }
 
     <!-- Floating tooltip -->
     @if (hoveredSlot() !== null && vm.pricesBySlot[hoveredSlot()!]?.length) {

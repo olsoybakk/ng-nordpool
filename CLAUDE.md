@@ -71,7 +71,7 @@ There is no linter configured (no ESLint or similar). Prettier config is in `pac
 
 ## Angular Signals
 
-Component state uses `signal()` / `effect()` rather than `BehaviorSubject`. Cleanup uses `inject(DestroyRef).onDestroy(...)` instead of `ngOnDestroy`. Store observables (`store.select(...)`) are kept as observables for the template `async` pipe; signals are used for purely local UI state (`chartMode`, `theme`, `isFullscreen`, `tooltipData`, etc.). `@ngrx/entity` is installed but not used.
+Component state uses `signal()` / `effect()` rather than `BehaviorSubject`. Exception: `zoomRange` in `PriceChartComponent` is a `BehaviorSubject` so `combineLatest` (vm$) receives the new value synchronously within event handlers, preventing a flicker render. Cleanup uses `inject(DestroyRef).onDestroy(...)` instead of `ngOnDestroy`. Store observables (`store.select(...)`) are kept as observables for the template `async` pipe; signals are used for purely local UI state (`chartMode`, `theme`, `isFullscreen`, `tooltipData`, etc.). `@ngrx/entity` is installed but not used.
 
 ## Environment
 
@@ -126,12 +126,16 @@ src/app/store/prices/
   prices.selectors.ts  selectAllPrices, selectAllAreaPrices, selectSelectedArea,
                        selectSelectedDate, selectDateRangeDays, selectLoading,
                        selectAllAreasLoading, selectError, selectCurrentPrice,
-                       selectCurrentPriceInRange, selectDailyStats, selectNotification,
-                       selectLoadedDates, selectActiveDates, selectMergedAreaPrices
+                       selectCurrentPriceInRange, selectDailyStats, selectRangeStats,
+                       selectNotification, selectLoadedDates, selectActiveDates,
+                       selectMergedAreaPrices
                        selectCurrentPriceInRange: like selectCurrentPrice but checks
                          allAreaPricesByDate[today][selectedArea] — returns the current
                          slot whenever today falls within the active date range, even
                          when selectedDate is not today (e.g. tomorrow + multi-day)
+                       selectRangeStats: min/max/avg across all days in the active date
+                         range for the selected area; falls back to state.prices when
+                         dateRangeDays ≤ 1. Used by stats-bar.
 src/app/store/index.ts re-exports all of the above
 ```
 
@@ -173,6 +177,8 @@ src/app/components/
   stats-bar/      Now / Min / Avg / Max cards derived from store selectors.
                   "Now" uses selectCurrentPriceInRange so it appears whenever the
                   now-line is visible in the chart (not only when selectedDate === today).
+                  Min/Avg/Max use selectRangeStats, which covers all days in the active
+                  date range (not just the selected date).
   price-chart/    Pure SVG chart (no charting lib). Inputs: chartMode, includeTax,
                   showNorgespris. Selects date range from store for multi-day data.
                   Y scale: both modes snap min to floor-25 and max to ceil-25 of
@@ -187,7 +193,7 @@ src/app/components/
                   Both modes: dashed vertical "now" line shown whenever today falls
                     within the visible date range (single-day: selectedDate === today;
                     multi-day: oldest date ≤ today ≤ selectedDate); hover tooltip;
-                    fullscreen toggle; pinch-to-zoom.
+                    fullscreen toggle; pinch-to-zoom; scroll-to-zoom.
                   Mobile chart height: 45% of viewport height (desktop uses container
                     height in line mode, fixed CHART_H in bar mode).
                   Tax: prices multiplied by 1.25 when includeTax is true (NO4 exempt).
@@ -195,13 +201,27 @@ src/app/components/
                     showNorgespris is true. Also injected into the tooltip as a
                     TooltipEntry (isNorgespris: true) sorted by price value alongside
                     the other areas (not always at the bottom).
-                  Pinch-to-zoom: two-touch gesture slices the visible slot range
-                    (zoomRange signal → [startSlot, endSlot]). buildViewModel re-maps
-                    the visible window to fill the full chart width; y-scale, x-labels,
-                    now-line, and hourStep all adapt. A ↺ reset button appears above
-                    the chart when zoomed. zoomRange is a 9th source in the combineLatest
-                    vm$ stream. Slot-range slicing avoids viewBox manipulation so the
-                    y-axis remains intact.
+                  Zoom: slot-range slicing (zoomRange → [startSlot, endSlot]).
+                    buildViewModel re-maps the visible window to fill the full chart
+                    width; y-scale, x-labels, now-line, and hourStep all adapt. A ↺
+                    reset button appears above the chart when zoomed.
+                    Pinch-to-zoom: two-finger gesture on mobile centers on the midpoint
+                    of the two fingers.
+                    Scroll-to-zoom: mouse wheel / trackpad on desktop. Uses
+                    Math.pow(1.003, deltaY) so trackpad (small deltaY) feels smooth
+                    and mouse wheel (large deltaY) snaps. Uses floor-based formula
+                    (Math.floor(cursorSlot) - Math.floor(cursorFrac * clamped)) to
+                    guarantee the slot under the cursor is preserved after each zoom
+                    step. Tooltip and hover line are hidden on each wheel event.
+                  Scrollbar: shown below the chart (desktop only) when zoomed. Thumb
+                    drag pans the visible window; track click pages left/right.
+                    Entering the scrollbar clears hoveredSlot to hide the tooltip.
+                  zoomRange is a BehaviorSubject<[number,number]|null> (not a signal)
+                    so combineLatest (vm$) receives the new zoom value synchronously
+                    within the same event handler, preventing an intermediate render
+                    with the old chart state. A toSignal()-derived readonly is exposed
+                    for template bindings. ResizeObserver watches .chart-wrapper (not
+                    the host) so the scrollbar appearing never triggers a dims() change.
                   X-axis label density adapts to range: 3h / 6h / 12h / 24h steps
                     for 1 / ≤3 / ≤7 / 14-day ranges; further tightened when pinch-
                     zoomed to show 1h or 2h steps for short visible windows.
@@ -308,9 +328,14 @@ Repo must be **public** for GitHub Pages on a free plan.
 - `--base-href` is only needed for the Pages build; local dev works without it.
 - NgRx Store Devtools enabled in dev mode — works with the Redux DevTools browser extension.
 - Y-scale bounds are snapped to the nearest 25 øre after adding a 5 øre buffer. The snap helpers guarantee the result is strictly outside the buffered value (not equal), so a data max of exactly 220 øre never produces a scale max of 225.
-- Pinch-to-zoom uses slot-range slicing (`zoomRange` signal → `[startSlot, endSlot]`) rather than SVG viewBox manipulation, so the y-axis label column is never clipped and y-scale / x-labels / now-line all adapt naturally to the visible window.
+- Zoom uses slot-range slicing (`zoomRange` → `[startSlot, endSlot]`) rather than SVG viewBox manipulation, so the y-axis label column is never clipped and y-scale / x-labels / now-line all adapt naturally to the visible window.
+- Scroll-to-zoom uses `Math.floor(cursorSlot) - Math.floor(cursorFrac * clamped)` (not `Math.round`) for the new start slot. This provably keeps `floor(slot under cursor)` constant after each zoom step: since `cursorFrac * clamped ∈ [k, k+1)`, the resulting slot position always lands in `[floor(cursorSlot), floor(cursorSlot)+1)`.
+- `zoomRange` is a `BehaviorSubject` (not a signal) in `PriceChartComponent` so `combineLatest` (vm$) receives the new zoom synchronously within the event handler. With a signal, Angular's `toObservable` effect fires after the current CD cycle, causing an intermediate render with the old chart — visible as flicker. A `toSignal()`-derived readonly is exposed for template use.
+- `ResizeObserver` in `PriceChartComponent` watches `.chart-wrapper`, not the host element, so the scrollbar appearing/disappearing below the chart never changes `containerH`, never triggers a `dims()` recompute, and never causes a spurious `vm$` emission.
+- Scrollbar (desktop only, hidden on mobile): shown when zoomed. Thumb drag pans; track click pages. `mouseenter` on the scrollbar clears `hoveredSlot` to hide the tooltip.
 - Touch tooltip uses a three-state anchor signal (`'above'` / `'below'` / `'center'`) instead of a boolean. On touch the tooltip appears above the fingertip; it flips to below when the touch is within ~264px of the top of the chart.
 - `selectCurrentPriceInRange` is used by the stats-bar instead of `selectCurrentPrice` so the "Now" card appears whenever the now-line is visible (today within the active range), not only when `selectedDate === today`.
+- `selectRangeStats` is used by the stats-bar for Min/Avg/Max so the values reflect all days in the active date range, not just the selected date.
 - Norgespris is injected into `pricesBySlot` as a `TooltipEntry` (`isNorgespris: true`) and sorted by price value alongside the other areas, rather than always appended at the bottom. `TooltipEntry.area` is `string` (not `PriceArea`) to accommodate the `'norgespris'` key.
 - Multi-day prices are merged via `selectMergedAreaPrices` (selector concatenates `allAreaPricesByDate` entries for the active range). The store keyed by date avoids re-fetching already-loaded days.
 - `loadAllAreaPrices$` treats both HTTP errors and null API responses (HTTP 200 with null body) the same way: dispatch `loadAllAreaPricesSuccess` with empty results + `setNotification`. The Nordpool API returns null for dates outside its ~10-day history window, not a 500.
