@@ -265,6 +265,19 @@
     </svg>
     </div>
 
+    @if (zoomRange()) {
+      <div class="scroll-bar">
+        <div class="scroll-track" (mousedown)="onScrollTrackDown($event)">
+          <div
+            class="scroll-thumb"
+            [style.left.%]="scrollThumbLeft()"
+            [style.width.%]="scrollThumbWidth()"
+            (mousedown)="onScrollThumbDown($event)"
+          ></div>
+        </div>
+      </div>
+    }
+
     <!-- Floating tooltip -->
     @if (hoveredSlot() !== null && vm.pricesBySlot[hoveredSlot()!]?.length) {
       <div

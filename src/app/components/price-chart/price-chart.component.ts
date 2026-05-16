@@ -210,6 +210,17 @@ export class PriceChartComponent {
 
   private _totalSlotCount = signal(SLOT_COUNT);
   private _pinchState: { dist: number; range: [number, number]; centerSlot: number } | null = null;
+  private _scrollDragState: { startX: number; startRange: [number, number]; trackW: number } | null = null;
+
+  readonly scrollThumbLeft = computed(() => {
+    const zoom = this.zoomRange();
+    return zoom ? (zoom[0] / this._totalSlotCount()) * 100 : 0;
+  });
+
+  readonly scrollThumbWidth = computed(() => {
+    const zoom = this.zoomRange();
+    return zoom ? ((zoom[1] - zoom[0] + 1) / this._totalSlotCount()) * 100 : 100;
+  });
 
   vm$ = combineLatest([
     this.store.select(selectCurrentPrice),
@@ -297,6 +308,55 @@ export class PriceChartComponent {
 
   resetZoom(): void {
     this.zoomRange.set(null);
+  }
+
+  onScrollThumbDown(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    const track = (event.currentTarget as HTMLElement).parentElement!;
+    this._scrollDragState = {
+      startX: event.clientX,
+      startRange: this.zoomRange()!,
+      trackW: track.getBoundingClientRect().width,
+    };
+    const onMove = (e: MouseEvent) => {
+      if (!this._scrollDragState) return;
+      const { startX, startRange, trackW } = this._scrollDragState;
+      const total = this._totalSlotCount();
+      const visible = startRange[1] - startRange[0] + 1;
+      const slotDelta = Math.round(((e.clientX - startX) / trackW) * total);
+      let start = startRange[0] + slotDelta;
+      let end = start + visible - 1;
+      if (start < 0) { start = 0; end = visible - 1; }
+      if (end >= total) { end = total - 1; start = total - visible; }
+      this.zoomRange.set([start, end]);
+    };
+    const onUp = () => {
+      this._scrollDragState = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  onScrollTrackDown(event: MouseEvent): void {
+    const track = event.currentTarget as HTMLElement;
+    const rect = track.getBoundingClientRect();
+    const clickFrac = (event.clientX - rect.left) / rect.width;
+    const total = this._totalSlotCount();
+    const zoom = this.zoomRange();
+    if (!zoom) return;
+    const [zs, ze] = zoom;
+    const visible = ze - zs + 1;
+    const clickSlot = clickFrac * total;
+    let start: number;
+    if (clickSlot < zs) {
+      start = Math.max(0, zs - visible);
+    } else {
+      start = Math.min(total - visible, ze + 1);
+    }
+    this.zoomRange.set([start, start + visible - 1]);
   }
 
   private pinchDist(touches: TouchList): number {
