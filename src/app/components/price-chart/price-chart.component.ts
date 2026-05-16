@@ -542,10 +542,10 @@ export class PriceChartComponent {
       ? (includeTax ? NORGESPRIS_ORE_INCL_TAX : NORGESPRIS_ORE_INCL_TAX / TAX_FACTOR)
       : null;
 
-    // Bar chart: single area, visible slots
-    const singleValues = barPrices.map((p) => displayOre(selectedArea, p.ore_per_kWh, includeTax));
-    const singleMin = snapFloor25(Math.min(...singleValues) - 5);
-    const singleMax = snapCeil25(Math.max(...singleValues) + 5);
+    // Bar chart: single area — scale from full dataset so y-axis stays fixed while zooming
+    const allSingleValues = allBarPrices.map((p) => displayOre(selectedArea, p.ore_per_kWh, includeTax));
+    const singleMin = snapFloor25(Math.min(...allSingleValues) - 5);
+    const singleMax = snapCeil25(Math.max(...allSingleValues) + 5);
     const singleRange = singleMax - singleMin || 1;
 
     const visibleHours = slotCount / 4;
@@ -595,9 +595,10 @@ export class PriceChartComponent {
       hourlyPrices: (allAreaPrices[value] ?? []).slice(zStart, zEnd + 1),
     })).filter((e) => e.hourlyPrices.length > 0);
 
+    // Line chart: scale from full dataset so y-axis stays fixed while zooming
     let rawMultiMin = Infinity, rawMultiMax = -Infinity;
-    for (const { area, hourlyPrices } of areaEntries) {
-      for (const p of hourlyPrices) {
+    for (const { value: area } of PRICE_AREAS) {
+      for (const p of (allAreaPrices[area] ?? [])) {
         const v = displayOre(area, p.ore_per_kWh, includeTax);
         if (v < rawMultiMin) rawMultiMin = v;
         if (v > rawMultiMax) rawMultiMax = v;

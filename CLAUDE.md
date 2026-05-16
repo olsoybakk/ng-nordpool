@@ -182,13 +182,15 @@ src/app/components/
   price-chart/    Pure SVG chart (no charting lib). Inputs: chartMode, includeTax,
                   showNorgespris. Selects date range from store for multi-day data.
                   Y scale: both modes snap min to floor-25 and max to ceil-25 of
-                    (data ± 5 øre buffer). Grid lines at every 50 øre.
+                    (full-dataset values ± 5 øre buffer). Grid lines at every 50 øre.
+                    Scale is always derived from the complete unsliced dataset so the
+                    y-axis stays fixed while zooming.
                   Bar mode: colour-coded bars (low/mid/high by tertile); current
-                    hour highlighted. Y scale = single-area snapped min/max.
+                    hour highlighted. Y scale = single-area snapped min/max (full day).
                   Line mode: step chart — two SVG points per hour (left + right
                     edge at same Y) producing a staircase with a plain <polyline>.
                     One polyline per area; selected area renders on top (sorted last).
-                    Y scale = global snapped min/max across all areas.
+                    Y scale = global snapped min/max across all areas (full dataset).
                     Uses selectMergedAreaPrices for multi-day data across all areas.
                   Both modes: dashed vertical "now" line shown whenever today falls
                     within the visible date range (single-day: selectedDate === today;
@@ -203,8 +205,9 @@ src/app/components/
                     the other areas (not always at the bottom).
                   Zoom: slot-range slicing (zoomRange → [startSlot, endSlot]).
                     buildViewModel re-maps the visible window to fill the full chart
-                    width; y-scale, x-labels, now-line, and hourStep all adapt. A ↺
-                    reset button appears above the chart when zoomed.
+                    width; x-labels, now-line, and hourStep adapt to the visible window;
+                    y-scale is anchored to the full dataset. A ↺ reset button appears
+                    above the chart when zoomed.
                     Pinch-to-zoom: two-finger gesture on mobile. Uses the same
                     floor-based formula as scroll-zoom (centerFrac =
                     (centerSlot - initZs) / initVisible) to keep the slot under
@@ -331,7 +334,7 @@ Repo must be **public** for GitHub Pages on a free plan.
 - `--base-href` is only needed for the Pages build; local dev works without it.
 - NgRx Store Devtools enabled in dev mode — works with the Redux DevTools browser extension.
 - Y-scale bounds are snapped to the nearest 25 øre after adding a 5 øre buffer. The snap helpers guarantee the result is strictly outside the buffered value (not equal), so a data max of exactly 220 øre never produces a scale max of 225.
-- Zoom uses slot-range slicing (`zoomRange` → `[startSlot, endSlot]`) rather than SVG viewBox manipulation, so the y-axis label column is never clipped and y-scale / x-labels / now-line all adapt naturally to the visible window.
+- Zoom uses slot-range slicing (`zoomRange` → `[startSlot, endSlot]`) rather than SVG viewBox manipulation, so the y-axis label column is never clipped. X-labels, now-line, and hourStep adapt to the visible window; y-scale is anchored to the full unsliced dataset so the axis stays fixed while zooming.
 - Scroll-to-zoom uses `Math.floor(cursorSlot) - Math.floor(cursorFrac * clamped)` (not `Math.round`) for the new start slot. This provably keeps `floor(slot under cursor)` constant after each zoom step: since `cursorFrac * clamped ∈ [k, k+1)`, the resulting slot position always lands in `[floor(cursorSlot), floor(cursorSlot)+1)`.
 - `zoomRange` is a `BehaviorSubject` (not a signal) in `PriceChartComponent` so `combineLatest` (vm$) receives the new zoom synchronously within the event handler. With a signal, Angular's `toObservable` effect fires after the current CD cycle, causing an intermediate render with the old chart — visible as flicker. A `toSignal()`-derived readonly is exposed for template use.
 - `ResizeObserver` in `PriceChartComponent` watches `.chart-wrapper`, not the host element, so the scrollbar appearing/disappearing below the chart never changes `containerH`, never triggers a `dims()` recompute, and never causes a spurious `vm$` emission.
