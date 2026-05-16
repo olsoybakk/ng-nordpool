@@ -267,12 +267,13 @@
 
     @if (zoomRange()) {
       <div class="scroll-bar" (mouseenter)="hoveredSlot.set(null)">
-        <div class="scroll-track" (mousedown)="onScrollTrackDown($event)">
+        <div class="scroll-track" (mousedown)="onScrollTrackDown($event)" (touchstart)="onScrollTrackTouchStart($event)">
           <div
             class="scroll-thumb"
             [style.left.%]="scrollThumbLeft()"
             [style.width.%]="scrollThumbWidth()"
             (mousedown)="onScrollThumbDown($event)"
+            (touchstart)="onScrollThumbTouchStart($event)"
           ></div>
         </div>
       </div>

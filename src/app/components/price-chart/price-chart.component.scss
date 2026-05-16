@@ -380,13 +380,9 @@
   }
 }
 
-// Zoom scrollbar (desktop only — mobile uses pinch-to-zoom)
+// Zoom scrollbar (shown when zoomed; touch-friendly on mobile)
 .scroll-bar {
   padding: 4px 3.2% 2px 4%;
-
-  @media (max-width: 640px) {
-    display: none;
-  }
 }
 
 .scroll-track {
@@ -395,18 +391,28 @@
   background: var(--color-border);
   border-radius: 3px;
   cursor: pointer;
+
+  @media (max-width: 640px) {
+    height: 12px;
+    border-radius: 6px;
+  }
 }
 
 .scroll-thumb {
   position: absolute;
   top: 0;
   height: 100%;
-  min-width: 16px;
+  min-width: 24px;
   background: var(--color-muted);
   border-radius: 3px;
   cursor: grab;
   transition: background 0.15s;
   user-select: none;
+
+  @media (max-width: 640px) {
+    border-radius: 6px;
+    min-width: 40px;
+  }
 
   &:hover {
     background: var(--color-text);
