@@ -416,6 +416,7 @@ export class PriceChartComponent {
 
   onWheel(event: WheelEvent): void {
     event.preventDefault();
+    this.hoveredSlot.set(null);
     const svg = event.currentTarget as SVGSVGElement;
     const rect = svg.getBoundingClientRect();
     const svgX = (event.clientX - rect.left) * (CHART_W / rect.width);
