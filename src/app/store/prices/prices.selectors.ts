@@ -92,6 +92,31 @@ export const selectDailyStats = createSelector(selectAllPrices, (prices) => {
   };
 });
 
+/** Min/max/avg across all days in the active date range for the selected area. */
+export const selectRangeStats = createSelector(selectPricesState, (state) => {
+  const { selectedDate, dateRangeDays, selectedArea } = state;
+  let prices: HourlyPrice[];
+  if (dateRangeDays <= 1) {
+    prices = state.prices;
+  } else {
+    const dates = Array.from({ length: dateRangeDays }, (_, i) =>
+      subtractDays(selectedDate, dateRangeDays - 1 - i)
+    );
+    prices = [];
+    for (const date of dates) {
+      const dayPrices = state.allAreaPricesByDate[date]?.[selectedArea];
+      if (dayPrices) prices.push(...dayPrices);
+    }
+  }
+  if (!prices.length) return null;
+  const values = prices.map((p) => p.ore_per_kWh);
+  return {
+    min: Math.min(...values),
+    max: Math.max(...values),
+    avg: values.reduce((a, b) => a + b, 0) / values.length,
+  };
+});
+
 function subtractDays(isoDate: string, days: number): string {
   const d = new Date(isoDate + 'T12:00:00');
   d.setDate(d.getDate() - days);

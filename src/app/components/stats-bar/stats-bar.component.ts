@@ -1,7 +1,7 @@
 import { Component, inject, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
-import { selectCurrentPriceInRange, selectDailyStats, selectSelectedArea } from '../../store';
+import { selectCurrentPriceInRange, selectRangeStats, selectSelectedArea } from '../../store';
 import { LanguageService } from '../../services/language.service';
 
 const TAX_FACTOR = 1.25;
@@ -21,7 +21,7 @@ export class StatsBarComponent {
   includeTax = input(false);
 
   currentPrice$ = this.store.select(selectCurrentPriceInRange);
-  stats$ = this.store.select(selectDailyStats);
+  stats$ = this.store.select(selectRangeStats);
   selectedArea$ = this.store.select(selectSelectedArea);
 
   taxFactor(area: string): number {
