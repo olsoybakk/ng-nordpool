@@ -1,9 +1,7 @@
 <div class="dashboard" [class.dashboard--viewport]="chartMode() === 'line'">
   <header class="dashboard__header">
     <div class="dashboard__title-row">
-      <h1 class="dashboard__title">
-        <span class="dashboard__logo">⚡</span> {{ ls.t().title }}
-      </h1>
+      <h1 class="dashboard__title"><span class="dashboard__logo">⚡</span> {{ ls.t().title }}</h1>
       <div class="dashboard__header-actions">
         <button
           class="theme-btn"
@@ -11,13 +9,25 @@
           [attr.aria-label]="theme() === 'dark' ? ls.t().switchToLight : ls.t().switchToDark"
         >
           @if (theme() === 'dark') {
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="4"/>
-              <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="4" />
+              <path
+                d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+              />
             </svg>
           } @else {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
             </svg>
           }
         </button>
@@ -26,7 +36,9 @@
           class="lang-btn"
           (click)="ls.toggleLang()"
           [attr.aria-label]="ls.lang() === 'nb' ? ls.t().switchToEnglish : ls.t().switchToNorwegian"
-        >{{ ls.lang() === 'nb' ? 'EN' : 'NO' }}</button>
+        >
+          {{ ls.lang() === 'nb' ? 'EN' : 'NO' }}
+        </button>
       </div>
     </div>
     <p class="dashboard__subtitle">{{ ls.t().subtitle }}</p>
@@ -43,8 +55,11 @@
       </div>
     }
 
-    <section class="dashboard__stats" [class.dashboard__stats--loading]="(loading$ | async) || (allAreasLoading$ | async)">
-      <app-stats-bar [includeTax]="includeTax()" />
+    <section
+      class="dashboard__stats"
+      [class.dashboard__stats--loading]="(loading$ | async) || (allAreasLoading$ | async)"
+    >
+      <app-stats-bar [includeTax]="includeTax()" [showStromstotte]="showStromstotte()" />
     </section>
 
     <section class="dashboard__chart">
@@ -63,7 +78,9 @@
             [attr.aria-pressed]="includeTax()"
             [attr.aria-label]="ls.t().taxAriaLabel"
             [attr.title]="ls.t().taxTitle"
-          >{{ ls.t().taxBtn }}</button>
+          >
+            {{ ls.t().taxBtn }}
+          </button>
 
           <button
             class="toggle-btn"
@@ -72,7 +89,20 @@
             [attr.aria-pressed]="showNorgespris()"
             [attr.aria-label]="ls.t().norgesprisAriaLabel"
             [attr.title]="ls.t().norgesprisTitle"
-          >Norgespris</button>
+          >
+            Norgespris
+          </button>
+
+          <button
+            class="toggle-btn"
+            [class.toggle-btn--active]="showStromstotte()"
+            (click)="toggleStromstotte()"
+            [attr.aria-pressed]="showStromstotte()"
+            [attr.aria-label]="ls.t().stromstotteAriaLabel"
+            [attr.title]="ls.t().stromstotteTitle"
+          >
+            Strømstøtte
+          </button>
 
           <div class="chart-toggle" role="group" [attr.aria-label]="ls.t().chartTypeLabel">
             <button
@@ -82,7 +112,14 @@
               [attr.aria-label]="ls.t().lineAriaLabel"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                <polyline points="1,13 5,7 9,9 13,3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+                <polyline
+                  points="1,13 5,7 9,9 13,3"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linejoin="round"
+                  stroke-linecap="round"
+                />
               </svg>
               {{ ls.t().lineBtn }}
             </button>
@@ -93,9 +130,9 @@
               [attr.aria-label]="ls.t().barAriaLabel"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                <rect x="1" y="6" width="3" height="9" rx="1"/>
-                <rect x="6" y="3" width="3" height="12" rx="1"/>
-                <rect x="11" y="8" width="3" height="7" rx="1"/>
+                <rect x="1" y="6" width="3" height="9" rx="1" />
+                <rect x="6" y="3" width="3" height="12" rx="1" />
+                <rect x="11" y="8" width="3" height="7" rx="1" />
               </svg>
               {{ ls.t().barBtn }}
             </button>
@@ -106,11 +143,15 @@
         [chartMode]="chartMode()"
         [includeTax]="includeTax()"
         [showNorgespris]="showNorgespris()"
+        [showStromstotte]="showStromstotte()"
       />
     </section>
 
     @if (chartMode() === 'bar' && (dateRangeDays$ | async) === 1) {
-      <section class="dashboard__table" [class.dashboard__table--loading]="(loading$ | async) || (allAreasLoading$ | async)">
+      <section
+        class="dashboard__table"
+        [class.dashboard__table--loading]="(loading$ | async) || (allAreasLoading$ | async)"
+      >
         <h2 class="section-title">{{ ls.t().allHours }}</h2>
         <app-price-table [includeTax]="includeTax()" />
       </section>

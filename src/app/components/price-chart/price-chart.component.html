@@ -2,9 +2,15 @@
   <div class="fullscreen-backdrop" (click)="toggleFullscreen()"></div>
 }
 @if (vm$ | async; as vm) {
-  <div class="chart-outer" [class.chart-outer--fullscreen]="isFullscreen()" (mouseleave)="onMouseLeave()">
+  <div
+    class="chart-outer"
+    [class.chart-outer--fullscreen]="isFullscreen()"
+    (mouseleave)="onMouseLeave()"
+  >
     @if (zoomRange()) {
-      <button class="reset-zoom-btn" (click)="resetZoom()" [attr.aria-label]="ls.t().resetZoom">↺</button>
+      <button class="reset-zoom-btn" (click)="resetZoom()" [attr.aria-label]="ls.t().resetZoom">
+        ↺
+      </button>
     }
     <button
       class="fullscreen-btn"
@@ -12,262 +18,357 @@
       [attr.aria-label]="isFullscreen() ? ls.t().exitFullscreen : ls.t().enterFullscreen"
     >
       @if (isFullscreen()) {
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="8 3 3 3 3 8"/>
-          <polyline points="21 8 21 3 16 3"/>
-          <polyline points="3 16 3 21 8 21"/>
-          <polyline points="16 21 21 21 21 16"/>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="8 3 3 3 3 8" />
+          <polyline points="21 8 21 3 16 3" />
+          <polyline points="3 16 3 21 8 21" />
+          <polyline points="16 21 21 21 21 16" />
         </svg>
       } @else {
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="15 3 21 3 21 9"/>
-          <polyline points="9 21 3 21 3 15"/>
-          <line x1="21" y1="3" x2="14" y2="10"/>
-          <line x1="3" y1="21" x2="10" y2="14"/>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="15 3 21 3 21 9" />
+          <polyline points="9 21 3 21 3 15" />
+          <line x1="21" y1="3" x2="14" y2="10" />
+          <line x1="3" y1="21" x2="10" y2="14" />
         </svg>
       }
     </button>
 
     <div class="chart-wrapper">
-    <svg
-      class="chart"
-      [attr.viewBox]="dims().viewBox"
-      preserveAspectRatio="xMidYMid meet"
-      role="img"
-      [attr.aria-label]="chartMode() === 'bar' ? ls.t().barChartAriaLabel : ls.t().lineChartAriaLabel"
-      (mousemove)="onMouseMove($event)"
-      (wheel)="onWheel($event)"
-      (touchstart)="onTouchStart($event)"
-      (touchmove)="onTouchMove($event)"
-      (touchend)="onTouchEnd($event)"
-      (touchcancel)="onTouchEnd($event)"
-    >
-      <!-- Y-axis grid lines and labels -->
-      @for (tick of (chartMode() === 'bar' ? vm.yTicks : vm.multiTicks); track tick.y) {
-        <line
-          [attr.x1]="offsetX"
-          [attr.y1]="tick.y"
-          [attr.x2]="offsetX + chartW"
-          [attr.y2]="tick.y"
-          class="grid-line"
-        />
-        <text
-          [attr.x]="dims().yLabelInside ? offsetX + 4 : offsetX - 8"
-          [attr.y]="tick.y"
-          class="axis-label"
-          [attr.text-anchor]="dims().yLabelInside ? 'start' : 'end'"
-          dominant-baseline="middle"
-          [attr.font-size]="dims().labelSize"
-        >{{ tick.val | number: '1.2-2' }}</text>
-      }
+      <svg
+        class="chart"
+        [attr.viewBox]="dims().viewBox"
+        preserveAspectRatio="xMidYMid meet"
+        role="img"
+        [attr.aria-label]="
+          chartMode() === 'bar' ? ls.t().barChartAriaLabel : ls.t().lineChartAriaLabel
+        "
+        (mousemove)="onMouseMove($event)"
+        (wheel)="onWheel($event)"
+        (touchstart)="onTouchStart($event)"
+        (touchmove)="onTouchMove($event)"
+        (touchend)="onTouchEnd($event)"
+        (touchcancel)="onTouchEnd($event)"
+      >
+        <!-- Y-axis grid lines and labels -->
+        @for (tick of chartMode() === 'bar' ? vm.yTicks : vm.multiTicks; track tick.y) {
+          <line
+            [attr.x1]="offsetX"
+            [attr.y1]="tick.y"
+            [attr.x2]="offsetX + chartW"
+            [attr.y2]="tick.y"
+            class="grid-line"
+          />
+          <text
+            [attr.x]="dims().yLabelInside ? offsetX + 4 : offsetX - 8"
+            [attr.y]="tick.y"
+            class="axis-label"
+            [attr.text-anchor]="dims().yLabelInside ? 'start' : 'end'"
+            dominant-baseline="middle"
+            [attr.font-size]="dims().labelSize"
+          >
+            {{ tick.val | number: '1.2-2' }}
+          </text>
+        }
 
-      @if (chartMode() === 'bar') {
-        <!-- Bar chart bars -->
-        @for (bar of vm.bars; track trackBySlot($index, bar)) {
-          <g class="bar-group" [class.bar-group--current]="bar.isCurrent">
-            <rect
-              [attr.x]="bar.x"
-              [attr.y]="bar.barY"
-              [attr.width]="vm.barW"
-              [attr.height]="bar.barHeight"
-              [attr.rx]="2"
-              class="bar"
-              [class.bar--low]="bar.priceLevel === 'low'"
-              [class.bar--mid]="bar.priceLevel === 'mid'"
-              [class.bar--high]="bar.priceLevel === 'high'"
-              [class.bar--current]="bar.isCurrent"
+        @if (chartMode() === 'bar') {
+          <!-- Bar chart bars -->
+          @for (bar of vm.bars; track trackBySlot($index, bar)) {
+            <g class="bar-group" [class.bar-group--current]="bar.isCurrent">
+              <rect
+                [attr.x]="bar.x"
+                [attr.y]="bar.barY"
+                [attr.width]="vm.barW"
+                [attr.height]="bar.barHeight"
+                [attr.rx]="2"
+                class="bar"
+                [class.bar--low]="bar.priceLevel === 'low'"
+                [class.bar--mid]="bar.priceLevel === 'mid'"
+                [class.bar--high]="bar.priceLevel === 'high'"
+                [class.bar--current]="bar.isCurrent"
+              />
+              <!-- Day boundary label -->
+              @if (vm.showDayLabels && bar.isDayBoundary) {
+                <text
+                  [attr.x]="bar.x"
+                  [attr.y]="dims().xAxisY"
+                  class="day-label"
+                  text-anchor="start"
+                  [attr.font-size]="dims().labelSize"
+                >
+                  {{ bar.dayLabel }}
+                </text>
+              }
+              <!-- Hour label (skip midnight on multi-day, handled by day label) -->
+              @if (!vm.showDayLabels && bar.minute === 0 && bar.hour % vm.hourStep === 0) {
+                <text
+                  [attr.x]="bar.x + vm.barW / 2"
+                  [attr.y]="dims().xAxisY"
+                  class="hour-label"
+                  text-anchor="middle"
+                  [attr.font-size]="dims().labelSize"
+                >
+                  {{ bar.timeLabel }}
+                </text>
+              }
+              @if (
+                vm.showDayLabels &&
+                bar.minute === 0 &&
+                bar.hour % vm.hourStep === 0 &&
+                !bar.isDayBoundary
+              ) {
+                <text
+                  [attr.x]="bar.x + vm.barW / 2"
+                  [attr.y]="dims().xAxisY"
+                  class="hour-label"
+                  text-anchor="middle"
+                  [attr.font-size]="dims().labelSize"
+                >
+                  {{ bar.timeLabel }}
+                </text>
+              }
+            </g>
+          }
+
+          <!-- Norgespris reference line (bar mode) -->
+          @if (vm.norgesprisBarY !== null) {
+            <line
+              [attr.x1]="offsetX"
+              [attr.y1]="vm.norgesprisBarY"
+              [attr.x2]="offsetX + chartW"
+              [attr.y2]="vm.norgesprisBarY"
+              class="norgespris-line"
             />
-            <!-- Day boundary label -->
+            <text
+              [attr.x]="offsetX + chartW - 2"
+              [attr.y]="vm.norgesprisBarY - 4"
+              class="norgespris-label"
+              text-anchor="end"
+              [attr.font-size]="dims().labelSize"
+            >
+              {{ ls.t().norgesprisLabel }}
+            </text>
+          }
+
+          <!-- Strømstøtte threshold line (bar mode) -->
+          @if (vm.stromstotteBarY !== null) {
+            <line
+              [attr.x1]="offsetX"
+              [attr.y1]="vm.stromstotteBarY"
+              [attr.x2]="offsetX + chartW"
+              [attr.y2]="vm.stromstotteBarY"
+              class="stromstotte-line"
+            />
+            <text
+              [attr.x]="offsetX + chartW - 2"
+              [attr.y]="vm.stromstotteBarY - 4"
+              class="stromstotte-label"
+              text-anchor="end"
+              [attr.font-size]="dims().labelSize"
+            >
+              {{ ls.t().stromstotteLabel }}
+            </text>
+          }
+        } @else {
+          <!-- Multi-area step line chart -->
+          @for (line of vm.areaLines; track trackByArea($index, line)) {
+            <g class="area-line" [class.area-line--selected]="line.isSelected">
+              <polyline
+                [attr.points]="line.linePoints"
+                class="line-path"
+                [attr.stroke]="line.color"
+              />
+              @if (line.isSelected) {
+                @for (pt of line.points; track pt.slot) {
+                  <circle
+                    [attr.cx]="pt.cx"
+                    [attr.cy]="pt.cy"
+                    r="5"
+                    class="line-dot line-dot--current"
+                    [attr.fill]="line.color"
+                  />
+                }
+              }
+              <text
+                [attr.x]="line.labelX"
+                [attr.y]="line.labelY"
+                class="area-label"
+                [class.area-label--selected]="line.isSelected"
+                [attr.fill]="line.color"
+                [attr.font-size]="dims().labelSize"
+              >
+                {{ line.area }}
+              </text>
+            </g>
+          }
+
+          <!-- X-axis labels (line mode) -->
+          @for (bar of vm.bars; track bar.slot) {
             @if (vm.showDayLabels && bar.isDayBoundary) {
               <text
-                [attr.x]="bar.x"
+                [attr.x]="offsetX + $index * (chartW / vm.slotCount)"
                 [attr.y]="dims().xAxisY"
                 class="day-label"
                 text-anchor="start"
                 [attr.font-size]="dims().labelSize"
-              >{{ bar.dayLabel }}</text>
+              >
+                {{ bar.dayLabel }}
+              </text>
             }
-            <!-- Hour label (skip midnight on multi-day, handled by day label) -->
             @if (!vm.showDayLabels && bar.minute === 0 && bar.hour % vm.hourStep === 0) {
               <text
-                [attr.x]="bar.x + vm.barW / 2"
+                [attr.x]="offsetX + $index * (chartW / vm.slotCount)"
                 [attr.y]="dims().xAxisY"
                 class="hour-label"
                 text-anchor="middle"
                 [attr.font-size]="dims().labelSize"
-              >{{ bar.timeLabel }}</text>
+              >
+                {{ bar.timeLabel }}
+              </text>
             }
-            @if (vm.showDayLabels && bar.minute === 0 && bar.hour % vm.hourStep === 0 && !bar.isDayBoundary) {
+            @if (
+              vm.showDayLabels &&
+              bar.minute === 0 &&
+              bar.hour % vm.hourStep === 0 &&
+              !bar.isDayBoundary
+            ) {
               <text
-                [attr.x]="bar.x + vm.barW / 2"
+                [attr.x]="offsetX + $index * (chartW / vm.slotCount)"
                 [attr.y]="dims().xAxisY"
                 class="hour-label"
                 text-anchor="middle"
                 [attr.font-size]="dims().labelSize"
-              >{{ bar.timeLabel }}</text>
+              >
+                {{ bar.timeLabel }}
+              </text>
             }
-          </g>
-        }
+          }
 
-        <!-- Norgespris reference line (bar mode) -->
-        @if (vm.norgesprisBarY !== null) {
-          <line
-            [attr.x1]="offsetX"
-            [attr.y1]="vm.norgesprisBarY"
-            [attr.x2]="offsetX + chartW"
-            [attr.y2]="vm.norgesprisBarY"
-            class="norgespris-line"
-          />
-          <text
-            [attr.x]="offsetX + chartW - 2"
-            [attr.y]="vm.norgesprisBarY - 4"
-            class="norgespris-label"
-            text-anchor="end"
-            [attr.font-size]="dims().labelSize"
-          >{{ ls.t().norgesprisLabel }}</text>
-        }
-
-      } @else {
-        <!-- Multi-area step line chart -->
-        @for (line of vm.areaLines; track trackByArea($index, line)) {
-          <g class="area-line" [class.area-line--selected]="line.isSelected">
-            <polyline
-              [attr.points]="line.linePoints"
-              class="line-path"
-              [attr.stroke]="line.color"
+          <!-- Norgespris reference line (line mode) -->
+          @if (vm.norgesprisLineY !== null) {
+            <line
+              [attr.x1]="offsetX"
+              [attr.y1]="vm.norgesprisLineY"
+              [attr.x2]="offsetX + chartW"
+              [attr.y2]="vm.norgesprisLineY"
+              class="norgespris-line"
             />
-            @if (line.isSelected) {
-              @for (pt of line.points; track pt.slot) {
-                <circle
-                  [attr.cx]="pt.cx"
-                  [attr.cy]="pt.cy"
-                  r="5"
-                  class="line-dot line-dot--current"
-                  [attr.fill]="line.color"
-                />
-              }
-            }
             <text
-              [attr.x]="line.labelX"
-              [attr.y]="line.labelY"
-              class="area-label"
-              [class.area-label--selected]="line.isSelected"
-              [attr.fill]="line.color"
+              [attr.x]="offsetX + chartW - 2"
+              [attr.y]="vm.norgesprisLineY - 4"
+              class="norgespris-label"
+              text-anchor="end"
               [attr.font-size]="dims().labelSize"
-            >{{ line.area }}</text>
-          </g>
-        }
+            >
+              {{ ls.t().norgesprisLabel }}
+            </text>
+          }
 
-        <!-- X-axis labels (line mode) -->
-        @for (bar of vm.bars; track bar.slot) {
-          @if (vm.showDayLabels && bar.isDayBoundary) {
+          <!-- Strømstøtte threshold line (line mode) -->
+          @if (vm.stromstotteLineY !== null) {
+            <line
+              [attr.x1]="offsetX"
+              [attr.y1]="vm.stromstotteLineY"
+              [attr.x2]="offsetX + chartW"
+              [attr.y2]="vm.stromstotteLineY"
+              class="stromstotte-line"
+            />
             <text
-              [attr.x]="offsetX + $index * (chartW / vm.slotCount)"
-              [attr.y]="dims().xAxisY"
-              class="day-label"
-              text-anchor="start"
+              [attr.x]="offsetX + chartW - 2"
+              [attr.y]="vm.stromstotteLineY - 4"
+              class="stromstotte-label"
+              text-anchor="end"
               [attr.font-size]="dims().labelSize"
-            >{{ bar.dayLabel }}</text>
-          }
-          @if (!vm.showDayLabels && bar.minute === 0 && bar.hour % vm.hourStep === 0) {
-            <text
-              [attr.x]="offsetX + $index * (chartW / vm.slotCount)"
-              [attr.y]="dims().xAxisY"
-              class="hour-label"
-              text-anchor="middle"
-              [attr.font-size]="dims().labelSize"
-            >{{ bar.timeLabel }}</text>
-          }
-          @if (vm.showDayLabels && bar.minute === 0 && bar.hour % vm.hourStep === 0 && !bar.isDayBoundary) {
-            <text
-              [attr.x]="offsetX + $index * (chartW / vm.slotCount)"
-              [attr.y]="dims().xAxisY"
-              class="hour-label"
-              text-anchor="middle"
-              [attr.font-size]="dims().labelSize"
-            >{{ bar.timeLabel }}</text>
+            >
+              {{ ls.t().stromstotteLabel }}
+            </text>
           }
         }
 
-        <!-- Norgespris reference line (line mode) -->
-        @if (vm.norgesprisLineY !== null) {
+        <!-- Hover column highlight -->
+        @if (hoveredSlot() !== null) {
+          <rect
+            [attr.x]="offsetX + hoveredSlot()! * slotW()"
+            [attr.y]="offsetY"
+            [attr.width]="slotW()"
+            [attr.height]="dims().chartH"
+            class="hover-column"
+          />
           <line
-            [attr.x1]="offsetX"
-            [attr.y1]="vm.norgesprisLineY"
-            [attr.x2]="offsetX + chartW"
-            [attr.y2]="vm.norgesprisLineY"
-            class="norgespris-line"
+            [attr.x1]="offsetX + hoveredSlot()! * slotW() + slotW() / 2"
+            [attr.y1]="offsetY"
+            [attr.x2]="offsetX + hoveredSlot()! * slotW() + slotW() / 2"
+            [attr.y2]="dims().bottomY"
+            class="hover-line"
+          />
+        }
+
+        <!-- Current-time marker -->
+        @if (vm.nowLineX !== null) {
+          <line
+            [attr.x1]="vm.nowLineX"
+            [attr.y1]="offsetY"
+            [attr.x2]="vm.nowLineX"
+            [attr.y2]="dims().bottomY"
+            class="now-line"
           />
           <text
-            [attr.x]="offsetX + chartW - 2"
-            [attr.y]="vm.norgesprisLineY - 4"
-            class="norgespris-label"
-            text-anchor="end"
+            [attr.x]="vm.nowLineX"
+            [attr.y]="dims().nowLabelY"
+            class="now-label"
+            text-anchor="middle"
             [attr.font-size]="dims().labelSize"
-          >{{ ls.t().norgesprisLabel }}</text>
+          >
+            {{ ls.t().nowMarker }}
+          </text>
         }
-      }
 
-      <!-- Hover column highlight -->
-      @if (hoveredSlot() !== null) {
-        <rect
-          [attr.x]="offsetX + hoveredSlot()! * slotW()"
-          [attr.y]="offsetY"
-          [attr.width]="slotW()"
-          [attr.height]="dims().chartH"
-          class="hover-column"
-        />
+        <!-- Y-axis line -->
         <line
-          [attr.x1]="offsetX + hoveredSlot()! * slotW() + slotW() / 2"
+          [attr.x1]="offsetX"
           [attr.y1]="offsetY"
-          [attr.x2]="offsetX + hoveredSlot()! * slotW() + slotW() / 2"
+          [attr.x2]="offsetX"
           [attr.y2]="dims().bottomY"
-          class="hover-line"
+          class="axis-line"
         />
-      }
 
-      <!-- Current-time marker -->
-      @if (vm.nowLineX !== null) {
-        <line
-          [attr.x1]="vm.nowLineX"
-          [attr.y1]="offsetY"
-          [attr.x2]="vm.nowLineX"
-          [attr.y2]="dims().bottomY"
-          class="now-line"
-        />
+        <!-- Y-axis title -->
         <text
-          [attr.x]="vm.nowLineX"
-          [attr.y]="dims().nowLabelY"
-          class="now-label"
+          [attr.x]="dims().axisTitleX"
+          [attr.y]="offsetY + dims().chartH / 2"
+          class="axis-title"
           text-anchor="middle"
+          [attr.transform]="
+            'rotate(-90 ' + dims().axisTitleX + ' ' + (offsetY + dims().chartH / 2) + ')'
+          "
           [attr.font-size]="dims().labelSize"
-        >{{ ls.t().nowMarker }}</text>
-      }
-
-      <!-- Y-axis line -->
-      <line
-        [attr.x1]="offsetX"
-        [attr.y1]="offsetY"
-        [attr.x2]="offsetX"
-        [attr.y2]="dims().bottomY"
-        class="axis-line"
-      />
-
-      <!-- Y-axis title -->
-      <text
-        [attr.x]="dims().axisTitleX"
-        [attr.y]="offsetY + dims().chartH / 2"
-        class="axis-title"
-        text-anchor="middle"
-        [attr.transform]="'rotate(-90 ' + dims().axisTitleX + ' ' + (offsetY + dims().chartH / 2) + ')'"
-        [attr.font-size]="dims().labelSize"
-      >øre/kWh</text>
-    </svg>
+        >
+          øre/kWh
+        </text>
+      </svg>
     </div>
 
     @if (zoomRange()) {
       <div class="scroll-bar" (mouseenter)="hoveredSlot.set(null)">
-        <div class="scroll-track" (mousedown)="onScrollTrackDown($event)" (touchstart)="onScrollTrackTouchStart($event)">
+        <div
+          class="scroll-track"
+          (mousedown)="onScrollTrackDown($event)"
+          (touchstart)="onScrollTrackTouchStart($event)"
+        >
           <div
             class="scroll-thumb"
             [style.left.%]="scrollThumbLeft()"
@@ -285,9 +386,19 @@
         class="tooltip"
         [style.left.px]="tooltipLeft()"
         [style.top.px]="tooltipTop()"
-        [style.transform]="tooltipFlip()
-          ? (tooltipAnchor() === 'above' ? 'translate(calc(-100% - 12px), calc(-100% - 44px))' : tooltipAnchor() === 'below' ? 'translate(calc(-100% - 12px), 44px)' : 'translate(calc(-100% - 12px), -50%)')
-          : (tooltipAnchor() === 'above' ? 'translate(12px, calc(-100% - 44px))' : tooltipAnchor() === 'below' ? 'translate(12px, 44px)' : 'translate(12px, -50%)')"
+        [style.transform]="
+          tooltipFlip()
+            ? tooltipAnchor() === 'above'
+              ? 'translate(calc(-100% - 12px), calc(-100% - 44px))'
+              : tooltipAnchor() === 'below'
+                ? 'translate(calc(-100% - 12px), 44px)'
+                : 'translate(calc(-100% - 12px), -50%)'
+            : tooltipAnchor() === 'above'
+              ? 'translate(12px, calc(-100% - 44px))'
+              : tooltipAnchor() === 'below'
+                ? 'translate(12px, 44px)'
+                : 'translate(12px, -50%)'
+        "
       >
         <div class="tooltip__header">
           @if (vm.slotTimes[hoveredSlot()!].date) {
@@ -301,14 +412,20 @@
         <div class="tooltip__rows">
           @for (entry of vm.pricesBySlot[hoveredSlot()!]; track trackByAreaEntry($index, entry)) {
             @if (chartMode() === 'line' || entry.isSelected || entry.isNorgespris) {
-              <div class="tooltip__row"
+              <div
+                class="tooltip__row"
                 [class.tooltip__row--selected]="chartMode() === 'line' && entry.isSelected"
                 [class.tooltip__row--single]="chartMode() === 'bar'"
-                [class.tooltip__row--norgespris]="entry.isNorgespris">
-                <span class="tooltip__swatch"
+                [class.tooltip__row--norgespris]="entry.isNorgespris"
+              >
+                <span
+                  class="tooltip__swatch"
                   [class.tooltip__swatch--dashed]="entry.isNorgespris"
-                  [style.background]="entry.isNorgespris ? null : entry.color"></span>
-                <span class="tooltip__area">{{ entry.isNorgespris ? ls.t().norgesprisLabel : entry.label }}</span>
+                  [style.background]="entry.isNorgespris ? null : entry.color"
+                ></span>
+                <span class="tooltip__area">{{
+                  entry.isNorgespris ? ls.t().norgesprisLabel : entry.label
+                }}</span>
                 <span class="tooltip__price">{{ entry.ore | number: '1.2-2' }}</span>
               </div>
             }

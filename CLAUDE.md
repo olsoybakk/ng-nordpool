@@ -146,6 +146,7 @@ src/app/store/index.ts re-exports all of the above
 `src/app/services/nordpool.service.ts` — two methods: `getPrices(date, area)` fetches a single area; `getAllAreaPrices(date)` fetches all 5 areas in one request. Both check `PriceCacheService` before making an HTTP call and write results back per-area, so a `getAllAreaPrices` hit warms the `getPrices` cache and vice versa. Both map each 15-min `multiAreaEntries` entry directly to a `HourlyPrice` (÷ 10 for NOK/MWh → øre/kWh), yielding up to 96 entries per area with no per-hour averaging.
 
 `src/app/services/location.service.ts` — `detectPriceArea()` wraps `navigator.geolocation.getCurrentPosition` in an Observable, calls `nominatim.openstreetmap.org/reverse` for the country code, then maps to a `PriceArea`:
+
 - Norway: lat/lon → NO1–NO5 (approximate bidding-zone boundaries)
 - All other countries → NO1 (non-Norwegian mappings commented out)
 
@@ -175,12 +176,15 @@ src/app/components/
                   trigger focuses the first/last option. Options have tabindex=0
                   with Enter/Space to select.
   stats-bar/      Now / Min / Avg / Max cards derived from store selectors.
+                  Inputs: includeTax, showStromstotte.
                   "Now" uses selectCurrentPriceInRange so it appears whenever the
                   now-line is visible in the chart (not only when selectedDate === today).
                   Min/Avg/Max use selectRangeStats, which covers all days in the active
                   date range (not just the selected date).
+                  effectiveOre() applies the strømstøtte formula (when showStromstotte)
+                  and tax factor in sequence, matching the chart's price transform.
   price-chart/    Pure SVG chart (no charting lib). Inputs: chartMode, includeTax,
-                  showNorgespris. Selects date range from store for multi-day data.
+                  showNorgespris, showStromstotte. Selects date range from store for multi-day data.
                   Y scale: both modes snap min to floor-25 and max to ceil-25 of
                     (full-dataset values ± 5 øre buffer). Grid lines at every 50 øre.
                     Scale is always derived from the complete unsliced dataset so the
@@ -203,6 +207,15 @@ src/app/components/
                     showNorgespris is true. Also injected into the tooltip as a
                     TooltipEntry (isNorgespris: true) sorted by price value alongside
                     the other areas (not always at the bottom).
+                  Strømstøtte: when showStromstotte is true, all displayed prices are
+                    recalculated via applyStromstotte() — prices ≤ 77 øre/kWh excl.
+                    VAT are unchanged; prices above are compressed to
+                    0.1 × spot + 0.9 × 77 (90% covered). A dashed threshold line is
+                    drawn at 77 øre (or 96.25 incl. VAT) using --color-norgespris.
+                    The transformation is applied inside displayOre() before the tax
+                    factor, affecting bars, line points, y-scale, and tooltip prices.
+                    Norgespris and Strømstøtte are independent toggles — both can be
+                    active simultaneously.
                   Zoom: slot-range slicing (zoomRange → [startSlot, endSlot]).
                     buildViewModel re-maps the visible window to fill the full chart
                     width; x-labels, now-line, and hourStep adapt to the visible window;
@@ -247,6 +260,8 @@ src/app/components/
                     areas + Norgespris (when active) sorted most→least expensive;
                     non-selected rows at 0.8 opacity, selected bold + accent background.
                     Bar mode shows only the selected area and Norgespris (when active).
+                    When Strømstøtte is active, all area prices in the tooltip already
+                    reflect effective post-support values (no separate tooltip entry).
                   Fullscreen uses CSS position:fixed (not the browser Fullscreen API).
                     dims() computed signal recalculates chartH and viewBox to fill
                     the card. width:auto on .chart-outer--fullscreen is critical —
@@ -264,11 +279,13 @@ src/app/components/
                   Only shown when chartMode === 'bar'.
 
 src/app/pages/
-  dashboard/      Owns chartMode, includeTax, showNorgespris signals. Line/Bar,
-                  Tax, and Norgespris toggles in the header.
-                  All three signals are initialised from localStorage on load and
+  dashboard/      Owns chartMode, includeTax, showNorgespris, showStromstotte signals.
+                  Line/Bar, Tax, Norgespris, and Strømstøtte toggles in the header.
+                  All four signals are initialised from localStorage on load and
                   written back via effect() on every change (keys: 'chartMode',
-                  'includeTax', 'showNorgespris').
+                  'includeTax', 'showNorgespris', 'showStromstotte').
+                  Chart controls use flex-wrap so all five buttons remain accessible
+                  on narrow mobile viewports without overflow.
                   On init dispatches loadPrices + loadAllAreaPrices via
                   combineLatest + first(). Also dispatches detectLocation if
                   localStorage has no saved area.
@@ -290,7 +307,7 @@ Lazy-loads `DashboardComponent` at `''`. Wildcard redirects to `''`.
 
 `dateRangeDays` is written to `localStorage` by the `persistDateRangeDays$` effect and read back in the reducer's `initialState` (clamped 1–14, defaults to 1 if invalid).
 
-`chartMode`, `includeTax`, and `showNorgespris` are written to `localStorage` by `effect()` calls in `DashboardComponent` and read back on component init.
+`chartMode`, `includeTax`, `showNorgespris`, and `showStromstotte` are written to `localStorage` by `effect()` calls in `DashboardComponent` and read back on component init.
 
 Price data is cached in `localStorage` via `PriceCacheService` (key `nordpool_price_cache`). Up to `30 × PRICE_AREAS.length` entries are kept (currently 150, enough for 30 full days); `getAllAreaPrices` stores each area individually so a single all-area fetch warms the per-area cache.
 
@@ -305,6 +322,7 @@ Theme toggle: `DashboardComponent` holds a `theme` signal (`'dark' | 'light'`) i
 ### Public assets
 
 Static files in `public/` are served at the root. Current contents:
+
 - `favicon.svg` — SVG emoji favicon (`⚡`), works in all modern browsers
 - `apple-touch-icon.png` — 180×180 PNG for iOS home screen shortcuts; generated via canvas with `actualBoundingBox` metrics to visually centre the emoji
 - `favicon.ico` — legacy fallback (kept for older browsers)
@@ -325,7 +343,7 @@ Repo must be **public** for GitHub Pages on a free plan.
 - Step chart geometry: two points per hour (left + right edge at same Y) produces correct staircase without any path commands — a plain `<polyline>` is enough.
 - Tooltip uses HTML (not SVG foreignObject) for easy styling. Uses `position: fixed` (not `absolute`) so it is never clipped by `overflow: hidden` on `.chart-outer`. Coordinates in `updateTooltip` are therefore viewport-relative (`clientX/clientY`); `relX/relY` are only used for slot detection and the flip threshold. `pointer-events: none` so it never blocks mouse events on the SVG.
 - Tooltip flip threshold uses absolute pixels (`rect.width - 240`) rather than a percentage so it accounts for the tooltip's actual width.
-- `chartMode` lives in the dashboard signal, not the store — it's purely presentational. It (along with `includeTax` and `showNorgespris`) is persisted to localStorage via `effect()` in the dashboard so settings survive a reload without polluting NgRx state.
+- `chartMode` lives in the dashboard signal, not the store — it's purely presentational. It (along with `includeTax`, `showNorgespris`, and `showStromstotte`) is persisted to localStorage via `effect()` in the dashboard so settings survive a reload without polluting NgRx state.
 - `loadAllAreaPrices` fires a single API request for all 5 areas via `getAllAreaPrices(date)` — the proxy accepts a comma-separated `deliveryArea` list so no parallel requests are needed.
 - Price cache is keyed per `date:area` so adding a new area automatically busts the `getAllAreaPrices` cache for all existing dates (the all-cached check requires every currently-known area to be present).
 - Custom dropdown instead of native `<select>` because `<option>` elements do not support opacity or colour cross-browser.
@@ -343,6 +361,7 @@ Repo must be **public** for GitHub Pages on a free plan.
 - `selectCurrentPriceInRange` is used by the stats-bar instead of `selectCurrentPrice` so the "Now" card appears whenever the now-line is visible (today within the active range), not only when `selectedDate === today`.
 - `selectRangeStats` is used by the stats-bar for Min/Avg/Max so the values reflect all days in the active date range, not just the selected date.
 - Norgespris is injected into `pricesBySlot` as a `TooltipEntry` (`isNorgespris: true`) and sorted by price value alongside the other areas, rather than always appended at the bottom. `TooltipEntry.area` is `string` (not `PriceArea`) to accommodate the `'norgespris'` key.
+- Strømstøtte applies as a pre-tax transform inside `displayOre()` rather than a separate pass, so every code path (bars, line points, y-scale min/max, tooltip) automatically uses effective prices with a single flag. The threshold line uses `--color-norgespris` (same red) since both lines are reference overlays of the same visual weight — no separate CSS variable needed.
 - Multi-day prices are merged via `selectMergedAreaPrices` (selector concatenates `allAreaPricesByDate` entries for the active range). The store keyed by date avoids re-fetching already-loaded days.
 - `loadAllAreaPrices$` treats both HTTP errors and null API responses (HTTP 200 with null body) the same way: dispatch `loadAllAreaPricesSuccess` with empty results + `setNotification`. The Nordpool API returns null for dates outside its ~10-day history window, not a 500.
 - `selectLoadedDates` deduplicates dispatch in `loadMultiDayPrices$` — only dates absent from `allAreaPricesByDate` get a `loadAllAreaPrices` action, preventing redundant fetches when the range changes.

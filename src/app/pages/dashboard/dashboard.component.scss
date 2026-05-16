@@ -83,7 +83,9 @@
   transition: color 0.15s;
   flex-shrink: 0;
 
-  &:hover { color: var(--color-text); }
+  &:hover {
+    color: var(--color-text);
+  }
 }
 
 .lang-btn {
@@ -103,7 +105,9 @@
   transition: color 0.15s;
   flex-shrink: 0;
 
-  &:hover { color: var(--color-text); }
+  &:hover {
+    color: var(--color-text);
+  }
 }
 
 // Standalone Tax / Norgespris toggle buttons (outside the segmented chart-toggle)
@@ -116,9 +120,14 @@
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
 
-  &:hover { color: var(--color-text); border-color: var(--color-accent); }
+  &:hover {
+    color: var(--color-text);
+    border-color: var(--color-accent);
+  }
 
   &.toggle-btn--active {
     background: var(--color-accent);
@@ -149,11 +158,18 @@
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 
-  svg { flex-shrink: 0; fill: currentColor; }
+  svg {
+    flex-shrink: 0;
+    fill: currentColor;
+  }
 
-  &:hover { color: var(--color-text); }
+  &:hover {
+    color: var(--color-text);
+  }
 
   &--active {
     background: var(--color-surface);
@@ -222,7 +238,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .error-banner {
@@ -247,7 +265,11 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  flex-shrink: 0;
+  flex-wrap: wrap;
+
+  @media (max-width: 640px) {
+    width: 100%;
+  }
 }
 
 .section-title {
@@ -276,6 +298,12 @@
 }
 
 @keyframes toast-in {
-  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }

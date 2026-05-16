@@ -44,11 +44,10 @@ export class DashboardComponent implements OnInit {
   dateRangeDays$ = this.store.select(selectDateRangeDays);
   notification = toSignal(this.store.select(selectNotification), { initialValue: null });
 
-  chartMode = signal<ChartMode>(
-    (localStorage.getItem('chartMode') as ChartMode | null) ?? 'line',
-  );
+  chartMode = signal<ChartMode>((localStorage.getItem('chartMode') as ChartMode | null) ?? 'line');
   includeTax = signal(localStorage.getItem('includeTax') === 'true');
   showNorgespris = signal(localStorage.getItem('showNorgespris') === 'true');
+  showStromstotte = signal(localStorage.getItem('showStromstotte') === 'true');
   theme = signal<'dark' | 'light'>(
     window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
   );
@@ -65,6 +64,9 @@ export class DashboardComponent implements OnInit {
     });
     effect(() => {
       localStorage.setItem('showNorgespris', String(this.showNorgespris()));
+    });
+    effect(() => {
+      localStorage.setItem('showStromstotte', String(this.showStromstotte()));
     });
 
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
@@ -105,5 +107,9 @@ export class DashboardComponent implements OnInit {
 
   toggleNorgespris(): void {
     this.showNorgespris.update((v) => !v);
+  }
+
+  toggleStromstotte(): void {
+    this.showStromstotte.update((v) => !v);
   }
 }

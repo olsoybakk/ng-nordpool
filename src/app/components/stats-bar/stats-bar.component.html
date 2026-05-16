@@ -4,20 +4,28 @@
       @if (currentPrice$ | async; as current) {
         <div class="stat stat--current">
           <span class="stat__label">{{ ls.t().now }}</span>
-          <span class="stat__value">{{ current.ore_per_kWh * taxFactor(area) | number: '1.2-2' }} øre/kWh</span>
+          <span class="stat__value"
+            >{{ effectiveOre(current.ore_per_kWh, area) | number: '1.2-2' }} øre/kWh</span
+          >
         </div>
       }
       <div class="stat">
         <span class="stat__label">{{ ls.t().avg }}</span>
-        <span class="stat__value">{{ stats.avg * taxFactor(area) | number: '1.2-2' }} øre/kWh</span>
+        <span class="stat__value"
+          >{{ effectiveOre(stats.avg, area) | number: '1.2-2' }} øre/kWh</span
+        >
       </div>
       <div class="stat">
         <span class="stat__label">{{ ls.t().min }}</span>
-        <span class="stat__value stat__value--low">{{ stats.min * taxFactor(area) | number: '1.2-2' }} øre/kWh</span>
+        <span class="stat__value stat__value--low"
+          >{{ effectiveOre(stats.min, area) | number: '1.2-2' }} øre/kWh</span
+        >
       </div>
       <div class="stat">
         <span class="stat__label">{{ ls.t().max }}</span>
-        <span class="stat__value stat__value--high">{{ stats.max * taxFactor(area) | number: '1.2-2' }} øre/kWh</span>
+        <span class="stat__value stat__value--high"
+          >{{ effectiveOre(stats.max, area) | number: '1.2-2' }} øre/kWh</span
+        >
       </div>
     </div>
   }

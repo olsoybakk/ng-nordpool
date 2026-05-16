@@ -29,8 +29,20 @@ export type ChartMode = 'bar' | 'line';
 
 const TAX_FACTOR = 1.25;
 const NO_TAX_AREAS = new Set<PriceArea>(['NO4']);
+const STROMSTOTTE_THRESHOLD = 77; // øre/kWh excl. VAT
 
-function displayOre(area: PriceArea, ore: number, includeTax: boolean): number {
+function applyStromstotte(rawOre: number): number {
+  if (rawOre <= STROMSTOTTE_THRESHOLD) return rawOre;
+  return 0.1 * rawOre + 0.9 * STROMSTOTTE_THRESHOLD;
+}
+
+function displayOre(
+  area: PriceArea,
+  rawOre: number,
+  includeTax: boolean,
+  showStromstotte = false,
+): number {
+  const ore = showStromstotte ? applyStromstotte(rawOre) : rawOre;
   return includeTax && !NO_TAX_AREAS.has(area) ? ore * TAX_FACTOR : ore;
 }
 
@@ -93,6 +105,7 @@ const DASHBOARD_H_PAD = 64;
 const DASHBOARD_MAX_W = 1100;
 const CARD_PAD_PX = 20;
 const NORGESPRIS_ORE_INCL_TAX = 50;
+const STROMSTOTTE_THRESHOLD_INCL_TAX = STROMSTOTTE_THRESHOLD * TAX_FACTOR;
 
 @Component({
   selector: 'app-price-chart',
@@ -109,6 +122,7 @@ export class PriceChartComponent {
   chartMode = input<ChartMode>('line');
   includeTax = input(false);
   showNorgespris = input(false);
+  showStromstotte = input(false);
 
   readonly viewBoxW = CHART_W;
   readonly chartW = CHART_W - PADDING.left - PADDING.right;
@@ -120,7 +134,9 @@ export class PriceChartComponent {
   private readonly windowWidth = signal(window.innerWidth);
   private readonly windowHeight = signal(window.innerHeight);
   private readonly containerH = signal(0);
-  private readonly dateRangeDays = toSignal(this.store.select(selectDateRangeDays), { initialValue: 1 });
+  private readonly dateRangeDays = toSignal(this.store.select(selectDateRangeDays), {
+    initialValue: 1,
+  });
 
   /** Updated from the view model so updateTooltip always reads the correct slot width. */
   private readonly _slotCount = signal(SLOT_COUNT);
@@ -138,8 +154,9 @@ export class PriceChartComponent {
     afterNextRender(() => {
       // Observe chart-wrapper, not the host, so the scrollbar appearing/disappearing
       // below the chart never changes containerH and triggers an extra vm$ emission.
-      const target = this.elementRef.nativeElement.querySelector('.chart-wrapper')
-        ?? this.elementRef.nativeElement;
+      const target =
+        this.elementRef.nativeElement.querySelector('.chart-wrapper') ??
+        this.elementRef.nativeElement;
       const ro = new ResizeObserver((entries) => {
         const h = entries[0]?.contentRect.height ?? 0;
         if (h > 0) this.containerH.set(h);
@@ -161,16 +178,22 @@ export class PriceChartComponent {
       ? window.innerWidth - edge
       : Math.min(DASHBOARD_MAX_W, ww) - DASHBOARD_H_PAD;
 
-    const labelSize = Math.round(10 * CHART_W / Math.max(renderedW, 100));
+    const labelSize = Math.round((10 * CHART_W) / Math.max(renderedW, 100));
     const padBottom = Math.max(PADDING.bottom, Math.round(labelSize * 1.5));
 
     let h: number;
     if (fullscreen) {
-      h = Math.max(200, Math.round(((window.innerHeight - edge) * CHART_W) / renderedW) - PADDING.top - padBottom);
+      h = Math.max(
+        200,
+        Math.round(((window.innerHeight - edge) * CHART_W) / renderedW) - PADDING.top - padBottom,
+      );
     } else if (ww < 640) {
-      h = Math.max(200, Math.round(wh * 0.45 * CHART_W / renderedW) - PADDING.top - padBottom);
+      h = Math.max(200, Math.round((wh * 0.45 * CHART_W) / renderedW) - PADDING.top - padBottom);
     } else if (ch > 0 && mode === 'line') {
-      h = Math.max(200, Math.round((ch - CARD_PAD_PX) * CHART_W / renderedW) - PADDING.top - padBottom);
+      h = Math.max(
+        200,
+        Math.round(((ch - CARD_PAD_PX) * CHART_W) / renderedW) - PADDING.top - padBottom,
+      );
     } else {
       h = CHART_H;
     }
@@ -182,7 +205,8 @@ export class PriceChartComponent {
       bottomY: chartBottomY,
       labelSize,
       xAxisY: chartBottomY + Math.round(labelSize * 0.9),
-      nowLabelY: labelSize > PADDING.top ? PADDING.top + Math.round(labelSize * 0.9) : PADDING.top - 3,
+      nowLabelY:
+        labelSize > PADDING.top ? PADDING.top + Math.round(labelSize * 0.9) : PADDING.top - 3,
       axisTitleX: Math.max(12, Math.ceil(labelSize / 2) + 2),
       yLabelInside: labelSize > 15,
     };
@@ -214,11 +238,17 @@ export class PriceChartComponent {
   // BehaviorSubject so combineLatest (vm$) receives the new value synchronously
   // within the same event handler, eliminating the intermediate render that causes flicker.
   private readonly _zoomRange$ = new BehaviorSubject<[number, number] | null>(null);
-  readonly zoomRange = toSignal(this._zoomRange$, { initialValue: null as [number, number] | null });
+  readonly zoomRange = toSignal(this._zoomRange$, {
+    initialValue: null as [number, number] | null,
+  });
 
   private _totalSlotCount = signal(SLOT_COUNT);
   private _pinchState: { dist: number; range: [number, number]; centerSlot: number } | null = null;
-  private _scrollDragState: { startX: number; startRange: [number, number]; trackW: number } | null = null;
+  private _scrollDragState: {
+    startX: number;
+    startRange: [number, number];
+    trackW: number;
+  } | null = null;
 
   readonly scrollThumbLeft = computed(() => {
     const zoom = this.zoomRange();
@@ -239,10 +269,11 @@ export class PriceChartComponent {
     toObservable(this.dims),
     toObservable(this.includeTax),
     toObservable(this.showNorgespris),
+    toObservable(this.showStromstotte),
     this._zoomRange$,
   ]).pipe(
-    map(([current, mergedAreaPrices, selectedArea, selectedDate, dateRangeDays, dims, includeTax, showNorgespris, zoom]) =>
-      this.buildViewModel(
+    map(
+      ([
         current,
         mergedAreaPrices,
         selectedArea,
@@ -251,15 +282,28 @@ export class PriceChartComponent {
         dims,
         includeTax,
         showNorgespris,
-        zoom as [number, number] | null
-      )
+        showStromstotte,
+        zoom,
+      ]) =>
+        this.buildViewModel(
+          current,
+          mergedAreaPrices,
+          selectedArea,
+          selectedDate,
+          dateRangeDays,
+          dims,
+          includeTax,
+          showNorgespris as boolean,
+          showStromstotte as boolean,
+          zoom as [number, number] | null,
+        ),
     ),
     tap((vm) => {
       if (vm) {
         this._slotCount.set(vm.slotCount);
         this._totalSlotCount.set(vm.totalSlotCount);
       }
-    })
+    }),
   );
 
   onMouseMove(event: MouseEvent): void {
@@ -300,8 +344,14 @@ export class PriceChartComponent {
         // floor-based formula: same guarantee as scroll-zoom — slot under pinch center stays fixed
         let start = Math.floor(center) - Math.floor(centerFrac * clamped);
         let end = start + clamped - 1;
-        if (start < 0) { start = 0; end = Math.min(clamped - 1, total - 1); }
-        if (end >= total) { end = total - 1; start = Math.max(0, end - clamped + 1); }
+        if (start < 0) {
+          start = 0;
+          end = Math.min(clamped - 1, total - 1);
+        }
+        if (end >= total) {
+          end = total - 1;
+          start = Math.max(0, end - clamped + 1);
+        }
         this._zoomRange$.next([start, end]);
       }
       return;
@@ -338,8 +388,14 @@ export class PriceChartComponent {
       const slotDelta = Math.round(((e.clientX - startX) / trackW) * total);
       let start = startRange[0] + slotDelta;
       let end = start + visible - 1;
-      if (start < 0) { start = 0; end = visible - 1; }
-      if (end >= total) { end = total - 1; start = total - visible; }
+      if (start < 0) {
+        start = 0;
+        end = visible - 1;
+      }
+      if (end >= total) {
+        end = total - 1;
+        start = total - visible;
+      }
       this._zoomRange$.next([start, end]);
     };
     const onUp = () => {
@@ -389,8 +445,14 @@ export class PriceChartComponent {
       const slotDelta = Math.round(((e.touches[0].clientX - startX) / trackW) * total);
       let start = startRange[0] + slotDelta;
       let end = start + visible - 1;
-      if (start < 0) { start = 0; end = visible - 1; }
-      if (end >= total) { end = total - 1; start = total - visible; }
+      if (start < 0) {
+        start = 0;
+        end = visible - 1;
+      }
+      if (end >= total) {
+        end = total - 1;
+        start = total - visible;
+      }
       this._zoomRange$.next([start, end]);
     };
     const onEnd = () => {
@@ -425,11 +487,16 @@ export class PriceChartComponent {
   private pinchDist(touches: TouchList): number {
     return Math.hypot(
       touches[1].clientX - touches[0].clientX,
-      touches[1].clientY - touches[0].clientY
+      touches[1].clientY - touches[0].clientY,
     );
   }
 
-  private updateTooltip(svg: SVGSVGElement, clientX: number, clientY: number, isTouch: boolean): void {
+  private updateTooltip(
+    svg: SVGSVGElement,
+    clientX: number,
+    clientY: number,
+    isTouch: boolean,
+  ): void {
     const rect = svg.getBoundingClientRect();
     const relX = clientX - rect.left;
     const relY = clientY - rect.top;
@@ -447,7 +514,7 @@ export class PriceChartComponent {
       const flip = clientX > window.innerWidth - TOOLTIP_W;
       this.tooltipFlip.set(flip);
       this.tooltipLeft.set(
-        flip ? Math.max(TOOLTIP_W, clientX) : Math.min(clientX, window.innerWidth - TOOLTIP_W)
+        flip ? Math.max(TOOLTIP_W, clientX) : Math.min(clientX, window.innerWidth - TOOLTIP_W),
       );
 
       const HALF_H = this.chartMode() === 'bar' ? 35 : 110;
@@ -460,9 +527,8 @@ export class PriceChartComponent {
         const hasSpaceAbove = clientY >= tooltipH + 44;
         const anchor = hasSpaceAbove ? 'above' : 'below';
         this.tooltipAnchor.set(anchor);
-        const top = anchor === 'below'
-          ? Math.min(clientY, window.innerHeight - tooltipH - 44)
-          : clientY;
+        const top =
+          anchor === 'below' ? Math.min(clientY, window.innerHeight - tooltipH - 44) : clientY;
         this.tooltipTop.set(top);
       } else {
         this.tooltipAnchor.set('center');
@@ -505,8 +571,14 @@ export class PriceChartComponent {
     // floor-based formula guarantees floor(cursorSlot) stays under cursor after zoom
     let start = Math.floor(cursorSlot) - Math.floor(cursorFrac * clamped);
     let end = start + clamped - 1;
-    if (start < 0) { start = 0; end = Math.min(clamped - 1, total - 1); }
-    if (end >= total) { end = total - 1; start = Math.max(0, end - clamped + 1); }
+    if (start < 0) {
+      start = 0;
+      end = Math.min(clamped - 1, total - 1);
+    }
+    if (end >= total) {
+      end = total - 1;
+      start = Math.max(0, end - clamped + 1);
+    }
     this._zoomRange$.next([start, end]);
   }
 
@@ -519,13 +591,20 @@ export class PriceChartComponent {
     { chartH, bottomY, labelSize }: { chartH: number; bottomY: number; labelSize: number },
     includeTax: boolean,
     showNorgespris: boolean,
-    zoom: [number, number] | null
+    showStromstotte: boolean,
+    zoom: [number, number] | null,
   ) {
     const allBarPrices = allAreaPrices[selectedArea] ?? [];
     if (!allBarPrices.length) return null;
 
-    const snapFloor25 = (v: number) => { const s = Math.floor(v / 25) * 25; return s < v ? s : s - 25; };
-    const snapCeil25  = (v: number) => { const s = Math.ceil(v / 25)  * 25; return s > v ? s : s + 25; };
+    const snapFloor25 = (v: number) => {
+      const s = Math.floor(v / 25) * 25;
+      return s < v ? s : s - 25;
+    };
+    const snapCeil25 = (v: number) => {
+      const s = Math.ceil(v / 25) * 25;
+      return s > v ? s : s + 25;
+    };
 
     const totalSlotCount = allBarPrices.length;
     const zStart = Math.max(0, zoom ? zoom[0] : 0);
@@ -537,25 +616,35 @@ export class PriceChartComponent {
     const gap = this.chartW / slotCount;
     const barW = gap * 0.8;
 
-    // Norgespris value in the display unit (computed early so scale can include it)
+    // Reference line values in the display unit (computed early so scale can include them)
     const norgesprisDisplayOre = showNorgespris
-      ? (includeTax ? NORGESPRIS_ORE_INCL_TAX : NORGESPRIS_ORE_INCL_TAX / TAX_FACTOR)
+      ? includeTax
+        ? NORGESPRIS_ORE_INCL_TAX
+        : NORGESPRIS_ORE_INCL_TAX / TAX_FACTOR
+      : null;
+    const stromstotteThresholdOre = showStromstotte
+      ? includeTax
+        ? STROMSTOTTE_THRESHOLD_INCL_TAX
+        : STROMSTOTTE_THRESHOLD
       : null;
 
     // Bar chart: single area — scale from full dataset so y-axis stays fixed while zooming
-    const allSingleValues = allBarPrices.map((p) => displayOre(selectedArea, p.ore_per_kWh, includeTax));
+    const allSingleValues = allBarPrices.map((p) =>
+      displayOre(selectedArea, p.ore_per_kWh, includeTax, showStromstotte),
+    );
     const singleMin = snapFloor25(Math.min(...allSingleValues) - 5);
     const singleMax = snapCeil25(Math.max(...allSingleValues) + 5);
     const singleRange = singleMax - singleMin || 1;
 
     const visibleHours = slotCount / 4;
-    const baseHourStep = dateRangeDays === 1 ? 3 : dateRangeDays <= 3 ? 6 : dateRangeDays <= 7 ? 12 : 24;
+    const baseHourStep =
+      dateRangeDays === 1 ? 3 : dateRangeDays <= 3 ? 6 : dateRangeDays <= 7 ? 12 : 24;
     const hourStep = visibleHours <= 6 ? 1 : visibleHours <= 12 ? 2 : baseHourStep;
     const showDayLabels = dateRangeDays > 1;
     const slotsPerDay = SLOT_COUNT; // 96
 
     const bars: BarData[] = barPrices.map((p, i) => {
-      const ore = displayOre(selectedArea, p.ore_per_kWh, includeTax);
+      const ore = displayOre(selectedArea, p.ore_per_kWh, includeTax, showStromstotte);
       const normalised = (ore - singleMin) / singleRange;
       const barH = Math.max(2, normalised * chartH);
       const third = singleRange / 3;
@@ -596,10 +685,11 @@ export class PriceChartComponent {
     })).filter((e) => e.hourlyPrices.length > 0);
 
     // Line chart: scale from full dataset so y-axis stays fixed while zooming
-    let rawMultiMin = Infinity, rawMultiMax = -Infinity;
+    let rawMultiMin = Infinity,
+      rawMultiMax = -Infinity;
     for (const { value: area } of PRICE_AREAS) {
-      for (const p of (allAreaPrices[area] ?? [])) {
-        const v = displayOre(area, p.ore_per_kWh, includeTax);
+      for (const p of allAreaPrices[area] ?? []) {
+        const v = displayOre(area, p.ore_per_kWh, includeTax, showStromstotte);
         if (v < rawMultiMin) rawMultiMin = v;
         if (v > rawMultiMax) rawMultiMax = v;
       }
@@ -607,15 +697,14 @@ export class PriceChartComponent {
     const multiMin = snapFloor25(rawMultiMin - 5);
     const multiMax = snapCeil25(rawMultiMax + 5);
     const multiRange = multiMax - multiMin || 1;
-    const toYMulti = (v: number) =>
-      this.offsetY + chartH - ((v - multiMin) / multiRange) * chartH;
+    const toYMulti = (v: number) => this.offsetY + chartH - ((v - multiMin) / multiRange) * chartH;
 
     const areaLines: AreaLine[] = areaEntries.map(({ area, hourlyPrices }) => {
       const stepPairs: string[] = [];
       const pts: PointData[] = [];
 
       hourlyPrices.forEach((p, i) => {
-        const ore = displayOre(area, p.ore_per_kWh, includeTax);
+        const ore = displayOre(area, p.ore_per_kWh, includeTax, showStromstotte);
         const x1 = this.offsetX + i * gap;
         const x2 = this.offsetX + (i + 1) * gap;
         const y = toYMulti(ore);
@@ -625,7 +714,12 @@ export class PriceChartComponent {
         }
       });
 
-      const lastOre = displayOre(area, hourlyPrices.at(-1)!.ore_per_kWh, includeTax);
+      const lastOre = displayOre(
+        area,
+        hourlyPrices.at(-1)!.ore_per_kWh,
+        includeTax,
+        showStromstotte,
+      );
       const rawLabelX = this.offsetX + hourlyPrices.length * gap + 4;
       const maxLabelX = CHART_W - Math.round(labelSize * 1.8) - 4;
       return {
@@ -646,9 +740,9 @@ export class PriceChartComponent {
     const lowThreshY = toYMulti(multiMin + multiRange / 3);
     const highThreshY = toYMulti(multiMin + (2 * multiRange) / 3);
     const zones: Zone[] = [
-      { y: this.offsetY, height: highThreshY - this.offsetY,  level: 'high', label: 'High' },
-      { y: highThreshY,  height: lowThreshY - highThreshY,    level: 'mid',  label: 'Mid'  },
-      { y: lowThreshY,   height: bottomY - lowThreshY,        level: 'low',  label: 'Low'  },
+      { y: this.offsetY, height: highThreshY - this.offsetY, level: 'high', label: 'High' },
+      { y: highThreshY, height: lowThreshY - highThreshY, level: 'mid', label: 'Mid' },
+      { y: lowThreshY, height: bottomY - lowThreshY, level: 'low', label: 'Low' },
     ];
 
     const pricesBySlot: TooltipEntry[][] = Array.from({ length: slotCount }, (_, slot) => {
@@ -657,7 +751,7 @@ export class PriceChartComponent {
         .map(({ area, hourlyPrices }) => ({
           area,
           label: PRICE_AREAS.find((p) => p.value === area)?.label ?? area,
-          ore: displayOre(area, hourlyPrices[slot].ore_per_kWh, includeTax),
+          ore: displayOre(area, hourlyPrices[slot].ore_per_kWh, includeTax, showStromstotte),
           color: AREA_COLORS[area],
           isSelected: area === selectedArea,
         }))
@@ -689,9 +783,10 @@ export class PriceChartComponent {
       return {
         start: fmtTime(p.time_start),
         end: fmtTime(p.time_end),
-        date: dateRangeDays > 1
-          ? d.toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short' })
-          : null,
+        date:
+          dateRangeDays > 1
+            ? d.toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short' })
+            : null,
       };
     });
 
@@ -708,26 +803,40 @@ export class PriceChartComponent {
       if (oldest <= todayISO && todayISO <= selectedDate) {
         const dayOffset = Math.round(
           (new Date(todayISO + 'T12:00:00').getTime() - new Date(oldest + 'T12:00:00').getTime()) /
-          86400000
+            86400000,
         );
         const now = new Date();
-        nowAbsoluteSlotFrac = dayOffset * slotsPerDay + (now.getHours() + now.getMinutes() / 60) * 4;
+        nowAbsoluteSlotFrac =
+          dayOffset * slotsPerDay + (now.getHours() + now.getMinutes() / 60) * 4;
       }
     }
 
     let nowLineX: number | null = null;
-    if (nowAbsoluteSlotFrac !== null &&
-        nowAbsoluteSlotFrac >= zStart && nowAbsoluteSlotFrac <= zEnd + 1) {
+    if (
+      nowAbsoluteSlotFrac !== null &&
+      nowAbsoluteSlotFrac >= zStart &&
+      nowAbsoluteSlotFrac <= zEnd + 1
+    ) {
       nowLineX = this.offsetX + (nowAbsoluteSlotFrac - zStart) * gap;
     }
 
     const clampY = (y: number) => Math.max(this.offsetY, Math.min(bottomY, y));
-    const norgesprisBarY = norgesprisDisplayOre !== null
-      ? clampY(this.offsetY + chartH - ((norgesprisDisplayOre - singleMin) / singleRange) * chartH)
-      : null;
-    const norgesprisLineY = norgesprisDisplayOre !== null
-      ? clampY(toYMulti(norgesprisDisplayOre))
-      : null;
+    const norgesprisBarY =
+      norgesprisDisplayOre !== null
+        ? clampY(
+            this.offsetY + chartH - ((norgesprisDisplayOre - singleMin) / singleRange) * chartH,
+          )
+        : null;
+    const norgesprisLineY =
+      norgesprisDisplayOre !== null ? clampY(toYMulti(norgesprisDisplayOre)) : null;
+    const stromstotteBarY =
+      stromstotteThresholdOre !== null
+        ? clampY(
+            this.offsetY + chartH - ((stromstotteThresholdOre - singleMin) / singleRange) * chartH,
+          )
+        : null;
+    const stromstotteLineY =
+      stromstotteThresholdOre !== null ? clampY(toYMulti(stromstotteThresholdOre)) : null;
 
     return {
       bars,
@@ -745,7 +854,8 @@ export class PriceChartComponent {
       showDayLabels,
       norgesprisBarY,
       norgesprisLineY,
-      norgesprisOre: norgesprisDisplayOre,
+      stromstotteBarY,
+      stromstotteLineY,
     };
   }
 
@@ -759,7 +869,13 @@ export class PriceChartComponent {
     return ticks;
   }
 
-  trackByArea(_: number, line: AreaLine) { return line.area; }
-  trackBySlot(_: number, bar: BarData) { return bar.slot; }
-  trackByAreaEntry(_: number, entry: TooltipEntry) { return entry.area; }
+  trackByArea(_: number, line: AreaLine) {
+    return line.area;
+  }
+  trackBySlot(_: number, bar: BarData) {
+    return bar.slot;
+  }
+  trackByAreaEntry(_: number, entry: TooltipEntry) {
+    return entry.area;
+  }
 }
