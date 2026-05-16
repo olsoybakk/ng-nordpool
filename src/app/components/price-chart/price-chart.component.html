@@ -36,6 +36,7 @@
       role="img"
       [attr.aria-label]="chartMode() === 'bar' ? ls.t().barChartAriaLabel : ls.t().lineChartAriaLabel"
       (mousemove)="onMouseMove($event)"
+      (wheel)="onWheel($event)"
       (touchstart)="onTouchStart($event)"
       (touchmove)="onTouchMove($event)"
       (touchend)="onTouchEnd($event)"

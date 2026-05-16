@@ -354,6 +354,36 @@ export class PriceChartComponent {
     this.hoveredSlot.set(null);
   }
 
+  onWheel(event: WheelEvent): void {
+    event.preventDefault();
+    const svg = event.currentTarget as SVGSVGElement;
+    const rect = svg.getBoundingClientRect();
+    const svgX = (event.clientX - rect.left) * (CHART_W / rect.width);
+
+    const total = this._totalSlotCount();
+    const zoom = this.zoomRange();
+    const [zs, ze] = zoom ?? [0, total - 1];
+    const visible = ze - zs + 1;
+
+    // Scale zoom by delta magnitude so trackpad feels smooth and mouse wheel snaps.
+    const factor = Math.pow(1.003, event.deltaY);
+    const newVisible = Math.round(visible * factor);
+    const clamped = Math.min(total, Math.max(8, newVisible));
+
+    if (clamped >= total) {
+      this.zoomRange.set(null);
+      return;
+    }
+
+    const visGap = this.chartW / visible;
+    const centerSlot = zs + (svgX - this.offsetX) / visGap;
+    let start = Math.round(centerSlot - clamped / 2);
+    let end = start + clamped - 1;
+    if (start < 0) { start = 0; end = Math.min(clamped - 1, total - 1); }
+    if (end >= total) { end = total - 1; start = Math.max(0, end - clamped + 1); }
+    this.zoomRange.set([start, end]);
+  }
+
   private buildViewModel(
     current: HourlyPrice | null,
     allAreaPrices: Partial<Record<PriceArea, HourlyPrice[]>>,
