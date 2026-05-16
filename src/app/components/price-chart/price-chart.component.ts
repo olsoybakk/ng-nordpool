@@ -436,8 +436,9 @@ export class PriceChartComponent {
     }
 
     const visGap = this.chartW / visible;
-    const centerSlot = zs + (svgX - this.offsetX) / visGap;
-    let start = Math.round(centerSlot - clamped / 2);
+    const cursorSlot = zs + (svgX - this.offsetX) / visGap;
+    const cursorFrac = (cursorSlot - zs) / visible;
+    let start = Math.round(cursorSlot - cursorFrac * clamped);
     let end = start + clamped - 1;
     if (start < 0) { start = 0; end = Math.min(clamped - 1, total - 1); }
     if (end >= total) { end = total - 1; start = Math.max(0, end - clamped + 1); }
