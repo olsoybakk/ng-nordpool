@@ -10,11 +10,22 @@ const storedDays = Math.min(
   Math.max(1, parseInt(localStorage.getItem('dateRangeDays') ?? '1', 10)),
 );
 
+function loadStoredDate(): string {
+  try {
+    const raw = localStorage.getItem('selectedDate');
+    if (!raw) return todayISO;
+    const { date, savedAt } = JSON.parse(raw) as { date: string; savedAt: number };
+    return Date.now() - savedAt < 3_600_000 ? date : todayISO;
+  } catch {
+    return todayISO;
+  }
+}
+
 export const initialState: PricesState = {
   prices: [],
   allAreaPricesByDate: {},
   selectedArea: storedArea ?? 'NO1',
-  selectedDate: todayISO,
+  selectedDate: loadStoredDate(),
   dateRangeDays: isNaN(storedDays) ? 1 : storedDays,
   loading: false,
   allAreasLoadingCount: 0,
