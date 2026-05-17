@@ -81,6 +81,8 @@ The API base URL is configured via `src/environments/environment.ts` (committed,
 
 Both files point at a Netlify CORS proxy. Check `src/environments/environment.ts` for the current URL.
 
+`src/environments/build-info.ts` is committed with an empty `BUILD_DATE = ''` placeholder. The `prebuild` npm script overwrites it with `new Date().toISOString()` before every production build. `DashboardComponent` imports `BUILD_DATE`, formats it to `YYYY-MM-DD HH:mm` in the client's local timezone, and displays it as a two-line label (date / time) below the theme and language buttons. The label is hidden when `BUILD_DATE` is empty (local dev).
+
 ## Data source
 
 `{nordpoolApiUrl}?date={YYYY-MM-DD}&market=DayAhead&deliveryArea={AREA,...}&currency=NOK`
@@ -300,7 +302,10 @@ src/app/pages/
                     language changes. Returns '' for empty/invalid dates.
                   Theme and language buttons are `position:fixed` at top-right
                   (`top:1rem; right:1.5rem; z-index:200`) so they stay pinned
-                  regardless of scroll or sticky-header state.
+                  regardless of scroll or sticky-header state. A two-line build
+                  timestamp (date / time, client timezone) is rendered below them
+                  via `buildDate` (formatted from `BUILD_DATE` in build-info.ts);
+                  hidden when `BUILD_DATE` is empty (local dev).
                   Line/Bar, Tax, Norgespris, and Strømstøtte toggles in the header.
                   All four signals are initialised from localStorage on load and
                   written back via effect() on every change (keys: 'chartMode',
@@ -354,7 +359,7 @@ Static files in `public/` are served at the root. Current contents:
 
 `.github/workflows/ci.yml` — triggers on every PR to `main`. Runs two parallel jobs:
 - `test`: creates `environment.local.ts` from the template, then runs `npm test --watch=false`
-- `build`: runs `npx ng build` (production)
+- `build`: runs `npm run build` (production; triggers `prebuild` to stamp `build-info.ts`)
 
 Both jobs are required status checks — merging to `main` is blocked until they pass.
 
@@ -364,7 +369,7 @@ reading `localStorage` at load time (e.g. the reducer) work correctly.
 
 `.github/workflows/deploy.yml` — triggers on push to `main` and `workflow_dispatch`.
 
-Build step: `npx ng build --base-href=/ng-nordpool/`
+Build step: `npm run build -- --base-href=/ng-nordpool/` (uses `npm run build` so the `prebuild` script stamps `build-info.ts` with the deploy timestamp before Angular compiles)
 Post-build: copies `index.html` → `404.html` for client-side routing on Pages.
 Deploys via `actions/upload-pages-artifact` + `actions/deploy-pages`.
 

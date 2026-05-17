@@ -3,42 +3,50 @@
     <div class="dashboard__title-row">
       <h1 class="dashboard__title"><span class="dashboard__logo">⚡</span> {{ ls.t().title }}</h1>
       <div class="dashboard__header-actions">
-        <button
-          class="theme-btn"
-          (click)="toggleTheme()"
-          [attr.aria-label]="theme() === 'dark' ? ls.t().switchToLight : ls.t().switchToDark"
-        >
-          @if (theme() === 'dark') {
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <circle cx="12" cy="12" r="4" />
-              <path
-                d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
-              />
-            </svg>
-          } @else {
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-            </svg>
-          }
-        </button>
+        <div class="dashboard__header-buttons">
+          <button
+            class="theme-btn"
+            (click)="toggleTheme()"
+            [attr.aria-label]="theme() === 'dark' ? ls.t().switchToLight : ls.t().switchToDark"
+          >
+            @if (theme() === 'dark') {
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="4" />
+                <path
+                  d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+                />
+              </svg>
+            } @else {
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            }
+          </button>
 
-        <button
-          class="lang-btn"
-          (click)="ls.toggleLang()"
-          [attr.aria-label]="ls.lang() === 'nb' ? ls.t().switchToEnglish : ls.t().switchToNorwegian"
-        >
-          {{ ls.lang() === 'nb' ? 'EN' : 'NO' }}
-        </button>
+          <button
+            class="lang-btn"
+            (click)="ls.toggleLang()"
+            [attr.aria-label]="ls.lang() === 'nb' ? ls.t().switchToEnglish : ls.t().switchToNorwegian"
+          >
+            {{ ls.lang() === 'nb' ? 'EN' : 'NO' }}
+          </button>
+        </div>
+        @if (buildDate) {
+          <span class="build-date">
+            <span>{{ buildDate.slice(0, 10) }}</span>
+            <span>{{ buildDate.slice(11) }}</span>
+          </span>
+        }
       </div>
     </div>
     <p class="dashboard__tagline">{{ dateLabel() }}</p>
