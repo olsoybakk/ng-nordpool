@@ -168,6 +168,8 @@ All standalone. No shared module.
 src/app/components/
   controls/       Custom area dropdown + date <input> with ‹/› prev/next day buttons
                   + Days stepper (1–14, ‹/› buttons + native <select>).
+                  Date and Days controls are wrapped in a `.date-range-row` flex
+                  container so they always appear on the same row.
                   maxDate is tomorrow (Date.now() + 864e5). stepDate(±1) guards
                   against going past maxDate. Next button disabled at maxDate.
                   Area change → selectArea + loadPrices.
@@ -296,6 +298,9 @@ src/app/pages/
                     (single day) or range (multi-day) using Intl.DateTimeFormat with
                     the active locale (nb-NO / en-GB); reacts to date, range, and
                     language changes. Returns '' for empty/invalid dates.
+                  Theme and language buttons are `position:fixed` at top-right
+                  (`top:1rem; right:1.5rem; z-index:200`) so they stay pinned
+                  regardless of scroll or sticky-header state.
                   Line/Bar, Tax, Norgespris, and Strømstøtte toggles in the header.
                   All four signals are initialised from localStorage on load and
                   written back via effect() on every change (keys: 'chartMode',
@@ -332,6 +337,8 @@ Price data is cached in `localStorage` via `PriceCacheService` (key `nordpool_pr
 ### Styling
 
 CSS custom properties in `src/styles.scss`. Dark mode default, light mode via `prefers-color-scheme: light`. Variables: `--color-bg`, `--color-surface`, `--color-border`, `--color-text`, `--color-muted`, `--color-accent`, `--color-low`, `--color-high`, `--line-drop-shadow` (dark shadow in light mode, `none` in dark mode).
+
+Date inputs use `color-scheme` set in `src/styles.scss` following the same three-state pattern as the CSS variables (default dark, media-query light, explicit `[data-theme]` overrides) so the browser renders the native calendar icon and text at the correct contrast for each theme.
 
 Theme toggle: `DashboardComponent` holds a `theme` signal (`'dark' | 'light'`) initialised from `window.matchMedia('(prefers-color-scheme: dark)')` on load. An `effect()` writes it to `document.documentElement` as `data-theme`. A `matchMedia` change listener keeps the signal in sync when the OS theme changes while the app is open. CSS uses `:root:not([data-theme='dark'])` in the media query and explicit `:root[data-theme='light']` / `:root[data-theme='dark']` blocks to handle all three states.
 

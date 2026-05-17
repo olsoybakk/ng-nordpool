@@ -18,6 +18,10 @@
     color: var(--color-muted);
   }
 
+  input[type='date']::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+  }
+
   select,
   input[type='date'] {
     height: 2.375rem;
