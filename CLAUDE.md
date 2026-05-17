@@ -109,8 +109,10 @@ src/app/store/prices/
                        selectedArea is hydrated from localStorage on startup.
   prices.effects.ts    loadPrices$ → NordpoolService.getPrices() via switchMap
                        loadAllAreaPrices$ → NordpoolService.getAllAreaPrices() via
-                         mergeMap; empty results OR HTTP error → loadAllAreaPricesSuccess
-                         (results:{}) + setNotification (never sets state.error)
+                         mergeMap; empty results (no areas with data, including when
+                         API returns entries with empty entryPerArea) OR HTTP error →
+                         loadAllAreaPricesSuccess (results:{}) + setNotification
+                         (never sets state.error)
                        clearNotificationAfterDelay$ → switchMap + timer(5000) →
                          clearNotification (resets timer on each new notification)
                        loadMultiDayPrices$ → selectDate / setDateRangeDays →
@@ -129,6 +131,10 @@ src/app/store/prices/
                        selectCurrentPriceInRange, selectDailyStats, selectRangeStats,
                        selectNotification, selectLoadedDates, selectActiveDates,
                        selectMergedAreaPrices
+                       selectLoadedDates: only includes dates where at least one area
+                         has actual price data — dates stored with empty results ({})
+                         are excluded so they are re-fetched on the next navigation
+                         (e.g. after prices are published for a future date).
                        selectCurrentPriceInRange: like selectCurrentPrice but checks
                          allAreaPricesByDate[today][selectedArea] — returns the current
                          slot whenever today falls within the active date range, even
@@ -143,7 +149,7 @@ src/app/store/index.ts re-exports all of the above
 
 `src/app/services/price-cache.service.ts` — FIFO localStorage cache keyed by `date:area` strings (e.g. `"2026-05-13:NO1"`). Holds up to `30 × PRICE_AREAS.length` entries (currently 150) so the cache covers 30 full days regardless of area count; inserting an existing key moves it to the back. Silently falls back to in-memory if `localStorage` is unavailable (quota exceeded, private browsing).
 
-`src/app/services/nordpool.service.ts` — two methods: `getPrices(date, area)` fetches a single area; `getAllAreaPrices(date)` fetches all 5 areas in one request. Both check `PriceCacheService` before making an HTTP call and write results back per-area, so a `getAllAreaPrices` hit warms the `getPrices` cache and vice versa. Both map each 15-min `multiAreaEntries` entry directly to a `HourlyPrice` (÷ 10 for NOK/MWh → øre/kWh), yielding up to 96 entries per area with no per-hour averaging.
+`src/app/services/nordpool.service.ts` — two methods: `getPrices(date, area)` fetches a single area; `getAllAreaPrices(date)` fetches all 5 areas in one request. Both check `PriceCacheService` before making an HTTP call and write results back per-area, so a `getAllAreaPrices` hit warms the `getPrices` cache and vice versa. Both map each 15-min `multiAreaEntries` entry directly to a `HourlyPrice` (÷ 10 for NOK/MWh → øre/kWh), yielding up to 96 entries per area with no per-hour averaging. `getAllAreaPrices` only includes an area in the result if `toIntervalPrices` returns a non-empty array — entries where `entryPerArea` is `{}` (prices not yet published) are filtered out, keeping the result `{}` so the effect's no-data check triggers correctly.
 
 `src/app/services/location.service.ts` — `detectPriceArea()` wraps `navigator.geolocation.getCurrentPosition` in an Observable, calls `nominatim.openstreetmap.org/reverse` for the country code, then maps to a `PriceArea`:
 
@@ -167,6 +173,12 @@ src/app/components/
                   Area change → selectArea + loadPrices.
                   Date change → selectDate + loadPrices (loadAllAreaPrices for the
                     full range is handled by the loadMultiDayPrices$ effect).
+                  Clearing the date input resets to today: sets currentDate='' then
+                    calls ChangeDetectorRef.detectChanges() to flush a CD cycle so
+                    Angular's ngModel tracks '' as the current binding value, then
+                    sets currentDate=today — the post-event CD sees ''→today and
+                    writes to DOM (required in zoneless Angular; setTimeout does not
+                    trigger CD without zone.js).
                   Range change → setDateRangeDays (effect handles fetching).
                   Custom dropdown (.area-select): replaces the native <select> to
                   allow per-option styling. Each option shows its area colour dot;
@@ -280,6 +292,10 @@ src/app/components/
 
 src/app/pages/
   dashboard/      Owns chartMode, includeTax, showNorgespris, showStromstotte signals.
+                  Header tagline: dateLabel computed signal formats the selected date
+                    (single day) or range (multi-day) using Intl.DateTimeFormat with
+                    the active locale (nb-NO / en-GB); reacts to date, range, and
+                    language changes. Returns '' for empty/invalid dates.
                   Line/Bar, Tax, Norgespris, and Strømstøtte toggles in the header.
                   All four signals are initialised from localStorage on load and
                   written back via effect() on every change (keys: 'chartMode',
@@ -364,4 +380,7 @@ Repo must be **public** for GitHub Pages on a free plan.
 - Strømstøtte applies as a pre-tax transform inside `displayOre()` rather than a separate pass, so every code path (bars, line points, y-scale min/max, tooltip) automatically uses effective prices with a single flag. The threshold line uses `--color-norgespris` (same red) since both lines are reference overlays of the same visual weight — no separate CSS variable needed.
 - Multi-day prices are merged via `selectMergedAreaPrices` (selector concatenates `allAreaPricesByDate` entries for the active range). The store keyed by date avoids re-fetching already-loaded days.
 - `loadAllAreaPrices$` treats both HTTP errors and null API responses (HTTP 200 with null body) the same way: dispatch `loadAllAreaPricesSuccess` with empty results + `setNotification`. The Nordpool API returns null for dates outside its ~10-day history window, not a 500.
-- `selectLoadedDates` deduplicates dispatch in `loadMultiDayPrices$` — only dates absent from `allAreaPricesByDate` get a `loadAllAreaPrices` action, preventing redundant fetches when the range changes.
+- `selectLoadedDates` deduplicates dispatch in `loadMultiDayPrices$` — only dates with actual price data are considered loaded; dates stored with empty results are excluded so they are re-fetched on the next navigation (e.g. prices published after the first fetch attempt).
+- `getAllAreaPrices` filters areas with no prices from its result before returning. When the Nordpool API returns `multiAreaEntries` where every `entryPerArea` is `{}` (prices not yet published), the result is `{}` rather than `{ NO1: [], …, NO5: [] }`, so the existing no-data check in the effect fires correctly and the notification is shown.
+- `dateLabel` in `DashboardComponent` uses `Intl.DateTimeFormat.formatRange` for multi-day ranges and `format` for single days, with locale derived from the active language signal. Returns `''` for empty/invalid dates to avoid a runtime error when the date input is cleared.
+- Clearing the date input in `ControlsComponent` uses `ChangeDetectorRef.detectChanges()` to flush a CD cycle with `currentDate=''` before setting today. This is necessary in zoneless Angular (no zone.js) because `setTimeout` does not trigger change detection — Angular's `ngModel` binding only updates the DOM when it detects a value change from the previous CD run, and without the intermediate flush it sees `today → today` (no change) and leaves the input blank.
