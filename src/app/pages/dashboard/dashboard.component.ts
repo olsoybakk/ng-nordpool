@@ -20,6 +20,7 @@ import {
 import { detectLocation, loadPrices, loadAllAreaPrices } from '../../store/prices/prices.actions';
 import { LanguageService } from '../../services/language.service';
 import { subtractDays } from '../../utils/date';
+import { BUILD_DATE } from '../../../environments/build-info';
 
 @Component({
   selector: 'app-dashboard',
@@ -37,6 +38,12 @@ import { subtractDays } from '../../utils/date';
 export class DashboardComponent implements OnInit {
   private readonly store = inject(Store);
   readonly ls = inject(LanguageService);
+  readonly buildDate = (() => {
+    if (!BUILD_DATE) return '';
+    const d = new Date(BUILD_DATE);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  })();
 
   loading$ = this.store.select(selectLoading);
   allAreasLoading$ = this.store.select(selectAllAreasLoading);

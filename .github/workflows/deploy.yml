@@ -27,7 +27,7 @@ jobs:
 
       - run: npm ci
 
-      - run: npx ng build --base-href=/ng-nordpool/
+      - run: npm run build -- --base-href=/ng-nordpool/
 
       # GitHub Pages needs a 404.html to handle client-side routing
       - run: cp dist/ng-nordpool/browser/index.html dist/ng-nordpool/browser/404.html

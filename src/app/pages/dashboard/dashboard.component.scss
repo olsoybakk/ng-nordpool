@@ -67,8 +67,25 @@
   right: 1.5rem;
   z-index: 200;
   display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
+}
+
+.dashboard__header-buttons {
+  display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.build-date {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
 }
 
 .theme-btn {

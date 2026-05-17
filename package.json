@@ -6,6 +6,7 @@
     "start": "ng serve",
     "predev": "test -f src/environments/environment.local.ts || cp src/environments/environment.ts src/environments/environment.local.ts",
     "dev": "ng serve --port 3000",
+    "prebuild": "node -e \"const fs=require('fs');fs.writeFileSync('src/environments/build-info.ts','export const BUILD_DATE = \\\"'+new Date().toISOString()+'\\\";\\n');\"",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
