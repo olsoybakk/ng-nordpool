@@ -5,7 +5,10 @@ import { localISODate } from '../../utils/date';
 
 const todayISO = localISODate();
 const storedArea = localStorage.getItem('selectedArea') as PriceArea | null;
-const storedDays = Math.min(14, Math.max(1, parseInt(localStorage.getItem('dateRangeDays') ?? '1', 10)));
+const storedDays = Math.min(
+  14,
+  Math.max(1, parseInt(localStorage.getItem('dateRangeDays') ?? '1', 10)),
+);
 
 export const initialState: PricesState = {
   prices: [],
@@ -80,5 +83,5 @@ export const pricesReducer = createReducer(
   on(PricesActions.clearNotification, (state) => ({
     ...state,
     notification: null,
-  }))
+  })),
 );

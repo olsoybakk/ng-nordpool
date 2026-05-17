@@ -3,54 +3,48 @@ import { HourlyPrice, PriceArea } from '../../models/price.model';
 
 export const loadPrices = createAction(
   '[Prices] Load Prices',
-  props<{ area: PriceArea; date: string }>()
+  props<{ area: PriceArea; date: string }>(),
 );
 
 export const loadPricesSuccess = createAction(
   '[Prices] Load Prices Success',
-  props<{ prices: HourlyPrice[] }>()
+  props<{ prices: HourlyPrice[] }>(),
 );
 
 export const loadPricesFailure = createAction(
   '[Prices] Load Prices Failure',
-  props<{ error: string }>()
+  props<{ error: string }>(),
 );
 
 export const loadAllAreaPrices = createAction(
   '[Prices] Load All Area Prices',
-  props<{ date: string }>()
+  props<{ date: string }>(),
 );
 
 export const loadAllAreaPricesSuccess = createAction(
   '[Prices] Load All Area Prices Success',
-  props<{ date: string; results: Partial<Record<PriceArea, HourlyPrice[]>> }>()
+  props<{ date: string; results: Partial<Record<PriceArea, HourlyPrice[]>> }>(),
 );
 
 export const loadAllAreaPricesFailure = createAction(
   '[Prices] Load All Area Prices Failure',
-  props<{ error: string }>()
+  props<{ error: string }>(),
 );
 
 export const detectLocation = createAction('[Prices] Detect Location');
 
-export const selectArea = createAction(
-  '[Prices] Select Area',
-  props<{ area: PriceArea }>()
-);
+export const selectArea = createAction('[Prices] Select Area', props<{ area: PriceArea }>());
 
-export const selectDate = createAction(
-  '[Prices] Select Date',
-  props<{ date: string }>()
-);
+export const selectDate = createAction('[Prices] Select Date', props<{ date: string }>());
 
 export const setDateRangeDays = createAction(
   '[Prices] Set Date Range Days',
-  props<{ days: number }>()
+  props<{ days: number }>(),
 );
 
 export const setNotification = createAction(
   '[Prices] Set Notification',
-  props<{ message: string }>()
+  props<{ message: string }>(),
 );
 
 export const clearNotification = createAction('[Prices] Clear Notification');

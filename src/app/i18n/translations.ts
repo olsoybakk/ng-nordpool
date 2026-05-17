@@ -51,7 +51,7 @@ export interface Translations {
 
 export const translations: Record<Lang, Translations> = {
   en: {
-    title: 'Nordpool Spot Prices',
+    title: 'Spot Prices',
     switchToLight: 'Switch to light mode',
     switchToDark: 'Switch to dark mode',
     switchToNorwegian: 'Bytt til norsk',
@@ -99,7 +99,7 @@ export const translations: Record<Lang, Translations> = {
     dataNotAvailable: 'Price data is not available for all selected dates.',
   },
   nb: {
-    title: 'Nordpool Spotpriser',
+    title: 'Spotpriser',
     switchToLight: 'Bytt til lyst tema',
     switchToDark: 'Bytt til mørkt tema',
     switchToNorwegian: 'Bytt til norsk',

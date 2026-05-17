@@ -13,8 +13,21 @@
       >
         <span class="area-dot" [style.background]="areaColors[currentArea]"></span>
         <span class="area-select__label">{{ currentAreaLabel }}</span>
-        <svg class="area-select__chevron" viewBox="0 0 10 6" aria-hidden="true" width="10" height="6">
-          <path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <svg
+          class="area-select__chevron"
+          viewBox="0 0 10 6"
+          aria-hidden="true"
+          width="10"
+          height="6"
+        >
+          <path
+            d="M1 1l4 4 4-4"
+            stroke="currentColor"
+            stroke-width="1.5"
+            fill="none"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
         </svg>
       </button>
       <ul class="area-select__options" role="listbox" [attr.aria-label]="ls.t().priceArea">
@@ -29,7 +42,10 @@
             (keydown.enter)="selectAreaOption(area.value)"
             (keydown.space)="selectAreaOption(area.value)"
           >
-            <span class="area-dot area-dot--inline" [style.background]="areaColors[area.value]"></span>
+            <span
+              class="area-dot area-dot--inline"
+              [style.background]="areaColors[area.value]"
+            ></span>
             {{ area.label }}
           </li>
         }
@@ -37,36 +53,61 @@
     </div>
   </div>
 
-  <div class="control-group">
-    <label for="date-input">{{ ls.t().date }}</label>
-    <div class="date-nav">
-      <button class="nav-btn" (click)="stepDate(-1)" [attr.aria-label]="ls.t().previousDay">&lsaquo;</button>
-      <input
-        id="date-input"
-        type="date"
-        [ngModel]="currentDate"
-        [max]="maxDate"
-        (ngModelChange)="onDateChange($event)"
-      />
-      <button class="nav-btn" (click)="stepDate(1)" [disabled]="currentDate >= maxDate" [attr.aria-label]="ls.t().nextDay">&rsaquo;</button>
+  <div class="date-range-row">
+    <div class="control-group">
+      <label for="date-input">{{ ls.t().date }}</label>
+      <div class="date-nav">
+        <button class="nav-btn" (click)="stepDate(-1)" [attr.aria-label]="ls.t().previousDay">
+          &lsaquo;
+        </button>
+        <input
+          id="date-input"
+          type="date"
+          [ngModel]="currentDate"
+          [max]="maxDate"
+          (ngModelChange)="onDateChange($event)"
+        />
+        <button
+          class="nav-btn"
+          (click)="stepDate(1)"
+          [disabled]="currentDate >= maxDate"
+          [attr.aria-label]="ls.t().nextDay"
+        >
+          &rsaquo;
+        </button>
+      </div>
     </div>
-  </div>
 
-  <div class="control-group">
-    <label for="range-select">{{ ls.t().days }}</label>
-    <div class="date-nav">
-      <button class="nav-btn" (click)="stepRange(-1)" [disabled]="currentRangeDays <= 1" [attr.aria-label]="ls.t().fewerDays">&lsaquo;</button>
-      <select
-        id="range-select"
-        [ngModel]="currentRangeDays"
-        (ngModelChange)="setRangeDays($event)"
-        [attr.aria-label]="ls.t().dateRangeLabel"
-      >
-        @for (n of rangeOptions; track n) {
-          <option [ngValue]="n">{{ n }} {{ n === 1 ? ls.t().day : ls.t().daysPlural }}</option>
-        }
-      </select>
-      <button class="nav-btn" (click)="stepRange(1)" [disabled]="currentRangeDays >= maxRangeDays" [attr.aria-label]="ls.t().moreDays">&rsaquo;</button>
+    <div class="control-group">
+      <label for="range-select">{{ ls.t().days }}</label>
+      <div class="date-nav">
+        <button
+          class="nav-btn"
+          (click)="stepRange(-1)"
+          [disabled]="currentRangeDays <= 1"
+          [attr.aria-label]="ls.t().fewerDays"
+        >
+          &lsaquo;
+        </button>
+        <select
+          id="range-select"
+          [ngModel]="currentRangeDays"
+          (ngModelChange)="setRangeDays($event)"
+          [attr.aria-label]="ls.t().dateRangeLabel"
+        >
+          @for (n of rangeOptions; track n) {
+            <option [ngValue]="n">{{ n }}</option>
+          }
+        </select>
+        <button
+          class="nav-btn"
+          (click)="stepRange(1)"
+          [disabled]="currentRangeDays >= maxRangeDays"
+          [attr.aria-label]="ls.t().moreDays"
+        >
+          &rsaquo;
+        </button>
+      </div>
     </div>
   </div>
 </div>

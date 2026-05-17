@@ -36,8 +36,13 @@
     }
   }
 
+
   select {
     width: auto;
+  }
+
+  #range-select {
+    width: 3.5rem;
   }
 }
 
@@ -149,6 +154,12 @@
   }
 }
 
+.date-range-row {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
 
 .date-nav {
   display: flex;

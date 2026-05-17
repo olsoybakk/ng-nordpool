@@ -46,6 +46,24 @@
   --line-drop-shadow: drop-shadow(0 0 0.8px rgba(0, 0, 0, 0.45));
 }
 
+input[type='date'] {
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) input[type='date'] {
+    color-scheme: light;
+  }
+}
+
+:root[data-theme='light'] input[type='date'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] input[type='date'] {
+  color-scheme: dark;
+}
+
 :root[data-theme='dark'] {
   --color-bg: #0f1117;
   --color-surface: #1a1d27;
