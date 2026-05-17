@@ -329,7 +329,7 @@ Lazy-loads `DashboardComponent` at `''`. Wildcard redirects to `''`.
 
 ### Persistence
 
-`selectedArea` is written to `localStorage` by the `persistSelectedArea$` effect and read back in the reducer's `initialState`. The selected date always resets to today on load.
+`selectedArea` is written to `localStorage` by the `persistSelectedArea$` effect and read back in the reducer's `initialState`. `selectedDate` is written to `localStorage` by the `persistSelectedDate$` effect as `{ date, savedAt }`. On load the reducer reads it back; if the entry is older than 1 hour (or missing/malformed), it resets to today.
 
 `dateRangeDays` is written to `localStorage` by the `persistDateRangeDays$` effect and read back in the reducer's `initialState` (clamped 1–14, defaults to 1 if invalid).
 

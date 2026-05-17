@@ -27,6 +27,17 @@ export class PricesEffects {
     { dispatch: false },
   );
 
+  persistSelectedDate$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(PricesActions.selectDate),
+        tap(({ date }) =>
+          localStorage.setItem('selectedDate', JSON.stringify({ date, savedAt: Date.now() })),
+        ),
+      ),
+    { dispatch: false },
+  );
+
   persistDateRangeDays$ = createEffect(
     () =>
       this.actions$.pipe(
