@@ -4,46 +4,31 @@ import { localISODate } from '../../utils/date';
 
 export const selectPricesState = createFeatureSelector<PricesState>('prices');
 
-export const selectAllPrices = createSelector(
-  selectPricesState,
-  (state) => state.prices
-);
+export const selectAllPrices = createSelector(selectPricesState, (state) => state.prices);
 
 /** All areas for the primary selected date only (backwards compat). */
 export const selectAllAreaPrices = createSelector(
   selectPricesState,
-  (state) => state.allAreaPricesByDate[state.selectedDate] ?? {}
+  (state) => state.allAreaPricesByDate[state.selectedDate] ?? {},
 );
 
-export const selectSelectedArea = createSelector(
-  selectPricesState,
-  (state) => state.selectedArea
-);
+export const selectSelectedArea = createSelector(selectPricesState, (state) => state.selectedArea);
 
-export const selectSelectedDate = createSelector(
-  selectPricesState,
-  (state) => state.selectedDate
-);
+export const selectSelectedDate = createSelector(selectPricesState, (state) => state.selectedDate);
 
 export const selectDateRangeDays = createSelector(
   selectPricesState,
-  (state) => state.dateRangeDays
+  (state) => state.dateRangeDays,
 );
 
-export const selectLoading = createSelector(
-  selectPricesState,
-  (state) => state.loading
-);
+export const selectLoading = createSelector(selectPricesState, (state) => state.loading);
 
 export const selectAllAreasLoading = createSelector(
   selectPricesState,
-  (state) => state.allAreasLoadingCount > 0
+  (state) => state.allAreasLoadingCount > 0,
 );
 
-export const selectError = createSelector(
-  selectPricesState,
-  (state) => state.error
-);
+export const selectError = createSelector(selectPricesState, (state) => state.error);
 
 export const selectCurrentPrice = createSelector(selectAllPrices, (prices) => {
   const now = new Date();
@@ -100,7 +85,7 @@ export const selectRangeStats = createSelector(selectPricesState, (state) => {
     prices = state.prices;
   } else {
     const dates = Array.from({ length: dateRangeDays }, (_, i) =>
-      subtractDays(selectedDate, dateRangeDays - 1 - i)
+      subtractDays(selectedDate, dateRangeDays - 1 - i),
     );
     prices = [];
     for (const date of dates) {
@@ -123,28 +108,26 @@ function subtractDays(isoDate: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-export const selectNotification = createSelector(
-  selectPricesState,
-  (state) => state.notification
-);
+export const selectNotification = createSelector(selectPricesState, (state) => state.notification);
 
-/** Date strings that have already been fetched and stored. */
-export const selectLoadedDates = createSelector(
-  selectPricesState,
-  (state) => Object.keys(state.allAreaPricesByDate)
+/** Date strings that have been fetched and have actual price data. */
+export const selectLoadedDates = createSelector(selectPricesState, (state) =>
+  Object.entries(state.allAreaPricesByDate)
+    .filter(([, dayData]) => Object.values(dayData).some((prices) => prices?.length))
+    .map(([date]) => date),
 );
 
 /** ISO date strings for the active range, oldest first. */
 export const selectActiveDates = createSelector(selectPricesState, (state) =>
   Array.from({ length: state.dateRangeDays }, (_, i) =>
-    subtractDays(state.selectedDate, state.dateRangeDays - 1 - i)
-  )
+    subtractDays(state.selectedDate, state.dateRangeDays - 1 - i),
+  ),
 );
 
 /** All areas with prices concatenated across all dates in the active range, oldest first. */
 export const selectMergedAreaPrices = createSelector(selectPricesState, (state) => {
   const dates = Array.from({ length: state.dateRangeDays }, (_, i) =>
-    subtractDays(state.selectedDate, state.dateRangeDays - 1 - i)
+    subtractDays(state.selectedDate, state.dateRangeDays - 1 - i),
   );
   const result: Partial<Record<PriceArea, HourlyPrice[]>> = {};
   for (const date of dates) {
