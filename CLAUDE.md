@@ -57,7 +57,7 @@ npm run dev        # dev server at http://localhost:3000
 npm run build      # production build → dist/ng-nordpool/browser/
 npm run watch      # incremental dev build (watch mode)
 npm test           # all unit tests (vitest via @angular/build:unit-test)
-ng test --include="**/app.spec.ts"  # single test file (currently the only spec)
+ng test --include="**/app.spec.ts"  # single test file
 npx prettier --write .  # format all files
 ```
 
@@ -351,6 +351,16 @@ Static files in `public/` are served at the root. Current contents:
 - `favicon.ico` — legacy fallback (kept for older browsers)
 
 ## Deployment
+
+`.github/workflows/ci.yml` — triggers on every PR to `main`. Runs two parallel jobs:
+- `test`: creates `environment.local.ts` from the template, then runs `npm test --watch=false`
+- `build`: runs `npx ng build` (production)
+
+Both jobs are required status checks — merging to `main` is blocked until they pass.
+
+`src/test-setup.ts` is loaded via `setupFiles` in `angular.json`. It replaces Angular's
+partial localStorage stub with a full in-memory implementation so tests that import modules
+reading `localStorage` at load time (e.g. the reducer) work correctly.
 
 `.github/workflows/deploy.yml` — triggers on push to `main` and `workflow_dispatch`.
 
