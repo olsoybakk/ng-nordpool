@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Store } from '@ngrx/store';
@@ -25,6 +25,7 @@ import {
 export class ControlsComponent implements OnInit {
   private readonly store = inject(Store);
   private readonly elRef = inject(ElementRef);
+  private readonly cdr = inject(ChangeDetectorRef);
   readonly ls = inject(LanguageService);
 
   readonly areas = PRICE_AREAS;
@@ -70,7 +71,7 @@ export class ControlsComponent implements OnInit {
       event.preventDefault();
       this.dropdownOpen = true;
       const options = (this.elRef.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(
-        '.area-select__option'
+        '.area-select__option',
       );
       if (options.length) {
         (event.key === 'ArrowDown' ? options[0] : options[options.length - 1]).focus();
@@ -90,6 +91,12 @@ export class ControlsComponent implements OnInit {
   }
 
   onDateChange(date: string): void {
+    if (!date) {
+      date = localISODate();
+      this.currentDate = '';
+      this.cdr.detectChanges(); // flush '' so Angular tracks it as the current binding value
+      this.currentDate = date;  // next CD (after this handler) sees '' → today and writes to DOM
+    }
     this.store.dispatch(selectDate({ date }));
     this.store.dispatch(loadPrices({ area: this.currentArea, date }));
     // loadAllAreaPrices for the full range is handled by the loadMultiDayPrices$ effect

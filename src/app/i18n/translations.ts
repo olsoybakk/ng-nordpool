@@ -2,7 +2,6 @@ export type Lang = 'en' | 'nb';
 
 export interface Translations {
   title: string;
-  subtitle: string;
   switchToLight: string;
   switchToDark: string;
   switchToNorwegian: string;
@@ -53,7 +52,6 @@ export interface Translations {
 export const translations: Record<Lang, Translations> = {
   en: {
     title: 'Nordpool Spot Prices',
-    subtitle: 'Day-ahead electricity prices',
     switchToLight: 'Switch to light mode',
     switchToDark: 'Switch to dark mode',
     switchToNorwegian: 'Bytt til norsk',
@@ -102,7 +100,6 @@ export const translations: Record<Lang, Translations> = {
   },
   nb: {
     title: 'Nordpool Spotpriser',
-    subtitle: 'Strømpriser for neste dag',
     switchToLight: 'Bytt til lyst tema',
     switchToDark: 'Bytt til mørkt tema',
     switchToNorwegian: 'Bytt til norsk',
