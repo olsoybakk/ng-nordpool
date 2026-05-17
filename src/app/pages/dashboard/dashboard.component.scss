@@ -62,10 +62,13 @@
 }
 
 .dashboard__header-actions {
+  position: fixed;
+  top: 1rem;
+  right: 1.5rem;
+  z-index: 200;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  flex-shrink: 0;
 }
 
 .theme-btn {

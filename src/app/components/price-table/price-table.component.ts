@@ -15,7 +15,9 @@ interface TableRow extends HourlyPrice {
 
 function toHHMM(isoLocal: string): string {
   const d = new Date(isoLocal);
-  return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+  return (
+    d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0')
+  );
 }
 
 const TAX_FACTOR = 1.25;
@@ -41,12 +43,14 @@ export class PriceTableComponent {
   ]).pipe(
     map(([prices, current, area]) => {
       const tf = this.includeTax() && !NO_TAX_AREAS.has(area) ? TAX_FACTOR : 1;
-      return prices.map((p): TableRow => ({
-        ...p,
-        time: toHHMM(p.time_start),
-        isCurrent: p === current,
-        displayOre: p.ore_per_kWh * tf,
-      }));
-    })
+      return prices.map(
+        (p): TableRow => ({
+          ...p,
+          time: toHHMM(p.time_start),
+          isCurrent: p === current,
+          displayOre: p.ore_per_kWh * tf,
+        }),
+      );
+    }),
   );
 }

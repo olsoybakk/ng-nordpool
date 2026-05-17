@@ -22,18 +22,18 @@ export class PricesEffects {
     () =>
       this.actions$.pipe(
         ofType(PricesActions.selectArea),
-        tap(({ area }) => localStorage.setItem('selectedArea', area))
+        tap(({ area }) => localStorage.setItem('selectedArea', area)),
       ),
-    { dispatch: false }
+    { dispatch: false },
   );
 
   persistDateRangeDays$ = createEffect(
     () =>
       this.actions$.pipe(
         ofType(PricesActions.setDateRangeDays),
-        tap(({ days }) => localStorage.setItem('dateRangeDays', String(days)))
+        tap(({ days }) => localStorage.setItem('dateRangeDays', String(days))),
       ),
-    { dispatch: false }
+    { dispatch: false },
   );
 
   detectLocation$ = createEffect(() =>
@@ -46,13 +46,13 @@ export class PricesEffects {
             of(
               PricesActions.selectArea({ area }),
               PricesActions.loadPrices({ area, date }),
-              PricesActions.loadAllAreaPrices({ date })
-            )
+              PricesActions.loadAllAreaPrices({ date }),
+            ),
           ),
-          catchError(() => EMPTY)
-        )
-      )
-    )
+          catchError(() => EMPTY),
+        ),
+      ),
+    ),
   );
 
   loadPrices$ = createEffect(() =>
@@ -62,13 +62,15 @@ export class PricesEffects {
         this.nordpoolService.getPrices(date, area).pipe(
           map((prices) => PricesActions.loadPricesSuccess({ prices })),
           catchError(() =>
-            of(PricesActions.loadPricesFailure({
-              error: this.ls.t().failedToLoad,
-            }))
-          )
-        )
-      )
-    )
+            of(
+              PricesActions.loadPricesFailure({
+                error: this.ls.t().failedToLoad,
+              }),
+            ),
+          ),
+        ),
+      ),
+    ),
   );
 
   /** Fetch all areas for a single date — mergeMap so concurrent date fetches all complete. */
@@ -84,7 +86,7 @@ export class PricesEffects {
                   PricesActions.loadAllAreaPricesSuccess({ date, results: {} }),
                   PricesActions.setNotification({
                     message: this.ls.t().dataNotAvailable,
-                  })
+                  }),
                 )
               : of(PricesActions.loadAllAreaPricesSuccess({ date, results }));
           }),
@@ -93,20 +95,20 @@ export class PricesEffects {
               PricesActions.loadAllAreaPricesSuccess({ date, results: {} }),
               PricesActions.setNotification({
                 message: 'Price data is not available for all selected dates.',
-              })
-            )
-          )
-        )
-      )
-    )
+              }),
+            ),
+          ),
+        ),
+      ),
+    ),
   );
 
   /** Auto-dismiss the notification after 5 s; resets the timer if a new one arrives. */
   clearNotificationAfterDelay$ = createEffect(() =>
     this.actions$.pipe(
       ofType(PricesActions.setNotification),
-      switchMap(() => timer(5000).pipe(map(() => PricesActions.clearNotification())))
-    )
+      switchMap(() => timer(5000).pipe(map(() => PricesActions.clearNotification()))),
+    ),
   );
 
   /** When date or range changes, dispatch loadAllAreaPrices only for dates not yet in the store. */
@@ -116,14 +118,15 @@ export class PricesEffects {
       withLatestFrom(
         this.store.select(selectSelectedDate),
         this.store.select(selectDateRangeDays),
-        this.store.select(selectLoadedDates)
+        this.store.select(selectLoadedDates),
       ),
       mergeMap(([, date, days, loadedDates]) => {
         const loaded = new Set(loadedDates);
-        const dates = Array.from({ length: days }, (_, i) => subtractDays(date, i))
-          .filter((d) => !loaded.has(d));
+        const dates = Array.from({ length: days }, (_, i) => subtractDays(date, i)).filter(
+          (d) => !loaded.has(d),
+        );
         return from(dates.map((d) => PricesActions.loadAllAreaPrices({ date: d })));
-      })
-    )
+      }),
+    ),
   );
 }

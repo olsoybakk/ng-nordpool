@@ -46,8 +46,12 @@
     font-weight: 700;
     color: var(--color-text);
 
-    &--low { color: var(--color-low); }
-    &--high { color: var(--color-high); }
+    &--low {
+      color: var(--color-low);
+    }
+    &--high {
+      color: var(--color-high);
+    }
 
     @media (max-width: 640px) {
       font-size: 0.9rem;
