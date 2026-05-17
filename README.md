@@ -3,7 +3,7 @@
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-live-brightgreen?logo=github)](https://olsoybakk.github.io/ng-nordpool/)
 [![Deploy to GitHub Pages](https://github.com/olsoybakk/ng-nordpool/actions/workflows/deploy.yml/badge.svg)](https://github.com/olsoybakk/ng-nordpool/actions/workflows/deploy.yml)
 
-A single-page Angular app for browsing Nordpool day-ahead electricity spot prices for Norway. Pick a price area, date and range to see the full price profile in 15-minute intervals, with live highlighting of the current period.
+A single-page Angular app for browsing Nordpool electricity spot prices for Norway — today, tomorrow, and historical data. Pick a price area, date and range to see the full price profile in 15-minute intervals, with live highlighting of the current period.
 
 **Live app:** https://olsoybakk.github.io/ng-nordpool/
 
@@ -41,10 +41,10 @@ npm test        # unit tests (Vitest)
 
 ## Tech stack
 
-| | |
-|---|---|
-| Framework | Angular 21 (standalone components) |
-| State | NgRx 21 (store, effects, store-devtools) |
-| Styling | SCSS with CSS custom properties |
-| Chart | Pure SVG — no charting library |
-| CI/CD | GitHub Actions → GitHub Pages |
+|           |                                          |
+| --------- | ---------------------------------------- |
+| Framework | Angular 21 (standalone components)       |
+| State     | NgRx 21 (store, effects, store-devtools) |
+| Styling   | SCSS with CSS custom properties          |
+| Chart     | Pure SVG — no charting library           |
+| CI/CD     | GitHub Actions → GitHub Pages            |
