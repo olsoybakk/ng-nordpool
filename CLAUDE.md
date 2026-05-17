@@ -20,6 +20,8 @@ Angular 21 app that displays Nordpool day-ahead electricity spot prices.
 
 > **Always ask the user before merging a PR.** Create and push the branch, open the PR, share the URL, then wait for explicit approval before running `gh pr merge`.
 
+> **Always check CI before merging.** Run `gh pr checks <number>` and confirm all checks pass before attempting `gh pr merge`. If checks are still running, wait and re-run until they complete.
+
 > **After merging, always delete the branch** — both remote (`git push origin --delete <branch>`) and local (`git branch -D <branch>`). Then run `git checkout main && git pull`.
 
 > **After merging, always clean up `.playwright-mcp/`** — run `rm -rf .playwright-mcp/` to remove screenshots and snapshots left from Playwright MCP sessions.
