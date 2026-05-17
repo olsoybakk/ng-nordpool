@@ -1,4 +1,4 @@
-import { Component, DestroyRef, effect, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, effect, inject, OnInit, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
@@ -43,6 +43,27 @@ export class DashboardComponent implements OnInit {
   error$ = this.store.select(selectError);
   dateRangeDays$ = this.store.select(selectDateRangeDays);
   notification = toSignal(this.store.select(selectNotification), { initialValue: null });
+
+  private readonly selectedDate = toSignal(this.store.select(selectSelectedDate), {
+    initialValue: new Date().toISOString().slice(0, 10),
+  });
+  private readonly dateRangeDays = toSignal(this.store.select(selectDateRangeDays), {
+    initialValue: 1,
+  });
+
+  readonly dateLabel = computed(() => {
+    const dateStr = this.selectedDate();
+    if (!dateStr) return '';
+    const end = new Date(dateStr + 'T12:00:00');
+    if (isNaN(end.getTime())) return '';
+    const locale = this.ls.lang() === 'nb' ? 'nb-NO' : 'en-GB';
+    const days = this.dateRangeDays();
+    const fmt = { day: 'numeric', month: 'long', year: 'numeric' } as const;
+    if (days <= 1) return new Intl.DateTimeFormat(locale, fmt).format(end);
+    const start = new Date(end);
+    start.setDate(start.getDate() - (days - 1));
+    return new Intl.DateTimeFormat(locale, fmt).formatRange(start, end);
+  });
 
   chartMode = signal<ChartMode>((localStorage.getItem('chartMode') as ChartMode | null) ?? 'line');
   includeTax = signal(localStorage.getItem('includeTax') === 'true');
