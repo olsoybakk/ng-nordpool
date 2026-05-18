@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 
-const LOCAL = process.argv.includes('--local');
 const root = path.resolve(__dirname, '..');
 
 function parseEnvFile(filePath) {
@@ -19,19 +18,17 @@ function parseEnvFile(filePath) {
 }
 
 const base = parseEnvFile(path.join(root, '.env'));
-const local = LOCAL ? parseEnvFile(path.join(root, '.env.local')) : {};
-const vars = { ...base, ...local };
+const local = parseEnvFile(path.join(root, '.env.local'));
+const vars = { ...base, ...local, ...process.env };
 
-const content = `export const environment = {
+const outFile = path.join(root, 'src/environments/environment.ts');
+
+fs.writeFileSync(
+  outFile,
+  `export const environment = {
   nordpoolApiUrl: '${vars['NORDPOOL_API_URL'] ?? ''}',
 };
-`;
-
-const outFile = path.join(
-  root,
-  'src/environments',
-  LOCAL ? 'environment.local.ts' : 'environment.ts',
+`,
 );
 
-fs.writeFileSync(outFile, content);
 console.log(`Generated ${path.relative(root, outFile)}`);

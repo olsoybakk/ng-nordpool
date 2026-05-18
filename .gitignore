@@ -41,7 +41,6 @@ __screenshots__/
 
 # Generated environment files (produced by scripts/generate-env.js)
 src/environments/environment.ts
-src/environments/environment.local.ts
 .env.local
 
 # Local MCP config (contains machine-specific absolute paths)
