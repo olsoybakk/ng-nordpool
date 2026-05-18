@@ -379,7 +379,7 @@ reading `localStorage` at load time (e.g. the reducer) work correctly.
 
 `.github/workflows/deploy.yml` — triggers on push to `main` and `workflow_dispatch`.
 
-Build step: `npm run build -- --base-href=/ng-nordpool/` (uses `npm run build` so the `prebuild` script stamps `build-info.ts` with the deploy timestamp before Angular compiles)
+Build step: `npm run build -- --base-href=/ng-nordpool/` (uses `npm run build` so the `prebuild` script stamps `build-info.ts` with the deploy timestamp before Angular compiles). `NORDPOOL_API_URL` is passed to the build step from a repository secret so `generate-env.js` writes the correct URL into `environment.ts`.
 Post-build: copies `index.html` → `404.html` for client-side routing on Pages.
 Deploys via `actions/upload-pages-artifact` + `actions/deploy-pages`.
 
