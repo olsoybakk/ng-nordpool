@@ -77,11 +77,9 @@ Component state uses `signal()` / `effect()` rather than `BehaviorSubject`. Exce
 
 ## Environment
 
-The API base URL is configured via `src/environments/environment.ts` (committed, used in production builds) and `src/environments/environment.local.ts` (gitignored, used automatically in development via `fileReplacements` in `angular.json`).
+The API base URL is configured via `.env` (committed, default values) and `.env.local` (gitignored, local overrides). `scripts/generate-env.js` reads both files plus `process.env` (highest priority) and writes `src/environments/environment.ts` before every build or dev server start. Priority: `process.env` > `.env.local` > `.env`.
 
-`npm run dev` runs a `predev` script that creates `environment.local.ts` from `environment.ts` on a fresh clone. Edit `environment.local.ts` to point at a different URL locally without affecting git.
-
-Both files point at a Netlify CORS proxy. Check `src/environments/environment.ts` for the current URL.
+`src/environments/environment.ts` is gitignored and generated — never edit it directly. To override the URL locally, create `.env.local` with `NORDPOOL_API_URL=<your-url>`.
 
 `src/environments/build-info.ts` is committed with `BUILD_DATE = '1970-01-01T00:00:00.000Z'` as a default placeholder. The `prebuild` npm script overwrites it with `new Date().toISOString()` before every production build. `DashboardComponent` imports `BUILD_DATE`, formats it to `YYYY.MM.DD HH:mm` in the client's local timezone, and displays it as a two-line label (date / time) inside the hamburger menu.
 
@@ -370,8 +368,8 @@ Static files in `public/` are served at the root. Current contents:
 ## Deployment
 
 `.github/workflows/ci.yml` — triggers on every PR to `main`. Runs two parallel jobs:
-- `test`: creates `environment.local.ts` from the template, then runs `npm test --watch=false`
-- `build`: runs `npm run build` (production; triggers `prebuild` to stamp `build-info.ts`)
+- `test`: runs `npm test --watch=false` (triggers `pretest` → `generate-env.js` → `environment.ts`)
+- `build`: runs `npm run build` (triggers `prebuild` → `generate-env.js` + stamps `build-info.ts`)
 
 Both jobs are required status checks — merging to `main` is blocked until they pass.
 

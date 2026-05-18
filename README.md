@@ -30,7 +30,7 @@ A single-page Angular app for browsing Nordpool electricity spot prices for Norw
 
 Prices are fetched from a Nordpool proxy API. No API key required. The API returns 15-minute interval data for all areas in a single request, with prices converted from NOK/MWh to øre/kWh.
 
-Configure the API URL in `src/environments/environment.local.ts` (created automatically on first `npm run dev`).
+Configure the API URL via `.env.local` (create it locally, gitignored): `NORDPOOL_API_URL=<your-url>`.
 
 ## Development
 

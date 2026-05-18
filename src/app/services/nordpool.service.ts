@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { HourlyPrice, PriceArea, PRICE_AREAS } from '../models/price.model';
 import { environment } from '../../environments/environment';
@@ -23,6 +23,7 @@ export class NordpoolService {
   private readonly baseUrl = environment.nordpoolApiUrl;
 
   getPrices(date: string, area: PriceArea): Observable<HourlyPrice[]> {
+    if (!this.baseUrl) return throwError(() => new Error('not-configured'));
     const key = `${date}:${area}`;
     const cached = this.cache.get(key);
     if (cached) return of(cached);
@@ -36,6 +37,7 @@ export class NordpoolService {
   }
 
   getAllAreaPrices(date: string): Observable<Partial<Record<PriceArea, HourlyPrice[]>>> {
+    if (!this.baseUrl) return throwError(() => new Error('not-configured'));
     const areas = PRICE_AREAS.map((a) => a.value);
     const allCached = areas.every((area) => this.cache.get(`${date}:${area}`) !== null);
 
