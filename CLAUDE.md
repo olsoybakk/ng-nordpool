@@ -218,7 +218,7 @@ src/app/components/
                     within the visible date range (single-day: selectedDate === today;
                     multi-day: oldest date ≤ today ≤ selectedDate); hover tooltip;
                     fullscreen toggle; pinch-to-zoom; scroll-to-zoom.
-                  Mobile chart height: 45% of viewport height (desktop uses container
+                  Mobile chart height: 38% of viewport height (desktop uses container
                     height in line mode, fixed CHART_H in bar mode).
                   Tax: prices multiplied by 1.25 when includeTax is true (NO4 exempt).
                   Norgespris: dashed reference line at 50 øre/kWh (incl. tax) when
@@ -250,8 +250,14 @@ src/app/components/
                     (Math.floor(cursorSlot) - Math.floor(cursorFrac * clamped)) to
                     guarantee the slot under the cursor is preserved after each zoom
                     step. Tooltip and hover line are hidden on each wheel event.
-                  Scrollbar: shown below the chart when zoomed. Thumb
-                    drag pans the visible window; track click pages left/right.
+                  Scrollbar: shown when zoomed; position:absolute at the bottom of
+                    .chart-outer with a surface background and border-top separator,
+                    so it never adds height to the card. A chart-outer--zoomed modifier
+                    adds matching padding-bottom (20px desktop / 32px mobile) so axis
+                    labels are not hidden behind it. touch-action:pan-x on the bar,
+                    track, and thumb prevents iOS from intercepting horizontal swipes
+                    as app-switcher gestures. Track height 20px on mobile (44px min-width
+                    thumb). Thumb drag pans the visible window; track click pages left/right.
                     Entering the scrollbar clears hoveredSlot to hide the tooltip.
                   zoomRange is a BehaviorSubject<[number,number]|null> (not a signal)
                     so combineLatest (vm$) receives the new zoom value synchronously
@@ -395,8 +401,8 @@ Repo must be **public** for GitHub Pages on a free plan.
 - Zoom uses slot-range slicing (`zoomRange` → `[startSlot, endSlot]`) rather than SVG viewBox manipulation, so the y-axis label column is never clipped. X-labels, now-line, and hourStep adapt to the visible window; y-scale is anchored to the full unsliced dataset so the axis stays fixed while zooming.
 - Scroll-to-zoom uses `Math.floor(cursorSlot) - Math.floor(cursorFrac * clamped)` (not `Math.round`) for the new start slot. This provably keeps `floor(slot under cursor)` constant after each zoom step: since `cursorFrac * clamped ∈ [k, k+1)`, the resulting slot position always lands in `[floor(cursorSlot), floor(cursorSlot)+1)`.
 - `zoomRange` is a `BehaviorSubject` (not a signal) in `PriceChartComponent` so `combineLatest` (vm$) receives the new zoom synchronously within the event handler. With a signal, Angular's `toObservable` effect fires after the current CD cycle, causing an intermediate render with the old chart — visible as flicker. A `toSignal()`-derived readonly is exposed for template use.
-- `ResizeObserver` in `PriceChartComponent` watches `.chart-wrapper`, not the host element, so the scrollbar appearing/disappearing below the chart never changes `containerH`, never triggers a `dims()` recompute, and never causes a spurious `vm$` emission.
-- Scrollbar: shown when zoomed on both desktop and mobile. Desktop: mouse thumb drag + track click pages. Mobile: touch thumb drag + track touchstart pages; track height 12px and min-width 40px for touch targets. `mouseenter` on the scrollbar clears `hoveredSlot` to hide the tooltip.
+- `ResizeObserver` in `PriceChartComponent` watches `.chart-wrapper`, not the host element, so the scrollbar (position:absolute, does not affect flow) never changes `containerH`, never triggers a `dims()` recompute, and never causes a spurious `vm$` emission.
+- Scrollbar: `position:absolute; bottom:0` inside `.chart-outer` so it overlays the card bottom without adding height. `chart-outer--zoomed` adds `padding-bottom` to reserve space for it. `touch-action:pan-x` on all three scrollbar elements (bar/track/thumb) tells iOS these elements own horizontal swipes, suppressing the app-switcher gesture. Desktop: mouse thumb drag + track click pages. Mobile: touch thumb drag + track touchstart pages; track height 20px and min-width 44px for touch targets. `mouseenter` on the scrollbar clears `hoveredSlot` to hide the tooltip.
 - Touch tooltip uses a three-state anchor signal (`'above'` / `'below'` / `'center'`) instead of a boolean. On touch the tooltip appears above the fingertip; it flips to below when the touch is within ~264px of the top of the chart.
 - `selectCurrentPriceInRange` is used by the stats-bar instead of `selectCurrentPrice` so the "Now" card appears whenever the now-line is visible (today within the active range), not only when `selectedDate === today`.
 - `selectRangeStats` is used by the stats-bar for Min/Avg/Max so the values reflect all days in the active date range, not just the selected date.
