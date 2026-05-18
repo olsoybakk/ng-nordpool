@@ -1,4 +1,13 @@
-import { Component, computed, DestroyRef, effect, inject, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  HostListener,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
@@ -42,7 +51,7 @@ export class DashboardComponent implements OnInit {
     if (!BUILD_DATE) return '';
     const d = new Date(BUILD_DATE);
     const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   })();
 
   loading$ = this.store.select(selectLoading);
@@ -72,6 +81,7 @@ export class DashboardComponent implements OnInit {
     return new Intl.DateTimeFormat(locale, fmt).formatRange(start, end);
   });
 
+  menuOpen = signal(false);
   chartMode = signal<ChartMode>((localStorage.getItem('chartMode') as ChartMode | null) ?? 'line');
   includeTax = signal(localStorage.getItem('includeTax') === 'true');
   showNorgespris = signal(localStorage.getItem('showNorgespris') === 'true');
@@ -139,5 +149,25 @@ export class DashboardComponent implements OnInit {
 
   toggleStromstotte(): void {
     this.showStromstotte.update((v) => !v);
+  }
+
+  toggleMenu(event: Event): void {
+    event.stopPropagation();
+    this.menuOpen.update((v) => !v);
+  }
+
+  @HostListener('document:click')
+  closeMenu(): void {
+    this.menuOpen.set(false);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.menuOpen.set(false);
+  }
+
+  clearAllData(): void {
+    localStorage.clear();
+    location.reload();
   }
 }

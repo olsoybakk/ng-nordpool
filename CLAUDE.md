@@ -83,7 +83,7 @@ The API base URL is configured via `src/environments/environment.ts` (committed,
 
 Both files point at a Netlify CORS proxy. Check `src/environments/environment.ts` for the current URL.
 
-`src/environments/build-info.ts` is committed with an empty `BUILD_DATE = ''` placeholder. The `prebuild` npm script overwrites it with `new Date().toISOString()` before every production build. `DashboardComponent` imports `BUILD_DATE`, formats it to `YYYY-MM-DD HH:mm` in the client's local timezone, and displays it as a two-line label (date / time) below the theme and language buttons. The label is hidden when `BUILD_DATE` is empty (local dev).
+`src/environments/build-info.ts` is committed with `BUILD_DATE = '1970-01-01T00:00:00.000Z'` as a default placeholder. The `prebuild` npm script overwrites it with `new Date().toISOString()` before every production build. `DashboardComponent` imports `BUILD_DATE`, formats it to `YYYY-MM-DD HH:mm` in the client's local timezone, and displays it as a two-line label (date / time) inside the hamburger menu.
 
 ## Data source
 
@@ -314,9 +314,10 @@ src/app/pages/
                   Theme and language buttons are `position:fixed` at top-right
                   (`top:1rem; right:1.5rem; z-index:200`) so they stay pinned
                   regardless of scroll or sticky-header state. A two-line build
-                  timestamp (date / time, client timezone) is rendered below them
-                  via `buildDate` (formatted from `BUILD_DATE` in build-info.ts);
-                  hidden when `BUILD_DATE` is empty (local dev).
+                  A hamburger menu button opens a dropdown containing the build
+                  timestamp (date / time, client timezone, from `BUILD_DATE` in
+                  build-info.ts) and a "Clear saved data" button that wipes
+                  localStorage and reloads.
                   Line/Bar, Tax, Norgespris, and Strømstøtte toggles in the header.
                   All four signals are initialised from localStorage on load and
                   written back via effect() on every change (keys: 'chartMode',

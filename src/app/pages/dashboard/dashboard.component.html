@@ -34,18 +34,45 @@
           </button>
 
           <button
-            class="lang-btn"
-            (click)="ls.toggleLang()"
-            [attr.aria-label]="ls.lang() === 'nb' ? ls.t().switchToEnglish : ls.t().switchToNorwegian"
+            class="hamburger-btn"
+            [class.hamburger-btn--active]="menuOpen()"
+            (click)="toggleMenu($event)"
+            [attr.aria-label]="ls.t().menuAriaLabel"
+            [attr.aria-expanded]="menuOpen()"
           >
-            {{ ls.lang() === 'nb' ? 'EN' : 'NO' }}
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <rect x="2" y="4" width="14" height="1.5" rx="0.75" fill="currentColor" />
+              <rect x="2" y="8.25" width="14" height="1.5" rx="0.75" fill="currentColor" />
+              <rect x="2" y="12.5" width="14" height="1.5" rx="0.75" fill="currentColor" />
+            </svg>
           </button>
         </div>
-        @if (buildDate) {
-          <span class="build-date">
-            <span>{{ buildDate.slice(0, 10) }}</span>
-            <span>{{ buildDate.slice(11) }}</span>
-          </span>
+
+        @if (menuOpen()) {
+          <div class="hamburger-menu" (click)="$event.stopPropagation()">
+            @if (buildDate) {
+              <div class="hamburger-menu__timestamp">
+                <span>{{ buildDate.slice(0, 10) }}</span>
+                <span>{{ buildDate.slice(11) }}</span>
+              </div>
+            }
+            <button
+              class="hamburger-menu__item"
+              (click)="ls.toggleLang()"
+              [attr.aria-label]="ls.lang() === 'nb' ? ls.t().switchToEnglish : ls.t().switchToNorwegian"
+            >
+              <span class="hamburger-menu__lang-badge" aria-hidden="true">{{ ls.lang() === 'nb' ? 'EN' : 'NO' }}</span>
+              {{ ls.lang() === 'nb' ? ls.t().switchToEnglish : ls.t().switchToNorwegian }}
+            </button>
+            <button class="hamburger-menu__item hamburger-menu__item--danger" (click)="clearAllData()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6l-1 14H6L5 6" />
+                <path d="M9 6V4h6v2" />
+              </svg>
+              {{ ls.t().clearData }}
+            </button>
+          </div>
         }
       </div>
     </div>
