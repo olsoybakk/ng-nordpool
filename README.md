@@ -20,6 +20,7 @@ A single-page Angular app for browsing Nordpool electricity spot prices for Norw
 - **Pinch-to-zoom** — two-finger pinch zooms into a time window; ↺ button resets; page zoom is disabled so the gesture is captured by the chart
 - **Stats bar** — current, min, avg and max (øre/kWh); "Now" visible whenever today falls within the selected date range
 - **15-minute table** — øre/kWh for all 96 intervals (bar mode, single day only)
+- **Hamburger menu** — language toggle, build timestamp, and a "Clear saved data" button that wipes all localStorage and reloads
 - **Persistent settings** — language, chart mode, tax, Norgespris and date range survive page reloads; area is remembered and auto-detected on first visit
 - **localStorage cache** — up to 30 full days cached (all areas); switching between dates and ranges is instant
 - **Dark/light mode** — follows system preference automatically; toggle button overrides manually
