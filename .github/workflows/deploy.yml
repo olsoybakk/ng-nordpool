@@ -28,6 +28,8 @@ jobs:
       - run: npm ci
 
       - run: npm run build -- --base-href=/ng-nordpool/
+        env:
+          NORDPOOL_API_URL: ${{ secrets.NORDPOOL_API_URL }}
 
       # GitHub Pages needs a 404.html to handle client-side routing
       - run: cp dist/ng-nordpool/browser/index.html dist/ng-nordpool/browser/404.html
