@@ -301,6 +301,9 @@ src/app/components/
   price-table/    Up to 96-row table (one row per 15-min interval). Current
                   interval row highlighted + "Now" badge.
                   Only shown when chartMode === 'bar'.
+                  Inputs: includeTax, showStromstotte. Applies the same
+                  applyStromstotte() + tax-factor transforms as the chart so
+                  displayed prices always match.
 
 src/app/pages/
   dashboard/      Owns chartMode, includeTax, showNorgespris, showStromstotte signals.
