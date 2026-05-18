@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
 import { map } from 'rxjs/operators';
 import { combineLatest } from 'rxjs';
-import { HourlyPrice } from '../../models/price.model';
+import { HourlyPrice, PriceArea } from '../../models/price.model';
 import { selectAllPrices, selectCurrentPrice, selectSelectedArea } from '../../store';
 import { LanguageService } from '../../services/language.service';
 
@@ -21,7 +21,18 @@ function toHHMM(isoLocal: string): string {
 }
 
 const TAX_FACTOR = 1.25;
-const NO_TAX_AREAS = new Set(['NO4']);
+const NO_TAX_AREAS = new Set<PriceArea>(['NO4']);
+const STROMSTOTTE_THRESHOLD = 77;
+
+function applyStromstotte(rawOre: number): number {
+  if (rawOre <= STROMSTOTTE_THRESHOLD) return rawOre;
+  return 0.1 * rawOre + 0.9 * STROMSTOTTE_THRESHOLD;
+}
+
+function displayOre(area: PriceArea, rawOre: number, includeTax: boolean, showStromstotte: boolean): number {
+  const ore = showStromstotte ? applyStromstotte(rawOre) : rawOre;
+  return includeTax && !NO_TAX_AREAS.has(area) ? ore * TAX_FACTOR : ore;
+}
 
 @Component({
   selector: 'app-price-table',
@@ -35,6 +46,7 @@ export class PriceTableComponent {
   readonly ls = inject(LanguageService);
 
   includeTax = input(false);
+  showStromstotte = input(false);
 
   rows$ = combineLatest([
     this.store.select(selectAllPrices),
@@ -42,13 +54,12 @@ export class PriceTableComponent {
     this.store.select(selectSelectedArea),
   ]).pipe(
     map(([prices, current, area]) => {
-      const tf = this.includeTax() && !NO_TAX_AREAS.has(area) ? TAX_FACTOR : 1;
       return prices.map(
         (p): TableRow => ({
           ...p,
           time: toHHMM(p.time_start),
           isCurrent: p === current,
-          displayOre: p.ore_per_kWh * tf,
+          displayOre: displayOre(area, p.ore_per_kWh, this.includeTax(), this.showStromstotte()),
         }),
       );
     }),

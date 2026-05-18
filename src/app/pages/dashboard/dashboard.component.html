@@ -161,7 +161,7 @@
         [class.dashboard__table--loading]="(loading$ | async) || (allAreasLoading$ | async)"
       >
         <h2 class="section-title">{{ ls.t().allHours }}</h2>
-        <app-price-table [includeTax]="includeTax()" />
+        <app-price-table [includeTax]="includeTax()" [showStromstotte]="showStromstotte()" />
       </section>
     }
   </div>
