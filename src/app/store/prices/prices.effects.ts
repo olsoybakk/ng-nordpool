@@ -72,10 +72,13 @@ export class PricesEffects {
       switchMap(({ area, date }) =>
         this.nordpoolService.getPrices(date, area).pipe(
           map((prices) => PricesActions.loadPricesSuccess({ prices })),
-          catchError(() =>
+          catchError((err: Error) =>
             of(
               PricesActions.loadPricesFailure({
-                error: this.ls.t().failedToLoad,
+                error:
+                  err.message === 'not-configured'
+                    ? 'API URL is not configured. Set NORDPOOL_API_URL in .env.'
+                    : this.ls.t().failedToLoad,
               }),
             ),
           ),
@@ -101,11 +104,14 @@ export class PricesEffects {
                 )
               : of(PricesActions.loadAllAreaPricesSuccess({ date, results }));
           }),
-          catchError(() =>
+          catchError((err: Error) =>
             of(
               PricesActions.loadAllAreaPricesSuccess({ date, results: {} }),
               PricesActions.setNotification({
-                message: 'Price data is not available for all selected dates.',
+                message:
+                  err.message === 'not-configured'
+                    ? 'API URL is not configured. Set NORDPOOL_API_URL in .env.'
+                    : 'Price data is not available for all selected dates.',
               }),
             ),
           ),
