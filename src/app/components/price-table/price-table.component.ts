@@ -1,5 +1,6 @@
 import { Component, inject, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
 import { map } from 'rxjs/operators';
 import { combineLatest } from 'rxjs';
@@ -52,14 +53,16 @@ export class PriceTableComponent {
     this.store.select(selectAllPrices),
     this.store.select(selectCurrentPrice),
     this.store.select(selectSelectedArea),
+    toObservable(this.includeTax),
+    toObservable(this.showStromstotte),
   ]).pipe(
-    map(([prices, current, area]) => {
+    map(([prices, current, area, includeTax, showStromstotte]) => {
       return prices.map(
         (p): TableRow => ({
           ...p,
           time: toHHMM(p.time_start),
           isCurrent: p === current,
-          displayOre: displayOre(area, p.ore_per_kWh, this.includeTax(), this.showStromstotte()),
+          displayOre: displayOre(area, p.ore_per_kWh, includeTax, showStromstotte),
         }),
       );
     }),
