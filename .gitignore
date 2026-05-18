@@ -39,8 +39,9 @@ testem.log
 /typings
 __screenshots__/
 
-# Local environment overrides (copy of environment.ts, customise as needed)
+# Local environment overrides
 src/environments/environment.local.ts
+.env.local
 
 # Local MCP config (contains machine-specific absolute paths)
 .mcp.json
