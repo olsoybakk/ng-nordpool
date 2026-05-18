@@ -17,8 +17,6 @@ jobs:
 
       - run: npm ci
 
-      - run: cp src/environments/environment.ts src/environments/environment.local.ts
-
       - run: npm test -- --watch=false
 
   build:

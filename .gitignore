@@ -39,8 +39,9 @@ testem.log
 /typings
 __screenshots__/
 
-# Local environment overrides (copy of environment.ts, customise as needed)
-src/environments/environment.local.ts
+# Generated environment files (produced by scripts/generate-env.js)
+src/environments/environment.ts
+.env.local
 
 # Local MCP config (contains machine-specific absolute paths)
 .mcp.json
