@@ -26,7 +26,7 @@ import {
   selectDateRangeDays,
   selectNotification,
 } from '../../store';
-import { detectLocation, loadPrices, loadAllAreaPrices } from '../../store/prices/prices.actions';
+import { detectLocation, loadPrices, loadAllAreaPrices } from '../../store';
 import { LanguageService } from '../../services/language.service';
 import { subtractDays } from '../../utils/date';
 import { BUILD_DATE } from '../../../environments/build-info';
