@@ -414,6 +414,13 @@
 // Zoom scrollbar (shown when zoomed; touch-friendly on mobile)
 .scroll-bar {
   padding: 4px 3.2% 2px 4%;
+  touch-action: pan-x;
+
+  @media (max-width: 640px) {
+    // Extra bottom padding keeps the track away from the iOS home indicator
+    // gesture area, reducing conflicts with the app-switcher swipe.
+    padding-bottom: 10px;
+  }
 }
 
 .scroll-track {
@@ -422,10 +429,11 @@
   background: var(--color-border);
   border-radius: 3px;
   cursor: pointer;
+  touch-action: pan-x;
 
   @media (max-width: 640px) {
-    height: 12px;
-    border-radius: 6px;
+    height: 20px;
+    border-radius: 10px;
   }
 }
 
@@ -439,10 +447,11 @@
   cursor: grab;
   transition: background 0.15s;
   user-select: none;
+  touch-action: pan-x;
 
   @media (max-width: 640px) {
-    border-radius: 6px;
-    min-width: 40px;
+    border-radius: 10px;
+    min-width: 44px;
   }
 
   &:hover {
