@@ -7,8 +7,7 @@ import { provideStoreDevtools } from '@ngrx/store-devtools';
 import { isDevMode } from '@angular/core';
 
 import { routes } from './app.routes';
-import { pricesReducer } from './store/prices/prices.reducer';
-import { PricesEffects } from './store/prices/prices.effects';
+import { PricesEffects, pricesReducer } from './store';
 
 export const appConfig: ApplicationConfig = {
   providers: [
