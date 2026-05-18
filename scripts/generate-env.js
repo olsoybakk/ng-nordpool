@@ -17,9 +17,14 @@ function parseEnvFile(filePath) {
   );
 }
 
+const KNOWN_VARS = ['NORDPOOL_API_URL'];
+
 const base = parseEnvFile(path.join(root, '.env'));
 const local = parseEnvFile(path.join(root, '.env.local'));
-const vars = { ...base, ...local, ...process.env };
+const fromEnv = Object.fromEntries(
+  KNOWN_VARS.filter((k) => process.env[k]).map((k) => [k, process.env[k]]),
+);
+const vars = { ...base, ...local, ...fromEnv };
 
 const outFile = path.join(root, 'src/environments/environment.ts');
 
