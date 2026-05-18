@@ -39,7 +39,8 @@ testem.log
 /typings
 __screenshots__/
 
-# Local environment overrides
+# Generated environment files (produced by scripts/generate-env.js)
+src/environments/environment.ts
 src/environments/environment.local.ts
 .env.local
 

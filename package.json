@@ -7,6 +7,7 @@
     "start": "ng serve",
     "predev": "node scripts/generate-env.js --local",
     "dev": "ng serve --port 3000",
+    "pretest": "node scripts/generate-env.js --local",
     "prebuild": "node scripts/generate-env.js && node -e \"const fs=require('fs');fs.writeFileSync('src/environments/build-info.ts','export const BUILD_DATE = \\\"'+new Date().toISOString()+'\\\";\\n');\"",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
