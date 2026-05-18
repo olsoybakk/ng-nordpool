@@ -37,6 +37,15 @@
     display: block;
   }
 
+  // Reserve space at the bottom so the absolute scrollbar doesn't cover axis labels.
+  &--zoomed {
+    padding-bottom: 20px; // desktop: 6px track + surrounding padding
+
+    @media (max-width: 640px) {
+      padding-bottom: 32px; // mobile: 20px track + surrounding padding
+    }
+  }
+
   &--fullscreen {
     position: fixed;
     inset: 24px; // FULLSCREEN_OUTER — keep in sync with .ts
@@ -55,6 +64,10 @@
     .chart {
       width: 100%;
       height: 100%;
+    }
+
+    .scroll-bar {
+      border-radius: 0 0 12px 12px;
     }
   }
 }
@@ -411,16 +424,19 @@
   }
 }
 
-// Zoom scrollbar (shown when zoomed; touch-friendly on mobile)
+// Zoom scrollbar — absolutely positioned so it overlays the chart bottom
+// without adding height to .chart-outer, keeping it on-screen when zoomed.
 .scroll-bar {
-  padding: 4px 3.2% 2px 4%;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  padding: 4px 3.2% 4px 4%;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  border-radius: 0 0 8px 8px;
   touch-action: pan-x;
-
-  @media (max-width: 640px) {
-    // Extra bottom padding keeps the track away from the iOS home indicator
-    // gesture area, reducing conflicts with the app-switcher swipe.
-    padding-bottom: 10px;
-  }
 }
 
 .scroll-track {

@@ -5,6 +5,7 @@
   <div
     class="chart-outer"
     [class.chart-outer--fullscreen]="isFullscreen()"
+    [class.chart-outer--zoomed]="!!zoomRange()"
     (mouseleave)="onMouseLeave()"
   >
     @if (zoomRange()) {
