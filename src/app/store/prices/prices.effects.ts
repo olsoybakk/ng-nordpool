@@ -77,7 +77,7 @@ export class PricesEffects {
               PricesActions.loadPricesFailure({
                 error:
                   err.message === 'not-configured'
-                    ? 'API URL is not configured. Set NORDPOOL_API_URL in .env.'
+                    ? 'API URL is not configured'
                     : this.ls.t().failedToLoad,
               }),
             ),
@@ -110,7 +110,7 @@ export class PricesEffects {
               PricesActions.setNotification({
                 message:
                   err.message === 'not-configured'
-                    ? 'API URL is not configured. Set NORDPOOL_API_URL in .env.'
+                    ? 'API URL is not configured.'
                     : 'Price data is not available for all selected dates.',
               }),
             ),
