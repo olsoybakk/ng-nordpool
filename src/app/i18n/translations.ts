@@ -47,6 +47,8 @@ export interface Translations {
   noData: string;
   failedToLoad: string;
   dataNotAvailable: string;
+  menuAriaLabel: string;
+  clearData: string;
 }
 
 export const translations: Record<Lang, Translations> = {
@@ -97,6 +99,8 @@ export const translations: Record<Lang, Translations> = {
     noData: 'No data to display',
     failedToLoad: 'Failed to load prices',
     dataNotAvailable: 'Price data is not available for all selected dates.',
+    menuAriaLabel: 'Open menu',
+    clearData: 'Clear saved data',
   },
   nb: {
     title: 'Spotpriser',
@@ -146,5 +150,7 @@ export const translations: Record<Lang, Translations> = {
     noData: 'Ingen data å vise',
     failedToLoad: 'Kunne ikke laste priser',
     dataNotAvailable: 'Prisdata er ikke tilgjengelig for alle valgte datoer.',
+    menuAriaLabel: 'Åpne meny',
+    clearData: 'Slett lagrede data',
   },
 };

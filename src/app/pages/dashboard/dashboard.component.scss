@@ -82,14 +82,84 @@
   gap: 0.5rem;
 }
 
-.build-date {
+.hamburger-btn {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  font-size: 0.75rem;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
   color: var(--color-muted);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: color 0.15s;
+  flex-shrink: 0;
+
+  &:hover,
+  &--active {
+    color: var(--color-text);
+  }
+}
+
+.hamburger-menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 180px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  z-index: 300;
+  overflow: hidden;
+
+  &__lang-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    min-width: 14px;
+    text-align: center;
+  }
+
+  &__timestamp {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    padding: 0.6rem 0.85rem;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.75rem;
+    color: var(--color-muted);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.03em;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.6rem 0.85rem;
+    border: none;
+    background: transparent;
+    color: var(--color-text);
+    font-size: 0.825rem;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+
+    &:hover {
+      background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+      color: var(--color-accent);
+    }
+
+    &--danger:hover {
+      background: color-mix(in srgb, var(--color-high) 12%, transparent);
+      color: var(--color-high);
+    }
+  }
 }
 
 .theme-btn {
@@ -103,28 +173,6 @@
   border-radius: 50%;
   background: transparent;
   color: var(--color-muted);
-  cursor: pointer;
-  transition: color 0.15s;
-  flex-shrink: 0;
-
-  &:hover {
-    color: var(--color-text);
-  }
-}
-
-.lang-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 32px;
-  padding: 0 0.45rem;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--color-muted);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
   cursor: pointer;
   transition: color 0.15s;
   flex-shrink: 0;
