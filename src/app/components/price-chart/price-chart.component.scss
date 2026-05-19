@@ -157,6 +157,14 @@
   vector-effect: non-scaling-stroke;
 }
 
+.day-grid-line {
+  stroke: var(--color-text);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  opacity: 0.2;
+  vector-effect: non-scaling-stroke;
+}
+
 .axis-line {
   stroke: var(--color-border);
   stroke-width: 1.5;

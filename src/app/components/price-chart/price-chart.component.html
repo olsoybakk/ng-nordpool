@@ -76,6 +76,21 @@
           />
         }
 
+        <!-- Vertical day boundary lines (multi-day only, skip index 0 which sits on the y-axis) -->
+        @if (vm.showDayLabels) {
+          @for (bar of vm.bars; track bar.slot) {
+            @if (bar.isDayBoundary && $index > 0) {
+              <line
+                [attr.x1]="offsetX + $index * (chartW / vm.slotCount)"
+                [attr.y1]="offsetY"
+                [attr.x2]="offsetX + $index * (chartW / vm.slotCount)"
+                [attr.y2]="dims().bottomY"
+                class="day-grid-line"
+              />
+            }
+          }
+        }
+
         @if (chartMode() === 'bar') {
           <!-- Bar chart bars -->
           @for (bar of vm.bars; track trackBySlot($index, bar)) {
