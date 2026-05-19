@@ -164,6 +164,11 @@
   fill: var(--color-text);
   font-weight: 600;
   opacity: 0.85;
+  paint-order: stroke fill;
+  stroke: var(--color-surface);
+  stroke-width: 4;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
 }
 
 .axis-title {
