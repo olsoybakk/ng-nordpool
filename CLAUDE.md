@@ -202,7 +202,9 @@ src/app/components/
   price-chart/    Pure SVG chart (no charting lib). Inputs: chartMode, includeTax,
                   showNorgespris, showStromstotte. Selects date range from store for multi-day data.
                   Y scale: both modes snap min to floor-25 and max to ceil-25 of
-                    (full-dataset values ± 5 øre buffer). Grid lines at every 50 øre.
+                    (full-dataset values ± 5 øre buffer). Grid lines at every 50 øre
+                    (stroke: --color-text at 30% opacity, vector-effect:non-scaling-stroke
+                    so they render at 1 CSS pixel on mobile instead of ~0.25px).
                     Scale is always derived from the complete unsliced dataset so the
                     y-axis stays fixed while zooming.
                   Bar mode: colour-coded bars (low/mid/high by tertile); current
@@ -276,6 +278,15 @@ src/app/components/
                     day label is clamped to start after the y-axis label area
                     (Math.max(natural x, offsetX + labelSize × 2.5 + 5)) so it
                     never collides with the "0" y-axis label at the bottom-left.
+                    First-boundary extended clearance: because the first day label is
+                    clamped rightward, hour labels inside that extended region would
+                    still collide. minSlotsFromFirstBoundary adds the clamp offset
+                    (labelSize × 2.5 + 5) to the normal clearance and is used for
+                    bars in the first visible day; subsequent boundaries use the
+                    standard minSlotsFromBoundary.
+                    Both bar and line modes use the same showDayLabel / showHourLabel
+                    fields computed in buildViewModel — no duplicate condition logic
+                    in the template.
                   Hover column: semi-transparent fill (0.10 opacity) + a 1px center
                     line (0.30 opacity, vector-effect:non-scaling-stroke) to mark the
                     exact active slot.
@@ -447,4 +458,6 @@ Repo must be **public** for GitHub Pages on a free plan.
 - Clearing the date input in `ControlsComponent` uses `ChangeDetectorRef.detectChanges()` to flush a CD cycle with `currentDate=''` before setting today. This is necessary in zoneless Angular (no zone.js) because `setTimeout` does not trigger change detection — Angular's `ngModel` binding only updates the DOM when it detects a value change from the previous CD run, and without the intermediate flush it sees `today → today` (no change) and leaves the input blank.
 - Day label thinning uses `dayLabelStep = ceil(8 × 0.66 × labelSize / svgUnitsPerDay)` — the estimated label width in SVG units divided by the available SVG units per day. The first visible day always gets a label; subsequent ones appear every `dayLabelStep` days. This keeps labels readable at all ranges on all screen sizes without hard-coded breakpoints.
 - Hour labels in multi-day mode are suppressed within `minSlotsFromBoundary` slots of any day boundary (same `8 × 0.66 × labelSize` width estimate, converted to slots). On narrow mobile this suppresses all intra-day hour labels; on desktop the clearance is small and hour labels still show normally.
+- `minSlotsFromFirstBoundary` extends the clearance for bars in the first visible day by adding the clamp offset (`labelSize × 2.5 + 5`) to the normal estimate. Without this, hour labels (e.g. "12") could fall within the extended footprint of the clamped first-day label and collide with it on 2-day mobile views.
+- Grid lines use `stroke: var(--color-text)` at 30% opacity with `vector-effect: non-scaling-stroke`. The original `--color-border` was invisible in dark mode (nearly identical to the surface colour); without `non-scaling-stroke`, the 1-unit stroke is scaled to ~0.25px at the 1500-wide viewBox on mobile — the same reason `.line-path` uses the same property.
 - Y-axis label halo on mobile uses `paint-order: stroke fill` with `vector-effect: non-scaling-stroke` instead of a background `<rect>`. This produces a per-glyph halo that follows exact letter outlines, avoiding the visually distracting fixed-size rectangle that consumed space even for a single-digit "0" label.
