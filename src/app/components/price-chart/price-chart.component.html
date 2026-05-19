@@ -93,7 +93,7 @@
                 [class.bar--current]="bar.isCurrent"
               />
               <!-- Day boundary label -->
-              @if (vm.showDayLabels && bar.isDayBoundary) {
+              @if (vm.showDayLabels && bar.showDayLabel) {
                 <text
                   [attr.x]="Math.max(bar.x, dims().yLabelInside ? offsetX + dims().labelSize * 2.5 + 5 : 0)"
                   [attr.y]="dims().xAxisY"
@@ -104,8 +104,8 @@
                   {{ bar.dayLabel }}
                 </text>
               }
-              <!-- Hour label (skip midnight on multi-day, handled by day label) -->
-              @if (!vm.showDayLabels && bar.minute === 0 && bar.hour % vm.hourStep === 0) {
+              <!-- Hour label -->
+              @if (!vm.showDayLabels && bar.showHourLabel) {
                 <text
                   [attr.x]="bar.x + vm.barW / 2"
                   [attr.y]="dims().xAxisY"
@@ -116,12 +116,7 @@
                   {{ bar.timeLabel }}
                 </text>
               }
-              @if (
-                vm.showDayLabels &&
-                bar.minute === 0 &&
-                bar.hour % vm.hourStep === 0 &&
-                !bar.isDayBoundary
-              ) {
+              @if (vm.showDayLabels && bar.showHourLabel) {
                 <text
                   [attr.x]="bar.x + vm.barW / 2"
                   [attr.y]="dims().xAxisY"
