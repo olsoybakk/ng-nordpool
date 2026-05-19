@@ -292,9 +292,19 @@
 
         <!-- Y-axis labels (above chart data) -->
         @for (tick of chartMode() === 'bar' ? vm.yTicks : vm.multiTicks; track tick.y) {
+          @if (dims().yLabelInside) {
+            <rect
+              [attr.x]="offsetX + 1"
+              [attr.y]="tick.labelY - dims().labelSize * 0.55"
+              [attr.width]="dims().labelSize * 2.5"
+              [attr.height]="dims().labelSize * 1.1"
+              rx="3"
+              class="axis-label-bg"
+            />
+          }
           <text
             [attr.x]="dims().yLabelInside ? offsetX + 4 : offsetX - 8"
-            [attr.y]="tick.y"
+            [attr.y]="tick.labelY"
             class="axis-label"
             [attr.text-anchor]="dims().yLabelInside ? 'start' : 'end'"
             dominant-baseline="middle"

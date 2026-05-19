@@ -302,6 +302,13 @@ src/app/components/
                     <line> elements stay in the first loop so they appear behind
                     data. Now-line y1 starts at nowLabelY + labelSize*0.4 so the
                     line does not draw through the NÅ label text.
+                    When yLabelInside is true (mobile), a <rect class="axis-label-bg">
+                    is rendered behind each label using --color-surface at 0.88
+                    opacity, so labels remain readable over chart lines.
+                    buildYTicks returns { val, y, labelY } — y is the geometrically
+                    correct grid-line position; labelY is clamped to
+                    max(y, labelSize*0.6) so the top tick's centered text never
+                    extends above the SVG viewport (y<0) and gets clipped.
                   Line visibility: vector-effect:non-scaling-stroke keeps stroke
                     widths in screen pixels (without it a 1.5-unit stroke at 1500-wide
                     viewBox renders at ~0.3px on mobile). --line-drop-shadow CSS

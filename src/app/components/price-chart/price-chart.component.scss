@@ -160,6 +160,11 @@
   stroke-width: 1.5;
 }
 
+.axis-label-bg {
+  fill: var(--color-surface);
+  opacity: 0.88;
+}
+
 .axis-label {
   fill: var(--color-text);
   font-weight: 600;
