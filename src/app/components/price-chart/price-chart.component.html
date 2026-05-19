@@ -1,7 +1,7 @@
 @if (isFullscreen()) {
   <div class="fullscreen-backdrop" (click)="toggleFullscreen()"></div>
 }
-@if (vm$ | async; as vm) {
+@if (vm(); as vm) {
   <div
     class="chart-outer"
     [class.chart-outer--fullscreen]="isFullscreen()"
