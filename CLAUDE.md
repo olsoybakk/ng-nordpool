@@ -266,6 +266,16 @@ src/app/components/
                   X-axis label density adapts to range: 3h / 6h / 12h / 24h steps
                     for 1 / ≤3 / ≤7 / 14-day ranges; further tightened when pinch-
                     zoomed to show 1h or 2h steps for short visible windows.
+                    Day label thinning: dayLabelStep = ceil(estimatedDayLabelWidth /
+                    svgUnitsPerDay) ensures only every Nth day boundary gets a label
+                    so they never overlap — always starting from the first visible day.
+                    Hour label suppression: hour labels within minSlotsFromBoundary
+                    of any day boundary are hidden (same width estimate); on narrow
+                    mobile this suppresses all intra-day hour labels entirely.
+                    First day label x-offset: on mobile (yLabelInside) the leftmost
+                    day label is clamped to start after the y-axis label area
+                    (Math.max(natural x, offsetX + labelSize × 2.5 + 5)) so it
+                    never collides with the "0" y-axis label at the bottom-left.
                   Hover column: semi-transparent fill (0.10 opacity) + a 1px center
                     line (0.30 opacity, vector-effect:non-scaling-stroke) to mark the
                     exact active slot.
@@ -302,9 +312,10 @@ src/app/components/
                     <line> elements stay in the first loop so they appear behind
                     data. Now-line y1 starts at nowLabelY + labelSize*0.4 so the
                     line does not draw through the NÅ label text.
-                    When yLabelInside is true (mobile), a <rect class="axis-label-bg">
-                    is rendered behind each label using --color-surface at 0.88
-                    opacity, so labels remain readable over chart lines.
+                    When yLabelInside is true (mobile), labels get class
+                    axis-label--inside which uses paint-order:stroke fill with a
+                    4px (non-scaling) stroke in --color-surface — a per-glyph halo
+                    that follows the exact letter outlines rather than a fixed rect.
                     buildYTicks returns { val, y, labelY } — y is the geometrically
                     correct grid-line position; labelY is clamped to
                     max(y, labelSize*0.6) so the top tick's centered text never
@@ -434,3 +445,6 @@ Repo must be **public** for GitHub Pages on a free plan.
 - `getAllAreaPrices` filters areas with no prices from its result before returning. When the Nordpool API returns `multiAreaEntries` where every `entryPerArea` is `{}` (prices not yet published), the result is `{}` rather than `{ NO1: [], …, NO5: [] }`, so the existing no-data check in the effect fires correctly and the notification is shown.
 - `dateLabel` in `DashboardComponent` uses `Intl.DateTimeFormat.formatRange` for multi-day ranges and `format` for single days, with locale derived from the active language signal. Returns `''` for empty/invalid dates to avoid a runtime error when the date input is cleared.
 - Clearing the date input in `ControlsComponent` uses `ChangeDetectorRef.detectChanges()` to flush a CD cycle with `currentDate=''` before setting today. This is necessary in zoneless Angular (no zone.js) because `setTimeout` does not trigger change detection — Angular's `ngModel` binding only updates the DOM when it detects a value change from the previous CD run, and without the intermediate flush it sees `today → today` (no change) and leaves the input blank.
+- Day label thinning uses `dayLabelStep = ceil(8 × 0.66 × labelSize / svgUnitsPerDay)` — the estimated label width in SVG units divided by the available SVG units per day. The first visible day always gets a label; subsequent ones appear every `dayLabelStep` days. This keeps labels readable at all ranges on all screen sizes without hard-coded breakpoints.
+- Hour labels in multi-day mode are suppressed within `minSlotsFromBoundary` slots of any day boundary (same `8 × 0.66 × labelSize` width estimate, converted to slots). On narrow mobile this suppresses all intra-day hour labels; on desktop the clearance is small and hour labels still show normally.
+- Y-axis label halo on mobile uses `paint-order: stroke fill` with `vector-effect: non-scaling-stroke` instead of a background `<rect>`. This produces a per-glyph halo that follows exact letter outlines, avoiding the visually distracting fixed-size rectangle that consumed space even for a single-digit "0" label.

@@ -59,6 +59,8 @@ interface BarData {
   priceLevel: 'low' | 'mid' | 'high';
   isDayBoundary: boolean;
   dayLabel: string;
+  showDayLabel: boolean;
+  showHourLabel: boolean;
 }
 
 interface PointData {
@@ -128,6 +130,7 @@ export class PriceChartComponent {
   readonly chartW = CHART_W - PADDING.left - PADDING.right;
   readonly offsetX = PADDING.left;
   readonly offsetY = PADDING.top;
+  protected readonly Math = Math;
 
   isFullscreen = signal(false);
 
@@ -643,6 +646,19 @@ export class PriceChartComponent {
     const showDayLabels = dateRangeDays > 1;
     const slotsPerDay = SLOT_COUNT; // 96
 
+    // Estimate how many slots wide a day label ("søn. 17.") spans.
+    // dayLabelStep: only show every Nth day boundary so labels never overlap each other.
+    // minSlotsFromBoundary: suppress hour labels within that slot-distance of any boundary.
+    const approxDayLabelWidthSvg = 8 * 0.66 * labelSize;
+    const svgUnitsPerDay = this.chartW / dateRangeDays;
+    const dayLabelStep = showDayLabels
+      ? Math.max(1, Math.ceil(approxDayLabelWidthSvg / svgUnitsPerDay))
+      : 1;
+    const firstDayIndex = Math.floor(zStart / slotsPerDay);
+    const minSlotsFromBoundary = showDayLabels
+      ? Math.ceil(approxDayLabelWidthSvg / (this.chartW / slotCount))
+      : 0;
+
     const bars: BarData[] = barPrices.map((p, i) => {
       const ore = displayOre(selectedArea, p.ore_per_kWh, includeTax, showStromstotte);
       const normalised = (ore - singleMin) / singleRange;
@@ -656,15 +672,27 @@ export class PriceChartComponent {
       const d = new Date(p.time_start);
       const absoluteSlot = zStart + i;
       const isDayBoundary = absoluteSlot % slotsPerDay === 0;
+      const dayIndex = Math.floor(absoluteSlot / slotsPerDay);
       const dayLabel = isDayBoundary
         ? d.toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric' })
         : '';
+      const showDayLabel = isDayBoundary && (dayIndex - firstDayIndex) % dayLabelStep === 0;
+      const hr = d.getHours();
+      const mn = d.getMinutes();
+      const slotsIntoBoundary = absoluteSlot % slotsPerDay;
+      const slotsToNextBoundary = slotsPerDay - slotsIntoBoundary;
+      const showHourLabel =
+        mn === 0 &&
+        hr % hourStep === 0 &&
+        !isDayBoundary &&
+        slotsIntoBoundary > minSlotsFromBoundary &&
+        slotsToNextBoundary > minSlotsFromBoundary;
 
       return {
         slot: i,
-        hour: d.getHours(),
-        minute: d.getMinutes(),
-        timeLabel: d.getHours().toString().padStart(2, '0'),
+        hour: hr,
+        minute: mn,
+        timeLabel: hr.toString().padStart(2, '0'),
         price: p,
         x: this.offsetX + i * gap + gap * 0.1,
         barHeight: barH,
@@ -673,6 +701,8 @@ export class PriceChartComponent {
         priceLevel,
         isDayBoundary,
         dayLabel,
+        showDayLabel,
+        showHourLabel,
       };
     });
 
