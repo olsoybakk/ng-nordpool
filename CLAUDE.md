@@ -24,7 +24,7 @@ Angular 21 app that displays Nordpool day-ahead electricity spot prices.
 
 > **After merging, always delete the branch** — both remote (`git push origin --delete <branch>`) and local (`git branch -D <branch>`). Then run `git checkout main && git pull`.
 
-> **After merging, always clean up `.playwright-mcp/`** — run `rm -rf .playwright-mcp/` to remove screenshots and snapshots left from Playwright MCP sessions.
+> **After merging, always clean up `.playwright-mcp/`** — run `rm -rf .playwright-mcp/` to remove screenshots and snapshots left from Playwright MCP sessions. Also delete any stray `*.png` / `*.jpg` files that ended up in the project root (`rm -f *.png *.jpg`).
 
 ```bash
 git config core.hooksPath .githooks
@@ -45,11 +45,13 @@ Restart Claude Code after changing `.mcp.json` for the update to take effect.
   "mcpServers": {
     "playwright": {
       "command": "npx",
-      "args": ["@playwright/mcp@latest"]
+      "args": ["@playwright/mcp@latest", "--output-dir", ".playwright-mcp"]
     }
   }
 }
 ```
+
+> **Screenshots must never be saved to the project root.** The `--output-dir .playwright-mcp` arg above enforces this for auto-saved files. When calling `browser_take_screenshot` with an explicit path, always use a path inside `.playwright-mcp/` (e.g. `.playwright-mcp/my-shot.png`).
 
 ## Commands
 
