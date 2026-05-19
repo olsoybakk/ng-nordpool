@@ -178,7 +178,7 @@ export class PriceChartComponent {
       ? window.innerWidth - edge
       : Math.min(DASHBOARD_MAX_W, ww) - DASHBOARD_H_PAD;
 
-    const labelSize = Math.round((10 * CHART_W) / Math.max(renderedW, 100));
+    const labelSize = Math.round((12 * CHART_W) / Math.max(renderedW, 100));
     const padBottom = Math.max(PADDING.bottom, Math.round(labelSize * 1.5));
 
     let h: number;
@@ -208,7 +208,7 @@ export class PriceChartComponent {
       nowLabelY:
         labelSize > PADDING.top ? PADDING.top + Math.round(labelSize * 0.9) : PADDING.top - 3,
       axisTitleX: Math.max(12, Math.ceil(labelSize / 2) + 2),
-      yLabelInside: labelSize > 15,
+      yLabelInside: ww <= 640,
     };
   });
 
