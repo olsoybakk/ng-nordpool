@@ -160,15 +160,15 @@
   stroke-width: 1.5;
 }
 
+.axis-label-bg {
+  fill: var(--color-surface);
+  opacity: 0.88;
+}
+
 .axis-label {
   fill: var(--color-text);
   font-weight: 600;
   opacity: 0.85;
-  paint-order: stroke fill;
-  stroke: var(--color-surface);
-  stroke-width: 4;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
 }
 
 .axis-title {
