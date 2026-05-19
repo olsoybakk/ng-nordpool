@@ -591,7 +591,12 @@ export class PriceChartComponent {
     selectedArea: PriceArea,
     selectedDate: string,
     dateRangeDays: number,
-    { chartH, bottomY, labelSize }: { chartH: number; bottomY: number; labelSize: number },
+    {
+      chartH,
+      bottomY,
+      labelSize,
+      yLabelInside,
+    }: { chartH: number; bottomY: number; labelSize: number; yLabelInside: boolean },
     includeTax: boolean,
     showNorgespris: boolean,
     showStromstotte: boolean,
@@ -658,6 +663,13 @@ export class PriceChartComponent {
     const minSlotsFromBoundary = showDayLabels
       ? Math.ceil(approxDayLabelWidthSvg / (this.chartW / slotCount))
       : 0;
+    // On mobile (yLabelInside) the first visible day label is clamped right by
+    // (labelSize * 2.5 + 5) SVG units, so hour labels in that extended region
+    // must also be suppressed — otherwise they collide with the clamped label.
+    const clampOffsetSvg = yLabelInside && showDayLabels ? labelSize * 2.5 + 5 : 0;
+    const minSlotsFromFirstBoundary = showDayLabels
+      ? Math.ceil((approxDayLabelWidthSvg + clampOffsetSvg) / (this.chartW / slotCount))
+      : 0;
 
     const bars: BarData[] = barPrices.map((p, i) => {
       const ore = displayOre(selectedArea, p.ore_per_kWh, includeTax, showStromstotte);
@@ -681,11 +693,13 @@ export class PriceChartComponent {
       const mn = d.getMinutes();
       const slotsIntoBoundary = absoluteSlot % slotsPerDay;
       const slotsToNextBoundary = slotsPerDay - slotsIntoBoundary;
+      const minSlotsAfterPrevBoundary =
+        dayIndex === firstDayIndex ? minSlotsFromFirstBoundary : minSlotsFromBoundary;
       const showHourLabel =
         mn === 0 &&
         hr % hourStep === 0 &&
         !isDayBoundary &&
-        slotsIntoBoundary > minSlotsFromBoundary &&
+        slotsIntoBoundary > minSlotsAfterPrevBoundary &&
         slotsToNextBoundary > minSlotsFromBoundary;
 
       return {
