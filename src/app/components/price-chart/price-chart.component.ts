@@ -12,7 +12,7 @@ import {
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
-import { map, tap } from 'rxjs/operators';
+import { map } from 'rxjs/operators';
 import { BehaviorSubject, combineLatest } from 'rxjs';
 import { AREA_COLORS, HourlyPrice, PRICE_AREAS, PriceArea } from '../../models/price.model';
 import { localISODate } from '../../utils/date';
@@ -141,8 +141,7 @@ export class PriceChartComponent {
     initialValue: 1,
   });
 
-  /** Updated from the view model so updateTooltip always reads the correct slot width. */
-  private readonly _slotCount = signal(SLOT_COUNT);
+  private readonly _slotCount = computed(() => this.vm()?.slotCount ?? SLOT_COUNT);
   readonly slotW = computed(() => this.chartW / this._slotCount());
 
   constructor() {
@@ -245,7 +244,7 @@ export class PriceChartComponent {
     initialValue: null as [number, number] | null,
   });
 
-  private _totalSlotCount = signal(SLOT_COUNT);
+  private readonly _totalSlotCount = computed(() => this.vm()?.totalSlotCount ?? SLOT_COUNT);
   private _pinchState: { dist: number; range: [number, number]; centerSlot: number } | null = null;
   private _scrollDragState: {
     startX: number;
@@ -263,7 +262,7 @@ export class PriceChartComponent {
     return zoom ? ((zoom[1] - zoom[0] + 1) / this._totalSlotCount()) * 100 : 100;
   });
 
-  vm$ = combineLatest([
+  private readonly _vm$ = combineLatest([
     this.store.select(selectCurrentPrice),
     this.store.select(selectMergedAreaPrices),
     this.store.select(selectSelectedArea),
@@ -301,13 +300,8 @@ export class PriceChartComponent {
           zoom as [number, number] | null,
         ),
     ),
-    tap((vm) => {
-      if (vm) {
-        this._slotCount.set(vm.slotCount);
-        this._totalSlotCount.set(vm.totalSlotCount);
-      }
-    }),
   );
+  readonly vm = toSignal(this._vm$);
 
   onMouseMove(event: MouseEvent): void {
     this.updateTooltip(event.currentTarget as SVGSVGElement, event.clientX, event.clientY, false);

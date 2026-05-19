@@ -75,7 +75,7 @@ There is no linter configured (no ESLint or similar). Prettier config is in `pac
 
 ## Angular Signals
 
-Component state uses `signal()` / `effect()` rather than `BehaviorSubject`. Exception: `zoomRange` in `PriceChartComponent` is a `BehaviorSubject` so `combineLatest` (vm$) receives the new value synchronously within event handlers, preventing a flicker render. Cleanup uses `inject(DestroyRef).onDestroy(...)` instead of `ngOnDestroy`. Store observables (`store.select(...)`) are kept as observables for the template `async` pipe; signals are used for purely local UI state (`chartMode`, `theme`, `isFullscreen`, `tooltipData`, etc.). `@ngrx/entity` is installed but not used.
+Component state uses `signal()` / `effect()` rather than `BehaviorSubject`. Exception: `zoomRange` in `PriceChartComponent` is a `BehaviorSubject` so the private `_vm$` combineLatest receives the new value synchronously within event handlers, preventing a flicker render. Cleanup uses `inject(DestroyRef).onDestroy(...)` instead of `ngOnDestroy`. Store observables (`store.select(...)`) are kept as observables for the template `async` pipe; signals are used for purely local UI state (`chartMode`, `theme`, `isFullscreen`, `tooltipData`, etc.). `PriceChartComponent` is an exception — its view model is exposed as a `vm` signal via `toSignal(_vm$)` rather than an async-piped observable. `@ngrx/entity` is installed but not used.
 
 ## Environment
 
@@ -264,9 +264,9 @@ src/app/components/
                     thumb). Thumb drag pans the visible window; track click pages left/right.
                     Entering the scrollbar clears hoveredSlot to hide the tooltip.
                   zoomRange is a BehaviorSubject<[number,number]|null> (not a signal)
-                    so combineLatest (vm$) receives the new zoom value synchronously
-                    within the same event handler, preventing an intermediate render
-                    with the old chart state. A toSignal()-derived readonly is exposed
+                    so the private _vm$ combineLatest receives the new zoom value
+                    synchronously within the same event handler, preventing an
+                    intermediate render with the old chart state. A toSignal()-derived readonly is exposed
                     for template bindings. ResizeObserver watches .chart-wrapper (not
                     the host) so the scrollbar appearing never triggers a dims() change.
                   X-axis label density adapts to range: 3h / 6h / 12h / 24h steps
@@ -446,8 +446,8 @@ Repo must be **public** for GitHub Pages on a free plan.
 - Y-scale bounds are snapped to the nearest 25 øre after adding a 5 øre buffer. The snap helpers guarantee the result is strictly outside the buffered value (not equal), so a data max of exactly 220 øre never produces a scale max of 225.
 - Zoom uses slot-range slicing (`zoomRange` → `[startSlot, endSlot]`) rather than SVG viewBox manipulation, so the y-axis label column is never clipped. X-labels, now-line, and hourStep adapt to the visible window; y-scale is anchored to the full unsliced dataset so the axis stays fixed while zooming.
 - Scroll-to-zoom uses `Math.floor(cursorSlot) - Math.floor(cursorFrac * clamped)` (not `Math.round`) for the new start slot. This provably keeps `floor(slot under cursor)` constant after each zoom step: since `cursorFrac * clamped ∈ [k, k+1)`, the resulting slot position always lands in `[floor(cursorSlot), floor(cursorSlot)+1)`.
-- `zoomRange` is a `BehaviorSubject` (not a signal) in `PriceChartComponent` so `combineLatest` (vm$) receives the new zoom synchronously within the event handler. With a signal, Angular's `toObservable` effect fires after the current CD cycle, causing an intermediate render with the old chart — visible as flicker. A `toSignal()`-derived readonly is exposed for template use.
-- `ResizeObserver` in `PriceChartComponent` watches `.chart-wrapper`, not the host element, so the scrollbar (position:absolute, does not affect flow) never changes `containerH`, never triggers a `dims()` recompute, and never causes a spurious `vm$` emission.
+- `zoomRange` is a `BehaviorSubject` (not a signal) in `PriceChartComponent` so the private `_vm$` combineLatest receives the new zoom synchronously within the event handler. With a signal, Angular's `toObservable` effect fires after the current CD cycle, causing an intermediate render with the old chart — visible as flicker. The view model is exposed as a `vm` signal via `toSignal(_vm$)`; `_slotCount` and `_totalSlotCount` are `computed()` values derived from it rather than writable signals mutated via `tap`.
+- `ResizeObserver` in `PriceChartComponent` watches `.chart-wrapper`, not the host element, so the scrollbar (position:absolute, does not affect flow) never changes `containerH`, never triggers a `dims()` recompute, and never causes a spurious `_vm$` emission.
 - Scrollbar: `position:absolute; bottom:0` inside `.chart-outer` so it overlays the card bottom without adding height. `chart-outer--zoomed` adds `padding-bottom` to reserve space for it. `touch-action:pan-x` on all three scrollbar elements (bar/track/thumb) tells iOS these elements own horizontal swipes, suppressing the app-switcher gesture. Desktop: mouse thumb drag + track click pages. Mobile: touch thumb drag + track touchstart pages; track height 20px and min-width 44px for touch targets. `mouseenter` on the scrollbar clears `hoveredSlot` to hide the tooltip.
 - Touch tooltip uses a three-state anchor signal (`'above'` / `'below'` / `'center'`) instead of a boolean. On touch the tooltip appears above the fingertip; it flips to below when the touch is within ~264px of the top of the chart.
 - `selectCurrentPriceInRange` is used by the stats-bar instead of `selectCurrentPrice` so the "Now" card appears whenever the now-line is visible (today within the active range), not only when `selectedDate === today`.

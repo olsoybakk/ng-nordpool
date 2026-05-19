@@ -1,4 +1,5 @@
-import { ChangeDetectorRef, Component, ElementRef, HostListener, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Store } from '@ngrx/store';
@@ -22,7 +23,7 @@ import {
   templateUrl: './controls.component.html',
   styleUrl: './controls.component.scss',
 })
-export class ControlsComponent implements OnInit {
+export class ControlsComponent {
   private readonly store = inject(Store);
   private readonly elRef = inject(ElementRef);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -34,14 +35,16 @@ export class ControlsComponent implements OnInit {
   readonly rangeOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
   readonly maxRangeDays = 14;
 
-  selectedArea$ = this.store.select(selectSelectedArea);
-  selectedDate$ = this.store.select(selectSelectedDate);
-  dateRangeDays$ = this.store.select(selectDateRangeDays);
-
   currentArea: PriceArea = 'NO1';
   currentDate = this.maxDate;
   currentRangeDays = 1;
   dropdownOpen = false;
+
+  constructor() {
+    this.store.select(selectSelectedArea).pipe(takeUntilDestroyed()).subscribe((area) => (this.currentArea = area));
+    this.store.select(selectSelectedDate).pipe(takeUntilDestroyed()).subscribe((date) => (this.currentDate = date));
+    this.store.select(selectDateRangeDays).pipe(takeUntilDestroyed()).subscribe((days) => (this.currentRangeDays = days));
+  }
 
   get currentAreaLabel(): string {
     return this.areas.find((a) => a.value === this.currentArea)?.label ?? this.currentArea;
@@ -77,12 +80,6 @@ export class ControlsComponent implements OnInit {
         (event.key === 'ArrowDown' ? options[0] : options[options.length - 1]).focus();
       }
     }
-  }
-
-  ngOnInit(): void {
-    this.selectedArea$.subscribe((area) => (this.currentArea = area));
-    this.selectedDate$.subscribe((date) => (this.currentDate = date));
-    this.dateRangeDays$.subscribe((days) => (this.currentRangeDays = days));
   }
 
   onAreaChange(area: PriceArea): void {
