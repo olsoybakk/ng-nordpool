@@ -150,9 +150,10 @@
 }
 
 .grid-line {
-  stroke: var(--color-border);
+  stroke: var(--color-text);
   stroke-width: 1;
   stroke-dasharray: 4 3;
+  opacity: 0.25;
 }
 
 .axis-line {
