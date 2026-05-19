@@ -289,8 +289,19 @@ src/app/components/
                     the card. width:auto on .chart-outer--fullscreen is critical —
                     without it the base width:100% overrides the right inset.
                   Scale-aware font sizing: dims() computes labelSize in SVG user
-                    units so labels render at ~10px on screen regardless of viewport.
+                    units so labels render at ~12px on screen regardless of viewport.
                     Text elements use [attr.font-size] (not CSS font-size).
+                    font-family is set explicitly on the <svg> element (not via
+                    font-family:inherit on <text>) because SVG does not reliably
+                    inherit font-family from HTML parents in all browsers.
+                    yLabelInside uses ww <= 640 (the CSS breakpoint), not a
+                    labelSize threshold — keeps desktop labels outside the chart
+                    and mobile labels inside regardless of the px target.
+                    Y-axis <text> labels are rendered in a second @for loop after
+                    the chart content (bars/lines) so they paint on top; grid
+                    <line> elements stay in the first loop so they appear behind
+                    data. Now-line y1 starts at nowLabelY + labelSize*0.4 so the
+                    line does not draw through the NÅ label text.
                   Line visibility: vector-effect:non-scaling-stroke keeps stroke
                     widths in screen pixels (without it a 1.5-unit stroke at 1500-wide
                     viewBox renders at ~0.3px on mobile). --line-drop-shadow CSS
