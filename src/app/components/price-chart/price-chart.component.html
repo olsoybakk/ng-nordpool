@@ -93,9 +93,9 @@
                 [class.bar--current]="bar.isCurrent"
               />
               <!-- Day boundary label -->
-              @if (vm.showDayLabels && bar.isDayBoundary) {
+              @if (vm.showDayLabels && bar.showDayLabel) {
                 <text
-                  [attr.x]="bar.x"
+                  [attr.x]="Math.max(bar.x, dims().yLabelInside ? offsetX + dims().labelSize * 2.5 + 5 : 0)"
                   [attr.y]="dims().xAxisY"
                   class="day-label"
                   text-anchor="start"
@@ -104,8 +104,8 @@
                   {{ bar.dayLabel }}
                 </text>
               }
-              <!-- Hour label (skip midnight on multi-day, handled by day label) -->
-              @if (!vm.showDayLabels && bar.minute === 0 && bar.hour % vm.hourStep === 0) {
+              <!-- Hour label -->
+              @if (!vm.showDayLabels && bar.showHourLabel) {
                 <text
                   [attr.x]="bar.x + vm.barW / 2"
                   [attr.y]="dims().xAxisY"
@@ -116,12 +116,7 @@
                   {{ bar.timeLabel }}
                 </text>
               }
-              @if (
-                vm.showDayLabels &&
-                bar.minute === 0 &&
-                bar.hour % vm.hourStep === 0 &&
-                !bar.isDayBoundary
-              ) {
+              @if (vm.showDayLabels && bar.showHourLabel) {
                 <text
                   [attr.x]="bar.x + vm.barW / 2"
                   [attr.y]="dims().xAxisY"
@@ -209,9 +204,9 @@
 
           <!-- X-axis labels (line mode) -->
           @for (bar of vm.bars; track bar.slot) {
-            @if (vm.showDayLabels && bar.isDayBoundary) {
+            @if (vm.showDayLabels && bar.showDayLabel) {
               <text
-                [attr.x]="offsetX + $index * (chartW / vm.slotCount)"
+                [attr.x]="Math.max(offsetX + $index * (chartW / vm.slotCount), dims().yLabelInside ? offsetX + dims().labelSize * 2.5 + 5 : 0)"
                 [attr.y]="dims().xAxisY"
                 class="day-label"
                 text-anchor="start"
@@ -231,12 +226,7 @@
                 {{ bar.timeLabel }}
               </text>
             }
-            @if (
-              vm.showDayLabels &&
-              bar.minute === 0 &&
-              bar.hour % vm.hourStep === 0 &&
-              !bar.isDayBoundary
-            ) {
+            @if (vm.showDayLabels && bar.showHourLabel) {
               <text
                 [attr.x]="offsetX + $index * (chartW / vm.slotCount)"
                 [attr.y]="dims().xAxisY"
@@ -292,20 +282,11 @@
 
         <!-- Y-axis labels (above chart data) -->
         @for (tick of chartMode() === 'bar' ? vm.yTicks : vm.multiTicks; track tick.y) {
-          @if (dims().yLabelInside) {
-            <rect
-              [attr.x]="offsetX + 1"
-              [attr.y]="tick.labelY - dims().labelSize * 0.55"
-              [attr.width]="dims().labelSize * 2.5"
-              [attr.height]="dims().labelSize * 1.1"
-              rx="3"
-              class="axis-label-bg"
-            />
-          }
           <text
             [attr.x]="dims().yLabelInside ? offsetX + 4 : offsetX - 8"
             [attr.y]="tick.labelY"
             class="axis-label"
+            [class.axis-label--inside]="dims().yLabelInside"
             [attr.text-anchor]="dims().yLabelInside ? 'start' : 'end'"
             dominant-baseline="middle"
             [attr.font-size]="dims().labelSize"
