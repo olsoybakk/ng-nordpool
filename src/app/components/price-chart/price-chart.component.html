@@ -65,7 +65,7 @@
         (touchend)="onTouchEnd($event)"
         (touchcancel)="onTouchEnd($event)"
       >
-        <!-- Y-axis grid lines and labels -->
+        <!-- Y-axis grid lines (behind chart data) -->
         @for (tick of chartMode() === 'bar' ? vm.yTicks : vm.multiTicks; track tick.y) {
           <line
             [attr.x1]="offsetX"
@@ -74,16 +74,6 @@
             [attr.y2]="tick.y"
             class="grid-line"
           />
-          <text
-            [attr.x]="dims().yLabelInside ? offsetX + 4 : offsetX - 8"
-            [attr.y]="tick.y"
-            class="axis-label"
-            [attr.text-anchor]="dims().yLabelInside ? 'start' : 'end'"
-            dominant-baseline="middle"
-            [attr.font-size]="dims().labelSize"
-          >
-            {{ tick.val | number: '1.2-2' }}
-          </text>
         }
 
         @if (chartMode() === 'bar') {
@@ -300,6 +290,20 @@
           }
         }
 
+        <!-- Y-axis labels (above chart data) -->
+        @for (tick of chartMode() === 'bar' ? vm.yTicks : vm.multiTicks; track tick.y) {
+          <text
+            [attr.x]="dims().yLabelInside ? offsetX + 4 : offsetX - 8"
+            [attr.y]="tick.y"
+            class="axis-label"
+            [attr.text-anchor]="dims().yLabelInside ? 'start' : 'end'"
+            dominant-baseline="middle"
+            [attr.font-size]="dims().labelSize"
+          >
+            {{ tick.val | number: '1.0-0' }}
+          </text>
+        }
+
         <!-- Hover column highlight -->
         @if (hoveredSlot() !== null) {
           <rect
@@ -322,7 +326,7 @@
         @if (vm.nowLineX !== null) {
           <line
             [attr.x1]="vm.nowLineX"
-            [attr.y1]="offsetY"
+            [attr.y1]="dims().nowLabelY + dims().labelSize * 0.4"
             [attr.x2]="vm.nowLineX"
             [attr.y2]="dims().bottomY"
             class="now-line"

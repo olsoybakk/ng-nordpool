@@ -146,6 +146,7 @@
   width: 100%;
   height: auto;
   display: block;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
 .grid-line {
@@ -160,18 +161,20 @@
 }
 
 .axis-label {
-  fill: var(--color-muted);
-  font-family: inherit;
+  fill: var(--color-text);
+  font-weight: 600;
+  opacity: 0.85;
 }
 
 .axis-title {
-  fill: var(--color-muted);
-  font-family: inherit;
+  fill: var(--color-text);
+  opacity: 0.6;
 }
 
 .hour-label {
-  fill: var(--color-muted);
-  font-family: inherit;
+  fill: var(--color-text);
+  font-weight: 600;
+  opacity: 0.85;
 }
 
 // Hover column
@@ -252,7 +255,6 @@
 }
 
 .area-label {
-  font-family: inherit;
   font-weight: 500;
   opacity: 0.6;
 
@@ -265,7 +267,6 @@
 // Day boundary labels (multi-day x-axis)
 .day-label {
   fill: var(--color-text);
-  font-family: inherit;
   font-weight: 600;
   opacity: 0.75;
 }
@@ -282,7 +283,6 @@
 
 .norgespris-label {
   fill: var(--color-norgespris);
-  font-family: inherit;
   font-weight: 600;
   opacity: 0.85;
 }
@@ -299,7 +299,6 @@
 
 .stromstotte-label {
   fill: var(--color-norgespris);
-  font-family: inherit;
   font-weight: 600;
   opacity: 0.85;
 }
@@ -309,15 +308,14 @@
   stroke: var(--color-text);
   stroke-width: 1.5;
   stroke-dasharray: 4 3;
-  opacity: 0.6;
+  opacity: 0.85;
   pointer-events: none;
 }
 
 .now-label {
   font-weight: 700;
   fill: var(--color-text);
-  font-family: inherit;
-  opacity: 0.6;
+  opacity: 0.85;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
