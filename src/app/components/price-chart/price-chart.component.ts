@@ -676,7 +676,7 @@ export class PriceChartComponent {
       };
     });
 
-    const yTicks = this.buildYTicks(singleMin, singleMax, chartH);
+    const yTicks = this.buildYTicks(singleMin, singleMax, chartH, labelSize);
 
     // Line chart: all areas, visible slots
     const areaEntries = PRICE_AREAS.map(({ value }) => ({
@@ -735,7 +735,7 @@ export class PriceChartComponent {
 
     areaLines.sort((a, b) => (a.isSelected ? 1 : 0) - (b.isSelected ? 1 : 0));
 
-    const multiTicks = this.buildYTicks(multiMin, multiMax, chartH);
+    const multiTicks = this.buildYTicks(multiMin, multiMax, chartH, labelSize);
 
     const lowThreshY = toYMulti(multiMin + multiRange / 3);
     const highThreshY = toYMulti(multiMin + (2 * multiRange) / 3);
@@ -859,12 +859,14 @@ export class PriceChartComponent {
     };
   }
 
-  private buildYTicks(min: number, max: number, chartH: number) {
+  private buildYTicks(min: number, max: number, chartH: number, labelSize: number) {
     const ticks = [];
     const range = max - min || 1;
+    // labelY is clamped so the top tick's text (centered on y) never extends above the SVG viewport.
+    const minLabelY = Math.ceil(labelSize * 0.6);
     for (let val = min; val <= max; val += 50) {
       const y = this.offsetY + chartH - ((val - min) / range) * chartH;
-      ticks.push({ val, y });
+      ticks.push({ val, y, labelY: Math.max(y, minLabelY) });
     }
     return ticks;
   }
