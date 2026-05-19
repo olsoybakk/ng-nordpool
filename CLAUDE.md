@@ -202,9 +202,11 @@ src/app/components/
   price-chart/    Pure SVG chart (no charting lib). Inputs: chartMode, includeTax,
                   showNorgespris, showStromstotte. Selects date range from store for multi-day data.
                   Y scale: both modes snap min to floor-25 and max to ceil-25 of
-                    (full-dataset values ± 5 øre buffer). Grid lines at every 50 øre
-                    (stroke: --color-text at 30% opacity, vector-effect:non-scaling-stroke
-                    so they render at 1 CSS pixel on mobile instead of ~0.25px).
+                    (full-dataset values ± 5 øre buffer). Horizontal grid lines at
+                    every 50 øre; vertical day boundary lines in multi-day mode
+                    (hidden for single day). Both use stroke: --color-text with
+                    vector-effect:non-scaling-stroke so they render at 1 CSS pixel
+                    on mobile instead of ~0.25px.
                     Scale is always derived from the complete unsliced dataset so the
                     y-axis stays fixed while zooming.
                   Bar mode: colour-coded bars (low/mid/high by tertile); current
@@ -460,4 +462,5 @@ Repo must be **public** for GitHub Pages on a free plan.
 - Hour labels in multi-day mode are suppressed within `minSlotsFromBoundary` slots of any day boundary (same `8 × 0.66 × labelSize` width estimate, converted to slots). On narrow mobile this suppresses all intra-day hour labels; on desktop the clearance is small and hour labels still show normally.
 - `minSlotsFromFirstBoundary` extends the clearance for bars in the first visible day by adding the clamp offset (`labelSize × 2.5 + 5`) to the normal estimate. Without this, hour labels (e.g. "12") could fall within the extended footprint of the clamped first-day label and collide with it on 2-day mobile views.
 - Grid lines use `stroke: var(--color-text)` at 30% opacity with `vector-effect: non-scaling-stroke`. The original `--color-border` was invisible in dark mode (nearly identical to the surface colour); without `non-scaling-stroke`, the 1-unit stroke is scaled to ~0.25px at the 1500-wide viewBox on mobile — the same reason `.line-path` uses the same property.
+- Vertical day boundary lines are rendered from the same `vm.bars` loop (one `<line>` per bar where `isDayBoundary && $index > 0`). `$index > 0` skips the first bar which sits on the y-axis. They are guarded by `@if (vm.showDayLabels)` so they never appear for single-day ranges.
 - Y-axis label halo on mobile uses `paint-order: stroke fill` with `vector-effect: non-scaling-stroke` instead of a background `<rect>`. This produces a per-glyph halo that follows exact letter outlines, avoiding the visually distracting fixed-size rectangle that consumed space even for a single-digit "0" label.
