@@ -3,9 +3,8 @@ import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
 import { selectCurrentPriceInRange, selectRangeStats, selectSelectedArea } from '../../store';
 import { LanguageService } from '../../services/language.service';
-const TAX_FACTOR = 1.25;
-const NO_TAX_AREAS = new Set(['NO4']);
-const STROMSTOTTE_THRESHOLD = 77; // øre/kWh excl. VAT
+import { PriceArea } from '../../models/price.model';
+import { displayOre } from '../../utils/pricing';
 
 @Component({
   selector: 'app-stats-bar',
@@ -25,11 +24,8 @@ export class StatsBarComponent {
   stats$ = this.store.select(selectRangeStats);
   selectedArea$ = this.store.select(selectSelectedArea);
 
-  effectiveOre(rawOre: number, area: string): number {
-    let ore = rawOre;
-    if (this.showStromstotte() && ore > STROMSTOTTE_THRESHOLD) {
-      ore = 0.1 * ore + 0.9 * STROMSTOTTE_THRESHOLD;
-    }
-    return this.includeTax() && !NO_TAX_AREAS.has(area) ? ore * TAX_FACTOR : ore;
+  /** Area comes second to match the existing template call sites. */
+  effectiveOre(rawOre: number, area: PriceArea): number {
+    return displayOre(area, rawOre, this.includeTax(), this.showStromstotte());
   }
 }

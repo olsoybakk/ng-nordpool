@@ -1,3 +1,5 @@
+import { Translations } from '../i18n/translations';
+
 export interface HourlyPrice {
   ore_per_kWh: number;
   time_start: string;
@@ -7,7 +9,16 @@ export interface HourlyPrice {
 export interface PricesState {
   prices: HourlyPrice[];
   allAreaPricesByDate: Record<string, Partial<Record<PriceArea, HourlyPrice[]>>>;
+  /**
+   * Epoch-ms timestamp of the last fetch *attempt* per date+area. Records the attempt rather
+   * than the result, because an area the API has no data for is never stored in
+   * allAreaPricesByDate — so a presence check alone would re-request it forever.
+   * Deliberately not persisted: prices survive in PriceCacheService, so a reload always
+   * grants a fresh retry.
+   */
+  attemptsByDate: Record<string, Partial<Record<PriceArea, number>>>;
   selectedArea: PriceArea;
+  enabledCountries: CountryCode[];
   selectedDate: string;
   dateRangeDays: number;
   loading: boolean;
@@ -16,22 +27,27 @@ export interface PricesState {
   notification: string | null;
 }
 
-export type PriceArea = 'NO1' | 'NO2' | 'NO3' | 'NO4' | 'NO5';
-// | 'SE1'
-// | 'SE2'
-// | 'SE3'
-// | 'SE4'
-// | 'DK1'
-// | 'DK2'
-// | 'FI'
-// | 'EE'
-// | 'LT'
-// | 'LV'
-// | 'AT'
-// | 'BE'
-// | 'DE-LU'
-// | 'FR'
-// | 'NL';
+export type PriceArea =
+  | 'NO1'
+  | 'NO2'
+  | 'NO3'
+  | 'NO4'
+  | 'NO5'
+  | 'SE1'
+  | 'SE2'
+  | 'SE3'
+  | 'SE4'
+  | 'DK1'
+  | 'DK2'
+  | 'FI'
+  | 'EE'
+  | 'LT'
+  | 'LV'
+  | 'AT'
+  | 'BE'
+  | 'DE-LU'
+  | 'FR'
+  | 'NL';
 
 export const PRICE_AREAS: { value: PriceArea; label: string }[] = [
   { value: 'NO1', label: 'NO1 — Sørøst-Norge' },
@@ -39,42 +55,111 @@ export const PRICE_AREAS: { value: PriceArea; label: string }[] = [
   { value: 'NO3', label: 'NO3 — Midt-Norge' },
   { value: 'NO4', label: 'NO4 — Nord-Norge' },
   { value: 'NO5', label: 'NO5 — Vest-Norge' },
-  // { value: 'SE1', label: 'SE1 — Luleå' },
-  // { value: 'SE2', label: 'SE2 — Sundsvall' },
-  // { value: 'SE3', label: 'SE3 — Stockholm' },
-  // { value: 'SE4', label: 'SE4 — Malmö' },
-  // { value: 'DK1', label: 'DK1 — West Denmark' },
-  // { value: 'DK2', label: 'DK2 — East Denmark' },
-  // { value: 'FI', label: 'FI — Finland' },
-  // { value: 'EE', label: 'EE — Estonia' },
-  // { value: 'LT', label: 'LT — Lithuania' },
-  // { value: 'LV', label: 'LV — Latvia' },
-  // { value: 'AT', label: 'AT — Austria' },
-  // { value: 'BE', label: 'BE — Belgium' },
-  // { value: 'DE-LU', label: 'DE-LU — Germany/Luxembourg' },
-  // { value: 'FR', label: 'FR — France' },
-  // { value: 'NL', label: 'NL — Netherlands' },
+  { value: 'SE1', label: 'SE1 — Luleå' },
+  { value: 'SE2', label: 'SE2 — Sundsvall' },
+  { value: 'SE3', label: 'SE3 — Stockholm' },
+  { value: 'SE4', label: 'SE4 — Malmö' },
+  { value: 'DK1', label: 'DK1 — West Denmark' },
+  { value: 'DK2', label: 'DK2 — East Denmark' },
+  { value: 'FI', label: 'FI — Finland' },
+  { value: 'EE', label: 'EE — Estonia' },
+  { value: 'LT', label: 'LT — Lithuania' },
+  { value: 'LV', label: 'LV — Latvia' },
+  { value: 'AT', label: 'AT — Austria' },
+  { value: 'BE', label: 'BE — Belgium' },
+  { value: 'DE-LU', label: 'DE-LU — Germany/Luxembourg' },
+  { value: 'FR', label: 'FR — France' },
+  { value: 'NL', label: 'NL — Netherlands' },
 ];
 
+/**
+ * Country hue families: one hue per country, lightness steps within multi-area countries, so
+ * a line's country reads from its hue and its area from the shade. 20 areas cannot be told
+ * apart by hue alone (18° spacing), which is why the original flat ramp was discarded.
+ * NO1–NO5 keep their long-established colours; the 11 new hues sit in the bands ≥18° away
+ * from the reserved Norwegian hues (0 / 27 / 46 / 140 / 204).
+ */
 export const AREA_COLORS: Record<PriceArea, string> = {
   NO1: 'hsl(204, 70%, 68%)',
   NO2: 'hsl(46,  90%, 62%)',
   NO3: 'hsl(27,  85%, 62%)',
   NO4: 'hsl(0,   72%, 65%)',
   NO5: 'hsl(140, 50%, 54%)',
-  // SE1:   'hsl(90,  72%, 55%)',
-  // SE2:   'hsl(108, 72%, 55%)',
-  // SE3:   'hsl(126, 72%, 55%)',
-  // SE4:   'hsl(144, 72%, 55%)',
-  // DK1:   'hsl(162, 72%, 58%)',
-  // DK2:   'hsl(180, 72%, 58%)',
-  // FI:    'hsl(198, 72%, 62%)',
-  // EE:    'hsl(216, 72%, 65%)',
-  // LT:    'hsl(234, 72%, 65%)',
-  // LV:    'hsl(252, 72%, 65%)',
-  // AT:    'hsl(270, 72%, 65%)',
-  // BE:    'hsl(288, 72%, 65%)',
-  // 'DE-LU': 'hsl(306, 72%, 65%)',
-  // FR:    'hsl(324, 72%, 65%)',
-  // NL:    'hsl(342, 72%, 65%)',
+  SE1: 'hsl(232, 62%, 76%)',
+  SE2: 'hsl(232, 62%, 68%)',
+  SE3: 'hsl(232, 62%, 60%)',
+  SE4: 'hsl(232, 62%, 52%)',
+  DK1: 'hsl(332, 62%, 70%)',
+  DK2: 'hsl(332, 62%, 58%)',
+  FI: 'hsl(168, 60%, 62%)',
+  EE: 'hsl(252, 62%, 62%)',
+  LT: 'hsl(292, 62%, 62%)',
+  LV: 'hsl(272, 62%, 62%)',
+  AT: 'hsl(186, 60%, 62%)',
+  BE: 'hsl(70,  60%, 62%)',
+  'DE-LU': 'hsl(312, 62%, 62%)',
+  FR: 'hsl(114, 60%, 62%)',
+  NL: 'hsl(92,  60%, 62%)',
 };
+
+export type CountryCode =
+  | 'NO'
+  | 'SE'
+  | 'DK'
+  | 'FI'
+  | 'EE'
+  | 'LT'
+  | 'LV'
+  | 'AT'
+  | 'BE'
+  | 'DE-LU'
+  | 'FR'
+  | 'NL';
+
+export interface Country {
+  code: CountryCode;
+  /** Key into the i18n dictionary — typed so a missing translation is a compile error. */
+  nameKey: keyof Translations;
+  areas: readonly PriceArea[];
+}
+
+/** Canonical display and iteration order: Nordics, then Baltics, then the rest. */
+export const COUNTRIES: readonly Country[] = [
+  { code: 'NO', nameKey: 'countryNO', areas: ['NO1', 'NO2', 'NO3', 'NO4', 'NO5'] },
+  { code: 'SE', nameKey: 'countrySE', areas: ['SE1', 'SE2', 'SE3', 'SE4'] },
+  { code: 'DK', nameKey: 'countryDK', areas: ['DK1', 'DK2'] },
+  { code: 'FI', nameKey: 'countryFI', areas: ['FI'] },
+  { code: 'EE', nameKey: 'countryEE', areas: ['EE'] },
+  { code: 'LT', nameKey: 'countryLT', areas: ['LT'] },
+  { code: 'LV', nameKey: 'countryLV', areas: ['LV'] },
+  { code: 'AT', nameKey: 'countryAT', areas: ['AT'] },
+  { code: 'BE', nameKey: 'countryBE', areas: ['BE'] },
+  { code: 'DE-LU', nameKey: 'countryDELU', areas: ['DE-LU'] },
+  { code: 'FR', nameKey: 'countryFR', areas: ['FR'] },
+  { code: 'NL', nameKey: 'countryNL', areas: ['NL'] },
+];
+
+export const AREA_COUNTRY: Record<PriceArea, CountryCode> = COUNTRIES.reduce(
+  (acc, country) => {
+    for (const area of country.areas) acc[area] = country.code;
+    return acc;
+  },
+  {} as Record<PriceArea, CountryCode>,
+);
+
+/** Countries enabled on a first visit — keeps the app Norway-only until a flag is clicked. */
+export const DEFAULT_COUNTRIES: readonly CountryCode[] = ['NO'];
+
+export function isCountryCode(value: unknown): value is CountryCode {
+  return COUNTRIES.some((c) => c.code === value);
+}
+
+export function isPriceArea(value: unknown): value is PriceArea {
+  return PRICE_AREAS.some((a) => a.value === value);
+}
+
+/** Areas belonging to the given countries, in canonical COUNTRIES order. */
+export function areasForCountries(codes: readonly CountryCode[]): PriceArea[] {
+  const enabled = new Set(codes);
+  return COUNTRIES.filter((c) => enabled.has(c.code)).flatMap((c) => [...c.areas]);
+}

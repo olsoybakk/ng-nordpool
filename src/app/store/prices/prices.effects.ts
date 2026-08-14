@@ -1,14 +1,30 @@
 import { Injectable, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { catchError, map, mergeMap, switchMap, tap, withLatestFrom } from 'rxjs/operators';
+import {
+  catchError,
+  distinctUntilChanged,
+  map,
+  mergeMap,
+  skip,
+  switchMap,
+  tap,
+  withLatestFrom,
+} from 'rxjs/operators';
 import { EMPTY, from, of, timer } from 'rxjs';
 import { NordpoolService } from '../../services/nordpool.service';
 import { LocationService } from '../../services/location.service';
 import { LanguageService } from '../../services/language.service';
-import { selectSelectedDate, selectDateRangeDays, selectLoadedDates } from './prices.selectors';
+import {
+  selectSelectedDate,
+  selectPricesState,
+  selectSelectedArea,
+  selectEnabledCountries,
+} from './prices.selectors';
 import * as PricesActions from './prices.actions';
 import { subtractDays } from '../../utils/date';
+import { areasForCountries } from '../../models/price.model';
+import { planAreaFetches } from './fetch-plan';
 
 @Injectable()
 export class PricesEffects {
@@ -18,11 +34,31 @@ export class PricesEffects {
   private readonly locationService = inject(LocationService);
   private readonly ls = inject(LanguageService);
 
+  /**
+   * State-driven, not payload-driven: the reducer can now correct selectedArea when its country
+   * is switched off, so persisting the action payload would leave a disabled area in storage.
+   *
+   * skip(1) is load-bearing. store.select emits immediately on subscribe, and effects are
+   * registered at bootstrap — without it the hydrated default would be written before
+   * DashboardComponent.ngOnInit runs, and geolocation detection (gated on selectedArea being
+   * absent from localStorage) would never fire for a first-time visitor.
+   */
   persistSelectedArea$ = createEffect(
     () =>
-      this.actions$.pipe(
-        ofType(PricesActions.selectArea),
-        tap(({ area }) => localStorage.setItem('selectedArea', area)),
+      this.store.select(selectSelectedArea).pipe(
+        skip(1),
+        distinctUntilChanged(),
+        tap((area) => localStorage.setItem('selectedArea', area)),
+      ),
+    { dispatch: false },
+  );
+
+  persistEnabledCountries$ = createEffect(
+    () =>
+      this.store.select(selectEnabledCountries).pipe(
+        skip(1),
+        distinctUntilChanged(),
+        tap((codes) => localStorage.setItem('enabledCountries', JSON.stringify(codes))),
       ),
     { dispatch: false },
   );
@@ -57,7 +93,7 @@ export class PricesEffects {
             of(
               PricesActions.selectArea({ area }),
               PricesActions.loadPrices({ area, date }),
-              PricesActions.loadAllAreaPrices({ date }),
+              PricesActions.requestPriceData(),
             ),
           ),
           catchError(() => EMPTY),
@@ -87,26 +123,28 @@ export class PricesEffects {
     ),
   );
 
-  /** Fetch all areas for a single date — mergeMap so concurrent date fetches all complete. */
+  /** Fetch the requested areas for a single date — mergeMap so concurrent date fetches complete. */
   loadAllAreaPrices$ = createEffect(() =>
     this.actions$.pipe(
       ofType(PricesActions.loadAllAreaPrices),
-      mergeMap(({ date }) =>
-        this.nordpoolService.getAllAreaPrices(date).pipe(
+      mergeMap(({ date, areas }) =>
+        this.nordpoolService.getAllAreaPrices(date, areas).pipe(
           mergeMap((results) => {
+            // Only a total miss warrants a toast. A partial miss just leaves that area without a
+            // line, and the attempt record stops it being re-requested.
             const noData = Object.keys(results).length === 0;
             return noData
               ? of(
-                  PricesActions.loadAllAreaPricesSuccess({ date, results: {} }),
+                  PricesActions.loadAllAreaPricesSuccess({ date, areas, results: {} }),
                   PricesActions.setNotification({
                     message: this.ls.t().dataNotAvailable,
                   }),
                 )
-              : of(PricesActions.loadAllAreaPricesSuccess({ date, results }));
+              : of(PricesActions.loadAllAreaPricesSuccess({ date, areas, results }));
           }),
           catchError((err: Error) =>
             of(
-              PricesActions.loadAllAreaPricesSuccess({ date, results: {} }),
+              PricesActions.loadAllAreaPricesSuccess({ date, areas, results: {} }),
               PricesActions.setNotification({
                 message:
                   err.message === 'not-configured'
@@ -128,22 +166,46 @@ export class PricesEffects {
     ),
   );
 
-  /** When date or range changes, dispatch loadAllAreaPrices only for dates not yet in the store. */
-  loadMultiDayPrices$ = createEffect(() =>
+  /**
+   * The single place that turns "we might need data" into concrete fetches. Every trigger that
+   * can widen the required date+area set funnels through here, so the attempt bookkeeping and the
+   * `at` timestamp are constructed once.
+   *
+   * Deliberately keyed on actions, never on loadAllAreaPricesSuccess — keying it on the success
+   * action would close the loop and let it re-plan itself indefinitely.
+   */
+  planPriceFetches$ = createEffect(() =>
     this.actions$.pipe(
-      ofType(PricesActions.selectDate, PricesActions.setDateRangeDays),
-      withLatestFrom(
-        this.store.select(selectSelectedDate),
-        this.store.select(selectDateRangeDays),
-        this.store.select(selectLoadedDates),
+      ofType(
+        PricesActions.requestPriceData,
+        PricesActions.selectDate,
+        PricesActions.setDateRangeDays,
+        PricesActions.toggleCountry,
+        PricesActions.setEnabledCountries,
+        PricesActions.selectArea,
       ),
-      mergeMap(([, date, days, loadedDates]) => {
-        const loaded = new Set(loadedDates);
-        const dates = Array.from({ length: days }, (_, i) => subtractDays(date, i)).filter(
-          (d) => !loaded.has(d),
+      withLatestFrom(this.store.select(selectPricesState)),
+      mergeMap(([, state]) => {
+        const dates = Array.from({ length: state.dateRangeDays }, (_, i) =>
+          subtractDays(state.selectedDate, i),
         );
-        return from(dates.map((d) => PricesActions.loadAllAreaPrices({ date: d })));
+        const areas = areasForCountries(state.enabledCountries);
+        const plan = planAreaFetches(state, dates, areas, Date.now());
+        return from(
+          plan.map(({ date, areas: missing }) =>
+            PricesActions.loadAllAreaPrices({ date, areas: missing, at: Date.now() }),
+          ),
+        );
       }),
+    ),
+  );
+
+  /** Toggling a country can reassign selectedArea, so reload the single-area series for it. */
+  loadPricesAfterCountryToggle$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(PricesActions.toggleCountry, PricesActions.setEnabledCountries),
+      withLatestFrom(this.store.select(selectSelectedArea), this.store.select(selectSelectedDate)),
+      map(([, area, date]) => PricesActions.loadPrices({ area, date })),
     ),
   );
 }

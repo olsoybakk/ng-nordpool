@@ -24,27 +24,14 @@ import {
   selectDateRangeDays,
 } from '../../store';
 import { LanguageService } from '../../services/language.service';
+import {
+  displayOre,
+  NORGESPRIS_ORE_INCL_TAX,
+  STROMSTOTTE_THRESHOLD,
+  TAX_FACTOR,
+} from '../../utils/pricing';
 
 export type ChartMode = 'bar' | 'line';
-
-const TAX_FACTOR = 1.25;
-const NO_TAX_AREAS = new Set<PriceArea>(['NO4']);
-const STROMSTOTTE_THRESHOLD = 77; // øre/kWh excl. VAT
-
-function applyStromstotte(rawOre: number): number {
-  if (rawOre <= STROMSTOTTE_THRESHOLD) return rawOre;
-  return 0.1 * rawOre + 0.9 * STROMSTOTTE_THRESHOLD;
-}
-
-function displayOre(
-  area: PriceArea,
-  rawOre: number,
-  includeTax: boolean,
-  showStromstotte = false,
-): number {
-  const ore = showStromstotte ? applyStromstotte(rawOre) : rawOre;
-  return includeTax && !NO_TAX_AREAS.has(area) ? ore * TAX_FACTOR : ore;
-}
 
 interface BarData {
   slot: number;
@@ -106,7 +93,6 @@ const FULLSCREEN_INNER = 12;
 const DASHBOARD_H_PAD = 64;
 const DASHBOARD_MAX_W = 1100;
 const CARD_PAD_PX = 20;
-const NORGESPRIS_ORE_INCL_TAX = 50;
 const STROMSTOTTE_THRESHOLD_INCL_TAX = STROMSTOTTE_THRESHOLD * TAX_FACTOR;
 
 @Component({

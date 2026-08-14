@@ -41,18 +41,29 @@ export class LocationService {
     switch (countryCode.toLowerCase()) {
       case 'no':
         return this.mapNorway(lat, lon);
-      // case 'se': return this.mapSweden(lat);
-      // case 'dk': return lon < 10 ? 'DK1' : 'DK2';
-      // case 'fi': return 'FI';
-      // case 'ee': return 'EE';
-      // case 'lv': return 'LV';
-      // case 'lt': return 'LT';
-      // case 'at': return 'AT';
-      // case 'be': return 'BE';
-      // case 'de':
-      // case 'lu': return 'DE-LU';
-      // case 'fr': return 'FR';
-      // case 'nl': return 'NL';
+      case 'se':
+        return this.mapSweden(lat);
+      case 'dk':
+        return lon < 10 ? 'DK1' : 'DK2';
+      case 'fi':
+        return 'FI';
+      case 'ee':
+        return 'EE';
+      case 'lt':
+        return 'LT';
+      case 'lv':
+        return 'LV';
+      case 'at':
+        return 'AT';
+      case 'be':
+        return 'BE';
+      case 'de':
+      case 'lu':
+        return 'DE-LU';
+      case 'fr':
+        return 'FR';
+      case 'nl':
+        return 'NL';
       default:
         return 'NO1';
     }
@@ -68,10 +79,10 @@ export class LocationService {
   }
 
   // Approximate Swedish bidding-zone boundaries
-  // private mapSweden(lat: number): PriceArea {
-  //   if (lat > 64) return 'SE1';
-  //   if (lat > 60) return 'SE2';
-  //   if (lat > 57) return 'SE3';
-  //   return 'SE4';
-  // }
+  private mapSweden(lat: number): PriceArea {
+    if (lat > 64) return 'SE1';
+    if (lat > 60) return 'SE2';
+    if (lat > 57) return 'SE3';
+    return 'SE4';
+  }
 }

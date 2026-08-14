@@ -4,9 +4,10 @@ import { toObservable } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
 import { map } from 'rxjs/operators';
 import { combineLatest } from 'rxjs';
-import { HourlyPrice, PriceArea } from '../../models/price.model';
+import { HourlyPrice } from '../../models/price.model';
 import { selectAllPrices, selectCurrentPrice, selectSelectedArea } from '../../store';
 import { LanguageService } from '../../services/language.service';
+import { displayOre } from '../../utils/pricing';
 
 interface TableRow extends HourlyPrice {
   time: string;
@@ -19,20 +20,6 @@ function toHHMM(isoLocal: string): string {
   return (
     d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0')
   );
-}
-
-const TAX_FACTOR = 1.25;
-const NO_TAX_AREAS = new Set<PriceArea>(['NO4']);
-const STROMSTOTTE_THRESHOLD = 77;
-
-function applyStromstotte(rawOre: number): number {
-  if (rawOre <= STROMSTOTTE_THRESHOLD) return rawOre;
-  return 0.1 * rawOre + 0.9 * STROMSTOTTE_THRESHOLD;
-}
-
-function displayOre(area: PriceArea, rawOre: number, includeTax: boolean, showStromstotte: boolean): number {
-  const ore = showStromstotte ? applyStromstotte(rawOre) : rawOre;
-  return includeTax && !NO_TAX_AREAS.has(area) ? ore * TAX_FACTOR : ore;
 }
 
 @Component({

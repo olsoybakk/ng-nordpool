@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
-import { HourlyPrice, PriceArea, PRICE_AREAS } from '../models/price.model';
+import { HourlyPrice, PriceArea } from '../models/price.model';
 import { environment } from '../../environments/environment';
 import { PriceCacheService } from './price-cache.service';
 
@@ -36,24 +36,33 @@ export class NordpoolService {
     );
   }
 
-  getAllAreaPrices(date: string): Observable<Partial<Record<PriceArea, HourlyPrice[]>>> {
+  /**
+   * Fetches the given areas for one date, requesting only the ones not already cached. Splitting
+   * cached from uncached matters because areas arrive a country at a time: with Norway already
+   * cached, enabling Sweden must fetch 4 areas rather than all 20.
+   */
+  getAllAreaPrices(
+    date: string,
+    areas: PriceArea[],
+  ): Observable<Partial<Record<PriceArea, HourlyPrice[]>>> {
     if (!this.baseUrl) return throwError(() => new Error('not-configured'));
-    const areas = PRICE_AREAS.map((a) => a.value);
-    const allCached = areas.every((area) => this.cache.get(`${date}:${area}`) !== null);
+    if (!areas.length) return of({});
 
-    if (allCached) {
-      const result: Partial<Record<PriceArea, HourlyPrice[]>> = {};
-      for (const area of areas) {
-        result[area] = this.cache.get(`${date}:${area}`)!;
-      }
-      return of(result);
+    const cached: Partial<Record<PriceArea, HourlyPrice[]>> = {};
+    const uncached: PriceArea[] = [];
+    for (const area of areas) {
+      const hit = this.cache.get(`${date}:${area}`);
+      if (hit) cached[area] = hit;
+      else uncached.push(area);
     }
 
-    return this.http.get<NordpoolResponse>(this.buildUrl(date, areas)).pipe(
+    if (!uncached.length) return of(cached);
+
+    return this.http.get<NordpoolResponse>(this.buildUrl(date, uncached)).pipe(
       map((r) => {
-        const result: Partial<Record<PriceArea, HourlyPrice[]>> = {};
+        const result: Partial<Record<PriceArea, HourlyPrice[]>> = { ...cached };
         if (r?.multiAreaEntries) {
-          for (const area of areas) {
+          for (const area of uncached) {
             const prices = this.toIntervalPrices(r.multiAreaEntries, area);
             if (prices.length) result[area] = prices;
           }
@@ -61,9 +70,11 @@ export class NordpoolService {
         return result;
       }),
       tap((result) => {
-        for (const area of areas) {
-          if (result[area]?.length) this.cache.set(`${date}:${area}`, result[area]!);
-        }
+        this.cache.setMany(
+          uncached
+            .filter((area) => result[area]?.length)
+            .map((area) => ({ key: `${date}:${area}`, data: result[area]! })),
+        );
       }),
     );
   }
