@@ -95,6 +95,17 @@ export class DashboardComponent implements OnInit {
    */
   readonly hasNorway = computed(() => this.enabledCountries().includes('NO'));
 
+  /**
+   * VAT is only offered when Norway is the *only* thing on the chart. It applies to Norwegian
+   * areas alone, so alongside any other series it would put VAT-inclusive Norwegian prices on
+   * the same axis as raw foreign ones — a comparison that looks valid and isn't. SYS counts as
+   * "other" here: it is an unadjusted reference price, not a Norwegian market.
+   */
+  readonly norwayOnly = computed(() => {
+    const enabled = this.enabledCountries();
+    return enabled.length === 1 && enabled[0] === 'NO';
+  });
+
   menuOpen = signal(false);
   chartMode = signal<ChartMode>((localStorage.getItem('chartMode') as ChartMode | null) ?? 'line');
   includeTax = signal(localStorage.getItem('includeTax') === 'true');
@@ -113,6 +124,12 @@ export class DashboardComponent implements OnInit {
     });
     effect(() => {
       localStorage.setItem('includeTax', String(this.includeTax()));
+    });
+    // Adding a second country while VAT is on would otherwise leave a mixed chart. Switch it
+    // off rather than just greying out the button, so what's drawn always matches the toggle.
+    // Converges after one pass: the write only happens while includeTax is still true.
+    effect(() => {
+      if (!this.norwayOnly() && this.includeTax()) this.includeTax.set(false);
     });
     effect(() => {
       localStorage.setItem('showNorgespris', String(this.showNorgespris()));
