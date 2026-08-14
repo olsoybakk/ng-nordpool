@@ -17,6 +17,7 @@ import { ControlsComponent } from '../../components/controls/controls.component'
 import { StatsBarComponent } from '../../components/stats-bar/stats-bar.component';
 import { PriceChartComponent, ChartMode } from '../../components/price-chart/price-chart.component';
 import { PriceTableComponent } from '../../components/price-table/price-table.component';
+import { CountryTogglesComponent } from '../../components/country-toggles/country-toggles.component';
 import {
   selectError,
   selectLoading,
@@ -25,9 +26,11 @@ import {
   selectSelectedDate,
   selectDateRangeDays,
   selectNotification,
+  selectEnabledCountries,
 } from '../../store';
 import { detectLocation, loadPrices, requestPriceData } from '../../store';
 import { LanguageService } from '../../services/language.service';
+import { CountryCode } from '../../models/price.model';
 import { BUILD_DATE } from '../../../environments/build-info';
 
 @Component({
@@ -39,6 +42,7 @@ import { BUILD_DATE } from '../../../environments/build-info';
     StatsBarComponent,
     PriceChartComponent,
     PriceTableComponent,
+    CountryTogglesComponent,
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
@@ -79,6 +83,17 @@ export class DashboardComponent implements OnInit {
     start.setDate(start.getDate() - (days - 1));
     return new Intl.DateTimeFormat(locale, fmt).formatRange(start, end);
   });
+
+  private readonly enabledCountries = toSignal(this.store.select(selectEnabledCountries), {
+    initialValue: [] as CountryCode[],
+  });
+
+  /**
+   * VAT, Norgespris and strømstøtte are Norwegian schemes, so with Norway switched off the
+   * three toggles would sit there doing nothing. Disabled rather than hidden to avoid a
+   * layout jump.
+   */
+  readonly hasNorway = computed(() => this.enabledCountries().includes('NO'));
 
   menuOpen = signal(false);
   chartMode = signal<ChartMode>((localStorage.getItem('chartMode') as ChartMode | null) ?? 'line');

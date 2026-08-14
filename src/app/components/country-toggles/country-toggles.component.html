@@ -1,0 +1,86 @@
+@let onlyNorway = enabledSet().size === 1 && enabledSet().has('NO');
+
+<div class="country-row" role="group" [attr.aria-label]="ls.t().countriesGroupLabel">
+  @for (country of countries; track country.code) {
+    <button
+      type="button"
+      class="flag-btn"
+      [class.flag-btn--active]="isEnabled(country.code)"
+      [disabled]="isEnabled(country.code) && isLastEnabled()"
+      (click)="toggle(country.code)"
+      [attr.aria-pressed]="isEnabled(country.code)"
+      [attr.aria-label]="ls.t()[country.nameKey]"
+      [attr.title]="ls.t()[country.nameKey]"
+    >
+      <!-- 24x16 viewBox for every flag so they line up on the baseline. -->
+      <svg class="flag" viewBox="0 0 24 16" width="24" height="16" aria-hidden="true">
+        @switch (country.code) {
+          @case ('NO') {
+            <rect width="24" height="16" fill="#ba0c2f" />
+            <path d="M0 5.5h24v5H0z M7 0h5v16H7z" fill="#fff" />
+            <path d="M0 7h24v2H0z M8.5 0h2v16h-2z" fill="#00205b" />
+          }
+          @case ('SE') {
+            <rect width="24" height="16" fill="#005293" />
+            <path d="M0 6h24v4H0z M7 0h4v16H7z" fill="#fecb00" />
+          }
+          @case ('DK') {
+            <rect width="24" height="16" fill="#c8102e" />
+            <path d="M0 6h24v4H0z M7 0h4v16H7z" fill="#fff" />
+          }
+          @case ('FI') {
+            <rect width="24" height="16" fill="#fff" />
+            <path d="M0 6h24v4H0z M7 0h4v16H7z" fill="#002f6c" />
+          }
+          @case ('EE') {
+            <rect width="24" height="5.34" fill="#0072ce" />
+            <rect y="5.34" width="24" height="5.33" fill="#000" />
+            <rect y="10.67" width="24" height="5.33" fill="#fff" />
+          }
+          @case ('LT') {
+            <rect width="24" height="5.34" fill="#fdb913" />
+            <rect y="5.34" width="24" height="5.33" fill="#006a44" />
+            <rect y="10.67" width="24" height="5.33" fill="#c1272d" />
+          }
+          @case ('LV') {
+            <rect width="24" height="16" fill="#9e3039" />
+            <rect y="6.4" width="24" height="3.2" fill="#fff" />
+          }
+          @case ('AT') {
+            <rect width="24" height="16" fill="#ed2939" />
+            <rect y="5.34" width="24" height="5.33" fill="#fff" />
+          }
+          @case ('BE') {
+            <rect width="8" height="16" fill="#000" />
+            <rect x="8" width="8" height="16" fill="#fae042" />
+            <rect x="16" width="8" height="16" fill="#ed2939" />
+          }
+          @case ('DE-LU') {
+            <rect width="24" height="5.34" fill="#000" />
+            <rect y="5.34" width="24" height="5.33" fill="#dd0000" />
+            <rect y="10.67" width="24" height="5.33" fill="#ffce00" />
+          }
+          @case ('FR') {
+            <rect width="8" height="16" fill="#002395" />
+            <rect x="8" width="8" height="16" fill="#fff" />
+            <rect x="16" width="8" height="16" fill="#ed2939" />
+          }
+          @case ('NL') {
+            <rect width="24" height="5.34" fill="#ae1c28" />
+            <rect y="5.34" width="24" height="5.33" fill="#fff" />
+            <rect y="10.67" width="24" height="5.33" fill="#21468b" />
+          }
+        }
+        <!-- Keeps the white-heavy flags (FI, NL, FR) from bleeding into a light background. -->
+        <rect width="24" height="16" fill="none" stroke="rgba(0, 0, 0, 0.25)" stroke-width="1" />
+      </svg>
+      <span class="flag-btn__code">{{ country.code }}</span>
+    </button>
+  }
+
+  @if (!onlyNorway) {
+    <button type="button" class="country-reset" (click)="resetToNorway()">
+      {{ ls.t().onlyNorway }}
+    </button>
+  }
+</div>

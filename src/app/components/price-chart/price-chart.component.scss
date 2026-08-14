@@ -146,7 +146,12 @@
   width: 100%;
   height: auto;
   display: block;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
 }
 
 .grid-line {
@@ -349,7 +354,11 @@
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   min-width: 210px;
-  max-height: 380px;
+  // Tall enough for all 20 areas plus Norgespris when the viewport allows; 70vh keeps it
+  // inside a short window. The tooltip is pointer-events:none, so anything past this can't
+  // be scrolled to — rows are sorted most→least expensive, so the cut falls on the least
+  // interesting end.
+  max-height: min(70vh, 560px);
   overflow: hidden;
   display: flex;
   flex-direction: column;

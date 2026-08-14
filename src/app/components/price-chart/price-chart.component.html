@@ -110,7 +110,9 @@
               <!-- Day boundary label -->
               @if (vm.showDayLabels && bar.showDayLabel) {
                 <text
-                  [attr.x]="Math.max(bar.x, dims().yLabelInside ? offsetX + dims().labelSize * 2.5 + 5 : 0)"
+                  [attr.x]="
+                    Math.max(bar.x, dims().yLabelInside ? offsetX + dims().labelSize * 2.5 + 5 : 0)
+                  "
                   [attr.y]="dims().xAxisY"
                   class="day-label"
                   text-anchor="start"
@@ -204,16 +206,18 @@
                   />
                 }
               }
-              <text
-                [attr.x]="line.labelX"
-                [attr.y]="line.labelY"
-                class="area-label"
-                [class.area-label--selected]="line.isSelected"
-                [attr.fill]="line.color"
-                [attr.font-size]="dims().labelSize"
-              >
-                {{ line.area }}
-              </text>
+              @if (line.showLabel) {
+                <text
+                  [attr.x]="line.labelX"
+                  [attr.y]="line.labelY"
+                  class="area-label"
+                  [class.area-label--selected]="line.isSelected"
+                  [attr.fill]="line.color"
+                  [attr.font-size]="dims().labelSize"
+                >
+                  {{ line.area }}
+                </text>
+              }
             </g>
           }
 
@@ -221,7 +225,12 @@
           @for (bar of vm.bars; track bar.slot) {
             @if (vm.showDayLabels && bar.showDayLabel) {
               <text
-                [attr.x]="Math.max(offsetX + $index * (chartW / vm.slotCount), dims().yLabelInside ? offsetX + dims().labelSize * 2.5 + 5 : 0)"
+                [attr.x]="
+                  Math.max(
+                    offsetX + $index * (chartW / vm.slotCount),
+                    dims().yLabelInside ? offsetX + dims().labelSize * 2.5 + 5 : 0
+                  )
+                "
                 [attr.y]="dims().xAxisY"
                 class="day-label"
                 text-anchor="start"

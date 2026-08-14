@@ -27,7 +27,13 @@
                 />
               </svg>
             } @else {
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+              >
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
               </svg>
             }
@@ -59,13 +65,30 @@
             <button
               class="hamburger-menu__item"
               (click)="ls.toggleLang()"
-              [attr.aria-label]="ls.lang() === 'nb' ? ls.t().switchToEnglish : ls.t().switchToNorwegian"
+              [attr.aria-label]="
+                ls.lang() === 'nb' ? ls.t().switchToEnglish : ls.t().switchToNorwegian
+              "
             >
-              <span class="hamburger-menu__lang-badge" aria-hidden="true">{{ ls.lang() === 'nb' ? 'EN' : 'NO' }}</span>
+              <span class="hamburger-menu__lang-badge" aria-hidden="true">{{
+                ls.lang() === 'nb' ? 'EN' : 'NO'
+              }}</span>
               {{ ls.lang() === 'nb' ? ls.t().switchToEnglish : ls.t().switchToNorwegian }}
             </button>
-            <button class="hamburger-menu__item hamburger-menu__item--danger" (click)="clearAllData()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <button
+              class="hamburger-menu__item hamburger-menu__item--danger"
+              (click)="clearAllData()"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
                 <polyline points="3 6 5 6 21 6" />
                 <path d="M19 6l-1 14H6L5 6" />
                 <path d="M9 6V4h6v2" />
@@ -106,9 +129,11 @@
       <div class="chart-header">
         <h2 class="section-title">{{ ls.t().hourlyPrices }}</h2>
         <div class="chart-controls">
+          <!-- The three schemes below only apply to Norwegian areas. -->
           <button
             class="toggle-btn"
             [class.toggle-btn--active]="includeTax()"
+            [disabled]="!hasNorway()"
             (click)="toggleTax()"
             [attr.aria-pressed]="includeTax()"
             [attr.aria-label]="ls.t().taxAriaLabel"
@@ -120,6 +145,7 @@
           <button
             class="toggle-btn"
             [class.toggle-btn--active]="showNorgespris()"
+            [disabled]="!hasNorway()"
             (click)="toggleNorgespris()"
             [attr.aria-pressed]="showNorgespris()"
             [attr.aria-label]="ls.t().norgesprisAriaLabel"
@@ -131,6 +157,7 @@
           <button
             class="toggle-btn"
             [class.toggle-btn--active]="showStromstotte()"
+            [disabled]="!hasNorway()"
             (click)="toggleStromstotte()"
             [attr.aria-pressed]="showStromstotte()"
             [attr.aria-label]="ls.t().stromstotteAriaLabel"
@@ -174,6 +201,7 @@
           </div>
         </div>
       </div>
+      <app-country-toggles />
       <app-price-chart
         [chartMode]="chartMode()"
         [includeTax]="includeTax()"
