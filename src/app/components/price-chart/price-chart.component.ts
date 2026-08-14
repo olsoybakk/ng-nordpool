@@ -18,6 +18,7 @@ import { AREA_COLORS, HourlyPrice, PRICE_AREAS, PriceArea } from '../../models/p
 import { localISODate } from '../../utils/date';
 import {
   selectCurrentPrice,
+  selectEnabledAreas,
   selectMergedAreaPrices,
   selectSelectedArea,
   selectSelectedDate,
@@ -65,6 +66,8 @@ interface AreaLine {
   linePoints: string;
   labelX: number;
   labelY: number;
+  /** False when a nearer line already claimed this slice of the right edge. */
+  showLabel: boolean;
   points: PointData[];
 }
 
@@ -254,6 +257,9 @@ export class PriceChartComponent {
     this.store.select(selectSelectedArea),
     this.store.select(selectSelectedDate),
     this.store.select(selectDateRangeDays),
+    // A store selector rather than a signal input: toObservable(input) emits after the
+    // current CD cycle, which would render one frame with the previous area set.
+    this.store.select(selectEnabledAreas),
     toObservable(this.dims),
     toObservable(this.includeTax),
     toObservable(this.showNorgespris),
@@ -267,6 +273,7 @@ export class PriceChartComponent {
         selectedArea,
         selectedDate,
         dateRangeDays,
+        visibleAreas,
         dims,
         includeTax,
         showNorgespris,
@@ -279,6 +286,7 @@ export class PriceChartComponent {
           selectedArea,
           selectedDate,
           dateRangeDays,
+          visibleAreas as PriceArea[],
           dims,
           includeTax,
           showNorgespris as boolean,
@@ -500,7 +508,16 @@ export class PriceChartComponent {
         flip ? Math.max(TOOLTIP_W, clientX) : Math.min(clientX, window.innerWidth - TOOLTIP_W),
       );
 
-      const HALF_H = this.chartMode() === 'bar' ? 35 : 110;
+      // Line mode lists one row per visible area, so the height has to follow the row count
+      // rather than the 5-area assumption it was originally tuned for. Capped at 70vh, which
+      // is where the CSS starts scrolling the list.
+      const ROW_H = 20;
+      const CHROME_H = 44; // header (time / date) + padding
+      const rows = this.vm()?.pricesBySlot[slot]?.length ?? 0;
+      const HALF_H =
+        this.chartMode() === 'bar'
+          ? 35
+          : Math.min(Math.max(rows * ROW_H + CHROME_H, 60), window.innerHeight * 0.7) / 2;
       const tooltipH = HALF_H * 2;
       if (isTouch) {
         // Anchor based on viewport space (clientY), not SVG-relative position.
@@ -571,6 +588,7 @@ export class PriceChartComponent {
     selectedArea: PriceArea,
     selectedDate: string,
     dateRangeDays: number,
+    visibleAreas: PriceArea[],
     {
       chartH,
       bottomY,
@@ -702,16 +720,19 @@ export class PriceChartComponent {
 
     const yTicks = this.buildYTicks(singleMin, singleMax, chartH, labelSize);
 
-    // Line chart: all areas, visible slots
-    const areaEntries = PRICE_AREAS.map(({ value }) => ({
-      area: value,
-      hourlyPrices: (allAreaPrices[value] ?? []).slice(zStart, zEnd + 1),
-    })).filter((e) => e.hourlyPrices.length > 0);
+    // Line chart: areas of the enabled countries, visible slots
+    const areaEntries = visibleAreas
+      .map((value) => ({
+        area: value,
+        hourlyPrices: (allAreaPrices[value] ?? []).slice(zStart, zEnd + 1),
+      }))
+      .filter((e) => e.hourlyPrices.length > 0);
 
-    // Line chart: scale from full dataset so y-axis stays fixed while zooming
+    // Line chart: scale from full dataset so y-axis stays fixed while zooming. Only the
+    // visible areas count — a hidden country must not stretch the axis.
     let rawMultiMin = Infinity,
       rawMultiMax = -Infinity;
-    for (const { value: area } of PRICE_AREAS) {
+    for (const area of visibleAreas) {
       for (const p of allAreaPrices[area] ?? []) {
         const v = displayOre(area, p.ore_per_kWh, includeTax, showStromstotte);
         if (v < rawMultiMin) rawMultiMin = v;
@@ -753,9 +774,25 @@ export class PriceChartComponent {
         linePoints: stepPairs.join(' '),
         labelX: Math.min(rawLabelX, maxLabelX),
         labelY: toYMulti(lastOre) + 4,
+        showLabel: true,
         points: pts,
       };
     });
+
+    // With every country enabled there are 20 labels stacked on the right edge, so keep only
+    // the ones that clear their neighbour. The selected area is placed first and so always
+    // survives; the rest are resolved top-down.
+    const minLabelGap = labelSize * 1.1;
+    const claimed: number[] = [];
+    for (const line of [...areaLines].sort(
+      (a, b) => (a.isSelected ? 0 : 1) - (b.isSelected ? 0 : 1) || a.labelY - b.labelY,
+    )) {
+      if (claimed.some((y) => Math.abs(y - line.labelY) < minLabelGap)) {
+        line.showLabel = false;
+      } else {
+        claimed.push(line.labelY);
+      }
+    }
 
     areaLines.sort((a, b) => (a.isSelected ? 1 : 0) - (b.isSelected ? 1 : 0));
 

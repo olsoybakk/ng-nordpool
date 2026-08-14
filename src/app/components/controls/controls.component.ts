@@ -10,6 +10,7 @@ import {
   selectSelectedArea,
   selectSelectedDate,
   selectDateRangeDays,
+  selectEnabledAreas,
   loadPrices,
   selectArea,
   selectDate,
@@ -29,7 +30,8 @@ export class ControlsComponent {
   private readonly cdr = inject(ChangeDetectorRef);
   readonly ls = inject(LanguageService);
 
-  readonly areas = PRICE_AREAS;
+  /** Only the areas of the enabled countries — kept in sync by the constructor below. */
+  areas = PRICE_AREAS;
   readonly areaColors = AREA_COLORS;
   readonly maxDate = localISODate(new Date(Date.now() + 864e5));
   readonly rangeOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
@@ -53,10 +55,19 @@ export class ControlsComponent {
       .select(selectDateRangeDays)
       .pipe(takeUntilDestroyed())
       .subscribe((days) => (this.currentRangeDays = days));
+    this.store
+      .select(selectEnabledAreas)
+      .pipe(takeUntilDestroyed())
+      .subscribe((enabled) => {
+        const visible = new Set(enabled);
+        this.areas = PRICE_AREAS.filter((a) => visible.has(a.value));
+      });
   }
 
   get currentAreaLabel(): string {
-    return this.areas.find((a) => a.value === this.currentArea)?.label ?? this.currentArea;
+    // Looks up the full list, not the filtered one, so the trigger never falls back to a
+    // bare area code during the transient between a country toggle and the area correction.
+    return PRICE_AREAS.find((a) => a.value === this.currentArea)?.label ?? this.currentArea;
   }
 
   @HostListener('document:click', ['$event.target'])

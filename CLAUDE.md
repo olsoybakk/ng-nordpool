@@ -67,8 +67,6 @@ npx prettier --write .  # format all files
 
 There is no linter configured (no ESLint or similar). Prettier config is in `package.json` (`printWidth: 100`, `singleQuote: true`, `angular` HTML parser).
 
-> **Note:** `app.spec.ts` has a stale "render title" test that expects `<h1>Hello, ng-nordpool</h1>` — the `App` component only renders `<router-outlet />`, so that assertion always fails. The "should create the app" test passes fine.
-
 ## TypeScript
 
 `tsconfig.json` has `strict: true` plus `noImplicitReturns`, `noPropertyAccessFromIndexSignature`, `noFallthroughCasesInSwitch`, and `noImplicitOverride`. Angular templates use `strictTemplates` and `strictInjectionParameters`. All new code must satisfy these.
@@ -91,7 +89,7 @@ The API base URL is configured via `.env` (committed, default values) and `.env.
 
 Free, no API key. Returns 15-minute interval data for all requested areas in one response (`multiAreaEntries`), with prices in `NOK/MWh`. The service maps each 15-min entry directly to `HourlyPrice`, converting `NOK/MWh → øre/kWh` (÷ 10). `time_start`/`time_end` use `localDeliveryStart`/`localDeliveryEnd` (CET/CEST local time, no timezone suffix) — parsed as local time by JS `Date`.
 
-The app shows only Norwegian areas: NO1–NO5. Non-Norwegian areas are commented out in the model, PRICE_AREAS list, AREA_COLORS, and location service.
+The app covers 20 areas across 12 countries (NO1–NO5, SE1–SE4, DK1/DK2, FI, EE, LT, LV, AT, BE, DE-LU, FR, NL). Only the areas of the **enabled countries** are requested — the default is Norway alone, and the user adds countries with the flag toggles. `currency=NOK` is requested for every area, including the euro-zone ones, so the chart stays directly comparable and the hardcoded "øre/kWh" unit strings remain valid.
 
 ## Architecture
 
@@ -102,43 +100,70 @@ Feature key: `prices`. Single feature slice — no root reducer needed beyond th
 ```
 src/app/store/prices/
   prices.actions.ts    loadPrices / loadPricesSuccess / loadPricesFailure
-                       loadAllAreaPrices / loadAllAreaPricesSuccess / loadAllAreaPricesFailure
+                       requestPriceData
+                       loadAllAreaPrices{date, areas, at} /
+                         loadAllAreaPricesSuccess{date, areas, results} /
+                         loadAllAreaPricesFailure
                        detectLocation
                        selectArea / selectDate / setDateRangeDays
+                       toggleCountry / setEnabledCountries
                        setNotification / clearNotification
   prices.reducer.ts    initialState: {
-                         prices[], allAreaPricesByDate{}, selectedArea, selectedDate:today,
-                         dateRangeDays:1, loading, allAreasLoadingCount:0, error, notification:null
+                         prices[], allAreaPricesByDate{}, attemptsByDate{}, selectedArea,
+                         enabledCountries, selectedDate:today, dateRangeDays:1, loading,
+                         allAreasLoadingCount:0, error, notification:null
                        }
-                       selectedArea is hydrated from localStorage on startup.
+                       hydrateCountries() / hydrateArea() validate the localStorage values
+                         on startup (both exported for tests, since initialState is computed
+                         at import time). An area whose country is disabled is rejected.
+                       loadAllAreaPrices records action.areas -> action.at in attemptsByDate.
+                       loadAllAreaPricesSuccess MERGES into allAreaPricesByDate[date] —
+                         replacing it would wipe the areas fetched for a different country.
+                       toggleCountry / setEnabledCountries re-sort into COUNTRIES order,
+                         refuse to leave zero countries enabled, and reassign selectedArea
+                         when its country is switched off.
+                       selectArea auto-enables that area's country.
   prices.effects.ts    loadPrices$ → NordpoolService.getPrices() via switchMap
-                       loadAllAreaPrices$ → NordpoolService.getAllAreaPrices() via
-                         mergeMap; empty results (no areas with data, including when
+                       loadAllAreaPrices$ → NordpoolService.getAllAreaPrices(date, areas)
+                         via mergeMap; empty results (no areas with data, including when
                          API returns entries with empty entryPerArea) OR HTTP error →
                          loadAllAreaPricesSuccess (results:{}) + setNotification
-                         (never sets state.error)
+                         (never sets state.error). A *partial* miss is silent — that area
+                         simply has no line, and its attempt record stops the re-request.
                        clearNotificationAfterDelay$ → switchMap + timer(5000) →
                          clearNotification (resets timer on each new notification)
-                       loadMultiDayPrices$ → selectDate / setDateRangeDays →
-                         dispatches loadAllAreaPrices only for dates not yet in
-                         allAreaPricesByDate (uses selectLoadedDates to dedup)
+                       planPriceFetches$ → requestPriceData / selectDate /
+                         setDateRangeDays / toggleCountry / setEnabledCountries /
+                         selectArea → runs planAreaFetches() over the active dates and
+                         enabled areas, emitting one loadAllAreaPrices per date that still
+                         needs one. The ONLY place loadAllAreaPrices is constructed.
+                         Deliberately not keyed on loadAllAreaPricesSuccess — that would
+                         close the loop and let it re-plan itself indefinitely.
+                       loadPricesAfterCountryToggle$ → toggleCountry /
+                         setEnabledCountries → loadPrices for the post-reduction area
                        detectLocation$ → LocationService.detectPriceArea(), then
-                         mergeMap → of(selectArea, loadPrices, loadAllAreaPrices);
+                         mergeMap → of(selectArea, loadPrices, requestPriceData);
                          catchError → EMPTY (silent fallback, keeps default NO1)
-                       persistSelectedArea$ → tap selectArea, writes to localStorage
-                         (dispatch: false)
+                       persistSelectedArea$ / persistEnabledCountries$ → state-driven
+                         (store.select + skip(1) + distinctUntilChanged), writing to
+                         localStorage (dispatch: false). State-driven rather than
+                         payload-driven because the reducer can correct selectedArea;
+                         skip(1) is load-bearing — store.select emits immediately on
+                         subscribe, and writing the hydrated default before ngOnInit runs
+                         would permanently suppress first-visit geolocation.
                        persistDateRangeDays$ → tap setDateRangeDays, writes to
                          localStorage (dispatch: false)
-  prices.selectors.ts  selectAllPrices, selectAllAreaPrices, selectSelectedArea,
-                       selectSelectedDate, selectDateRangeDays, selectLoading,
-                       selectAllAreasLoading, selectError, selectCurrentPrice,
-                       selectCurrentPriceInRange, selectDailyStats, selectRangeStats,
-                       selectNotification, selectLoadedDates, selectActiveDates,
+  prices.selectors.ts  selectAllPrices, selectSelectedArea, selectEnabledCountries,
+                       selectEnabledAreas, selectSelectedDate, selectDateRangeDays,
+                       selectLoading, selectAllAreasLoading, selectError,
+                       selectCurrentPrice, selectCurrentPriceInRange, selectDailyStats,
+                       selectRangeStats, selectNotification, selectActiveDates,
                        selectMergedAreaPrices
-                       selectLoadedDates: only includes dates where at least one area
-                         has actual price data — dates stored with empty results ({})
-                         are excluded so they are re-fetched on the next navigation
-                         (e.g. after prices are published for a future date).
+                       selectEnabledAreas: areasForCountries(enabledCountries), in
+                         canonical COUNTRIES order.
+                       selectMergedAreaPrices filters by enabled country, so a disabled
+                         country's data stays in allAreaPricesByDate and re-enabling it
+                         costs no requests.
                        selectCurrentPriceInRange: like selectCurrentPrice but checks
                          allAreaPricesByDate[today][selectedArea] — returns the current
                          slot whenever today falls within the active date range, even
@@ -146,23 +171,32 @@ src/app/store/prices/
                        selectRangeStats: min/max/avg across all days in the active date
                          range for the selected area; falls back to state.prices when
                          dateRangeDays ≤ 1. Used by stats-bar.
+  fetch-plan.ts        planAreaFetches(state, dates, areas, now) → [{date, areas}] —
+                       pure, so it is tested without the store. Skips an area that has
+                       data, or that was attempted within ATTEMPT_TTL_MS (15 min); groups
+                       by date so each date stays one HTTP request. `now` is a parameter
+                       rather than a Date.now() call, keeping the planner deterministic.
 src/app/store/index.ts re-exports all of the above
 ```
 
 ### Services
 
-`src/app/services/price-cache.service.ts` — FIFO localStorage cache keyed by `date:area` strings (e.g. `"2026-05-13:NO1"`). Holds up to `30 × PRICE_AREAS.length` entries (currently 150) so the cache covers 30 full days regardless of area count; inserting an existing key moves it to the back. Silently falls back to in-memory if `localStorage` is unavailable (quota exceeded, private browsing).
+`src/app/services/price-cache.service.ts` — FIFO localStorage cache keyed by `date:area` strings (e.g. `"2026-05-13:NO1"`). Holds up to `16 × PRICE_AREAS.length` entries (currently 320, ~2.7 MB) — at 20 areas a 30-day retention would have pushed past the typical 5 MB localStorage quota, and 16 days still exceeds one full 14-day range across every area. Inserting an existing key moves it to the back; `load()` trims an oversized persisted array so a shrunk constant converges immediately rather than one entry per write. `setMany()` writes a batch with a single `JSON.stringify`, so a multi-area fetch doesn't re-serialize the whole array once per area. Silently falls back to in-memory if `localStorage` is unavailable (quota exceeded, private browsing).
 
-`src/app/services/nordpool.service.ts` — two methods: `getPrices(date, area)` fetches a single area; `getAllAreaPrices(date)` fetches all 5 areas in one request. Both check `PriceCacheService` before making an HTTP call and write results back per-area, so a `getAllAreaPrices` hit warms the `getPrices` cache and vice versa. Both map each 15-min `multiAreaEntries` entry directly to a `HourlyPrice` (÷ 10 for NOK/MWh → øre/kWh), yielding up to 96 entries per area with no per-hour averaging. `getAllAreaPrices` only includes an area in the result if `toIntervalPrices` returns a non-empty array — entries where `entryPerArea` is `{}` (prices not yet published) are filtered out, keeping the result `{}` so the effect's no-data check triggers correctly.
+`src/app/services/nordpool.service.ts` — two methods: `getPrices(date, area)` fetches a single area; `getAllAreaPrices(date, areas)` fetches the given areas in one request. Both check `PriceCacheService` before making an HTTP call and write results back per-area, so a `getAllAreaPrices` hit warms the `getPrices` cache and vice versa. `getAllAreaPrices` partitions the requested areas into cached and uncached and asks the API for **only the uncached subset**, so enabling one more country does not refetch the ones already held. Both map each 15-min `multiAreaEntries` entry directly to a `HourlyPrice` (÷ 10 for NOK/MWh → øre/kWh), yielding up to 96 entries per area with no per-hour averaging. `getAllAreaPrices` only includes an area in the result if `toIntervalPrices` returns a non-empty array — entries where `entryPerArea` is `{}` (prices not yet published) are filtered out, keeping the result `{}` so the effect's no-data check triggers correctly.
 
 `src/app/services/location.service.ts` — `detectPriceArea()` wraps `navigator.geolocation.getCurrentPosition` in an Observable, calls `nominatim.openstreetmap.org/reverse` for the country code, then maps to a `PriceArea`:
 
 - Norway: lat/lon → NO1–NO5 (approximate bidding-zone boundaries)
-- All other countries → NO1 (non-Norwegian mappings commented out)
+- Sweden: lat → SE1–SE4; Denmark: lon split at 10° → DK1/DK2
+- FI, EE, LT, LV, AT, BE, FR, NL map to their single area; `de` and `lu` both → DE-LU
+- Any other country → NO1
+
+A detected area auto-enables its country, because the `selectArea` reducer handler does.
 
 ### Models
 
-`src/app/models/price.model.ts` — `HourlyPrice` (`ore_per_kWh`, `time_start`, `time_end`), `PricesState`, `PriceArea` union type (currently NO1–NO5 only; other areas commented out), `PRICE_AREAS` display list, `AREA_COLORS` record (5 HSL hues for active areas; remaining 15 commented out).
+`src/app/models/price.model.ts` — `HourlyPrice` (`ore_per_kWh`, `time_start`, `time_end`), `PricesState`, `PriceArea` union (20 areas), `PRICE_AREAS` display list, `AREA_COLORS` record (see the country-hue-family decision below), plus the country model: `CountryCode`, `Country` (`code`, `nameKey`, `areas`), `COUNTRIES` (canonical order), `AREA_COUNTRY`, `areasForCountries()`, `DEFAULT_COUNTRIES` (`['NO']`), and the `isCountryCode` / `isPriceArea` guards. The country model lives here rather than in its own file because `PricesState` needs `CountryCode`, which a separate `country.model.ts` would turn into an import cycle.
 
 ### Components
 
@@ -186,6 +220,12 @@ src/app/components/
                     writes to DOM (required in zoneless Angular; setTimeout does not
                     trigger CD without zone.js).
                   Range change → setDateRangeDays (effect handles fetching).
+                  The area list is reactive: a subscription on selectEnabledAreas
+                    filters PRICE_AREAS down to the enabled countries' areas, so the
+                    dropdown can never point at a hidden area. currentAreaLabel looks up
+                    the FULL list so the trigger never shows a bare code during the
+                    transient between a country toggle and the area correction.
+                    .area-select__options has max-height + overflow-y for the 20-entry case.
                   Custom dropdown (.area-select): replaces the native <select> to
                   allow per-option styling. Each option shows its area colour dot;
                   non-selected options at 0.8 opacity, selected at full opacity +
@@ -201,6 +241,20 @@ src/app/components/
                   date range (not just the selected date).
                   effectiveOre() applies the strømstøtte formula (when showStromstotte)
                   and tax factor in sequence, matching the chart's price transform.
+  country-toggles/ Row of 12 flag buttons (one per country in COUNTRIES order) that
+                  add/remove whole countries. Its own full-width row under the chart
+                  header, separated by a border-top, so 12 buttons don't compete with the
+                  display toggles for the header row; flex-wrap gives 2–3 rows at 375px.
+                  Flags are inline SVG in a shared 24×16 viewBox via a template @switch —
+                  emoji flags render as bare letter pairs ("NO", "DK") on Windows, and a
+                  template @switch avoids innerHTML and the sanitizer entirely.
+                  Inactive = opacity .45 + grayscale(1); active = full colour + accent
+                  border. The flag IS the content, so it is desaturated rather than
+                  recoloured the way the text toggles are.
+                  The last enabled country's button is [disabled], mirroring the reducer
+                  guard so the constraint is visible rather than a silent no-op.
+                  A "Bare Norge" / "Norway only" reset appears whenever more than Norway
+                  is enabled — switching 11 countries off one at a time is tedious.
   price-chart/    Pure SVG chart (no charting lib). Inputs: chartMode, includeTax,
                   showNorgespris, showStromstotte. Selects date range from store for multi-day data.
                   Y scale: both modes snap min to floor-25 and max to ceil-25 of
@@ -215,7 +269,12 @@ src/app/components/
                     hour highlighted. Y scale = single-area snapped min/max (full day).
                   Line mode: step chart — two SVG points per hour (left + right
                     edge at same Y) producing a staircase with a plain <polyline>.
-                    One polyline per area; selected area renders on top (sorted last).
+                    One polyline per *visible* area (selectEnabledAreas is a stream of
+                    _vm$ and a buildViewModel parameter); selected area renders on top
+                    (sorted last). The right-edge area labels run a collision pass —
+                    with 20 lines they would otherwise overlap, so labels closer than
+                    labelSize × 1.1 to an already-placed one are dropped (showLabel:false).
+                    The selected area is resolved first and so always keeps its label.
                     Y scale = global snapped min/max across all areas (full dataset).
                     Uses selectMergedAreaPrices for multi-day data across all areas.
                   Both modes: dashed vertical "now" line shown whenever today falls
@@ -343,9 +402,9 @@ src/app/components/
   price-table/    Up to 96-row table (one row per 15-min interval). Current
                   interval row highlighted + "Now" badge.
                   Only shown when chartMode === 'bar'.
-                  Inputs: includeTax, showStromstotte. Applies the same
-                  applyStromstotte() + tax-factor transforms as the chart so
-                  displayed prices always match.
+                  Inputs: includeTax, showStromstotte. Uses the same shared
+                  displayOre() from utils/pricing.ts as the chart, so displayed prices
+                  always match.
 
 src/app/pages/
   dashboard/      Owns chartMode, includeTax, showNorgespris, showStromstotte signals.
@@ -361,13 +420,18 @@ src/app/pages/
                   toggle, and a "Clear saved data" button that wipes localStorage
                   and reloads. Menu closes on outside click or Escape.
                   Line/Bar, Tax, Norgespris, and Strømstøtte toggles in the header.
+                  Tax / Norgespris / Strømstøtte are [disabled] when Norway is not among
+                    the enabled countries (hasNorway signal) — they are Norwegian schemes,
+                    so with NO off they would do nothing. Disabled, not hidden, to avoid
+                    a layout jump.
                   All four signals are initialised from localStorage on load and
                   written back via effect() on every change (keys: 'chartMode',
                   'includeTax', 'showNorgespris', 'showStromstotte').
                   Chart controls use flex-wrap so all five buttons remain accessible
                   on narrow mobile viewports without overflow.
-                  On init dispatches loadPrices + loadAllAreaPrices via
-                  combineLatest + first(). Also dispatches detectLocation if
+                  On init dispatches loadPrices + requestPriceData via
+                  combineLatest + first() — the planner effect decides which dates and
+                  areas are actually missing. Also dispatches detectLocation if
                   localStorage has no saved area.
                   Loading state: a semi-transparent overlay spinner covers the
                   chart section; stats bar and "All hours" table fade to 40%
@@ -387,9 +451,11 @@ Lazy-loads `DashboardComponent` at `''`. Wildcard redirects to `''`.
 
 `dateRangeDays` is written to `localStorage` by the `persistDateRangeDays$` effect and read back in the reducer's `initialState` (clamped 1–14, defaults to 1 if invalid).
 
+`enabledCountries` is written to `localStorage` by the `persistEnabledCountries$` effect as a JSON array and read back by `hydrateCountries()` in the reducer's `initialState`, which drops unknown codes, dedupes, sorts into `COUNTRIES` order, and falls back to `DEFAULT_COUNTRIES` (`['NO']`) when the result would be empty.
+
 `chartMode`, `includeTax`, `showNorgespris`, and `showStromstotte` are written to `localStorage` by `effect()` calls in `DashboardComponent` and read back on component init.
 
-Price data is cached in `localStorage` via `PriceCacheService` (key `nordpool_price_cache`). Up to `30 × PRICE_AREAS.length` entries are kept (currently 150, enough for 30 full days); `getAllAreaPrices` stores each area individually so a single all-area fetch warms the per-area cache.
+Price data is cached in `localStorage` via `PriceCacheService` (key `nordpool_price_cache`). Up to `16 × PRICE_AREAS.length` entries are kept (currently 320); `getAllAreaPrices` stores each area individually so a multi-area fetch warms the per-area cache.
 
 `detectLocation` is only dispatched when `localStorage.getItem('selectedArea')` is null (first visit or cleared storage). Once the area is detected and `selectArea` fires, `persistSelectedArea$` writes it to localStorage so detection never runs again.
 
@@ -412,6 +478,7 @@ Static files in `public/` are served at the root. Current contents:
 ## Deployment
 
 `.github/workflows/ci.yml` — triggers on every PR to `main`. Runs two parallel jobs:
+
 - `test`: runs `npm test --watch=false` (triggers `pretest` → `generate-env.js` → `environment.ts`)
 - `build`: runs `npm run build` (triggers `prebuild` → `generate-env.js` + stamps `build-info.ts`)
 
@@ -436,8 +503,12 @@ Repo must be **public** for GitHub Pages on a free plan.
 - Tooltip uses HTML (not SVG foreignObject) for easy styling. Uses `position: fixed` (not `absolute`) so it is never clipped by `overflow: hidden` on `.chart-outer`. Coordinates in `updateTooltip` are therefore viewport-relative (`clientX/clientY`); `relX/relY` are only used for slot detection and the flip threshold. `pointer-events: none` so it never blocks mouse events on the SVG.
 - Tooltip flip threshold uses absolute pixels (`rect.width - 240`) rather than a percentage so it accounts for the tooltip's actual width.
 - `chartMode` lives in the dashboard signal, not the store — it's purely presentational. It (along with `includeTax`, `showNorgespris`, and `showStromstotte`) is persisted to localStorage via `effect()` in the dashboard so settings survive a reload without polluting NgRx state.
-- `loadAllAreaPrices` fires a single API request for all 5 areas via `getAllAreaPrices(date)` — the proxy accepts a comma-separated `deliveryArea` list so no parallel requests are needed.
-- Price cache is keyed per `date:area` so adding a new area automatically busts the `getAllAreaPrices` cache for all existing dates (the all-cached check requires every currently-known area to be present).
+- `loadAllAreaPrices` fires a single API request per date via `getAllAreaPrices(date, areas)` — the proxy accepts a comma-separated `deliveryArea` list so no parallel requests are needed.
+- **Fetch bookkeeping records the attempt, not the result.** `getAllAreaPrices` drops areas whose price array is empty, so an area the API has no data for never lands in `allAreaPricesByDate` — a presence-only check would therefore re-request it on every date, range and country change forever. `attemptsByDate` stores a per-area timestamp, and `ATTEMPT_TTL_MS` (15 min) bounds the retry: day-ahead prices publish once a day around 13:00 CET, so a returning user still picks up newly published data while rapid clicking never re-hits the API. Attempts are recorded in the `loadAllAreaPrices` **reducer handler** (the timestamp rides on the action so the reducer stays pure), which also dedupes two triggers landing in the same tick. `attemptsByDate` is deliberately **not** persisted — prices survive in `PriceCacheService`, so a reload always grants a fresh retry.
+- **Area colours are country hue families, not a flat hue ramp.** One hue per country with lightness steps inside multi-area countries (SE1–SE4 at 232°, DK1/DK2 at 332°), so a line's country reads from its hue and its area from the shade. 20 areas cannot be separated by hue alone at 18° spacing, and the previously commented ramp collided with NO5 green and NO1 blue. NO1–NO5 keep their established colours — they are the primary audience and the app's recognisable identity.
+- VAT, Norgespris and strømstøtte are Norwegian schemes, so `displayOre()` returns foreign areas untouched regardless of the toggles. Consolidating the three duplicated copies into `utils/pricing.ts` made that a one-line change rather than three.
+- `currency=NOK` is requested for the euro-zone areas too. The API does the conversion, which keeps every line directly comparable on one axis and keeps the hardcoded "øre/kWh" strings in the tooltip, stats-bar and table correct.
+- Price cache is keyed per `date:area`, and `getAllAreaPrices` splits the requested areas into cached and uncached rather than treating the whole set as all-or-nothing. Enabling one country therefore fetches only that country's areas.
 - Custom dropdown instead of native `<select>` because `<option>` elements do not support opacity or colour cross-browser.
 - Geolocation detection is fire-and-forget: the initial `loadPrices` + `loadAllAreaPrices` dispatch runs immediately with the stored/default area, then if detection succeeds it re-dispatches both for the detected area. No loading gate needed.
 - `404.html` copy pattern handles deep-link / refresh on GitHub Pages without hash routing.
@@ -456,7 +527,9 @@ Repo must be **public** for GitHub Pages on a free plan.
 - Strømstøtte applies as a pre-tax transform inside `displayOre()` rather than a separate pass, so every code path (bars, line points, y-scale min/max, tooltip) automatically uses effective prices with a single flag. The threshold line uses `--color-norgespris` (same red) since both lines are reference overlays of the same visual weight — no separate CSS variable needed.
 - Multi-day prices are merged via `selectMergedAreaPrices` (selector concatenates `allAreaPricesByDate` entries for the active range). The store keyed by date avoids re-fetching already-loaded days.
 - `loadAllAreaPrices$` treats both HTTP errors and null API responses (HTTP 200 with null body) the same way: dispatch `loadAllAreaPricesSuccess` with empty results + `setNotification`. The Nordpool API returns null for dates outside its ~10-day history window, not a 500.
-- `selectLoadedDates` deduplicates dispatch in `loadMultiDayPrices$` — only dates with actual price data are considered loaded; dates stored with empty results are excluded so they are re-fetched on the next navigation (e.g. prices published after the first fetch attempt).
+- `planAreaFetches` replaced `selectLoadedDates`, whose "a date is loaded if _any_ area has data" heuristic became wrong once fetching went per-area: a date loaded while only Norway was enabled would have counted as complete and never picked up a newly enabled country.
+- The country invariant lives in the **reducer**, not an effect, so state is never momentarily inconsistent for the synchronous selectors that index by `selectedArea` (`selectRangeStats`, `selectCurrentPriceInRange`, chart bar mode). The reducer refuses to disable the last country and reassigns `selectedArea` to the first area of the first remaining country in `COUNTRIES` order — deterministic, and no geography guessing.
+- The chart gets its visible-area set from a **store selector inside `_vm$`**, not a signal input. Inputs reach `_vm$` through `toObservable(input)`, which emits _after_ the current CD cycle — the same flicker mechanism documented for `zoomRange` above — so an input would render one frame with the previous area set.
 - `getAllAreaPrices` filters areas with no prices from its result before returning. When the Nordpool API returns `multiAreaEntries` where every `entryPerArea` is `{}` (prices not yet published), the result is `{}` rather than `{ NO1: [], …, NO5: [] }`, so the existing no-data check in the effect fires correctly and the notification is shown.
 - `dateLabel` in `DashboardComponent` uses `Intl.DateTimeFormat.formatRange` for multi-day ranges and `format` for single days, with locale derived from the active language signal. Returns `''` for empty/invalid dates to avoid a runtime error when the date input is cleared.
 - Clearing the date input in `ControlsComponent` uses `ChangeDetectorRef.detectChanges()` to flush a CD cycle with `currentDate=''` before setting today. This is necessary in zoneless Angular (no zone.js) because `setTimeout` does not trigger change detection — Angular's `ngModel` binding only updates the DOM when it detects a value change from the previous CD run, and without the intermediate flush it sees `today → today` (no change) and leaves the input blank.

@@ -4,25 +4,26 @@
 [![Deploy to GitHub Pages](https://github.com/olsoybakk/ng-nordpool/actions/workflows/deploy.yml/badge.svg)](https://github.com/olsoybakk/ng-nordpool/actions/workflows/deploy.yml)
 [![CI](https://github.com/olsoybakk/ng-nordpool/actions/workflows/ci.yml/badge.svg)](https://github.com/olsoybakk/ng-nordpool/actions/workflows/ci.yml)
 
-A single-page Angular app for browsing Nordpool electricity spot prices for Norway — today, tomorrow, and historical data. Pick a price area, date and range to see the full price profile in 15-minute intervals, with live highlighting of the current period.
+A single-page Angular app for browsing Nordpool electricity spot prices — today, tomorrow, and historical data. Pick a price area, date and range to see the full price profile in 15-minute intervals, with live highlighting of the current period. Starts on Norway; add neighbouring countries with the flag toggles to compare across markets.
 
 **Live app:** https://olsoybakk.github.io/ng-nordpool/
 
 ## Features
 
-- **5 Norwegian price areas** — NO1–NO5, with a custom dropdown showing each area's colour and dimming unselected options
+- **20 price areas across 12 countries** — NO1–NO5, SE1–SE4, DK1/DK2, FI, EE, LT, LV, AT, BE, DE-LU, FR and NL, with a custom dropdown showing each area's colour and dimming unselected options
+- **Country flag toggles** — add or remove a whole country with one click; only the enabled countries' areas are fetched, so the chart stays readable and the requests stay small
 - **Date range selector** — view 1–14 days at once; all areas fetched and merged across the selected range
 - **Line chart** — all areas overlaid as a step chart; selected area highlighted
 - **Bar chart** — colour-coded low/mid/high by price tertile; current period highlighted
-- **Tax toggle** — apply 25% VAT to all prices (NO4 exempt); off by default
+- **Tax toggle** — apply 25% VAT (NO4 exempt); off by default. VAT, Norgespris and strømstøtte are Norwegian schemes, so they never alter foreign prices — and the three toggles disable when Norway is switched off
 - **Norgespris reference line** — dashed line at 50 øre/kWh incl. tax for quick comparison
 - **Hover tooltip** — time range (+ date when range > 1 day) + prices for all areas sorted by value (line) or selected area only (bar); Norgespris shown inline when active; flips left/right, appears above fingertip on touch
 - **Pinch-to-zoom** — two-finger pinch zooms into a time window; ↺ button resets; page zoom is disabled so the gesture is captured by the chart
 - **Stats bar** — current, min, avg and max (øre/kWh); "Now" visible whenever today falls within the selected date range
 - **15-minute table** — øre/kWh for all 96 intervals (bar mode, single day only)
 - **Hamburger menu** — language toggle, build timestamp, and a "Clear saved data" button that wipes all localStorage and reloads
-- **Persistent settings** — language, chart mode, tax, Norgespris and date range survive page reloads; area is remembered and auto-detected on first visit
-- **localStorage cache** — up to 30 full days cached (all areas); switching between dates and ranges is instant
+- **Persistent settings** — language, chart mode, tax, Norgespris, date range and enabled countries survive page reloads; area is remembered and auto-detected on first visit
+- **localStorage cache** — 16 days × every area cached; switching between dates, ranges and countries is instant
 - **Dark/light mode** — follows system preference automatically; toggle button overrides manually
 - **NgRx store** — all state managed via actions, reducers, effects and selectors
 
