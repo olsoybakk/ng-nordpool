@@ -1,9 +1,4 @@
-import {
-  selectDailyStats,
-  selectLoadedDates,
-  selectMergedAreaPrices,
-  selectRangeStats,
-} from './prices.selectors';
+import { selectDailyStats, selectMergedAreaPrices, selectRangeStats } from './prices.selectors';
 import { HourlyPrice, PricesState } from '../../models/price.model';
 
 const p = (ore: number): HourlyPrice => ({ ore_per_kWh: ore, time_start: '', time_end: '' });
@@ -11,7 +6,9 @@ const p = (ore: number): HourlyPrice => ({ ore_per_kWh: ore, time_start: '', tim
 const base: PricesState = {
   prices: [],
   allAreaPricesByDate: {},
+  attemptsByDate: {},
   selectedArea: 'NO1',
+  enabledCountries: ['NO'],
   selectedDate: '2026-05-17',
   dateRangeDays: 1,
   loading: false,
@@ -37,39 +34,6 @@ describe('selectDailyStats', () => {
     expect(result.min).toBe(150);
     expect(result.max).toBe(150);
     expect(result.avg).toBe(150);
-  });
-});
-
-describe('selectLoadedDates', () => {
-  it('returns empty array when no dates are loaded', () => {
-    expect(selectLoadedDates.projector(base)).toEqual([]);
-  });
-
-  it('excludes dates where all areas returned empty results', () => {
-    const state: PricesState = {
-      ...base,
-      allAreaPricesByDate: { '2026-05-17': {} },
-    };
-    expect(selectLoadedDates.projector(state)).toEqual([]);
-  });
-
-  it('excludes dates where all area arrays are empty', () => {
-    const state: PricesState = {
-      ...base,
-      allAreaPricesByDate: { '2026-05-17': { NO1: [] } },
-    };
-    expect(selectLoadedDates.projector(state)).toEqual([]);
-  });
-
-  it('includes dates that have at least one area with data', () => {
-    const state: PricesState = {
-      ...base,
-      allAreaPricesByDate: {
-        '2026-05-16': { NO1: [p(100)] },
-        '2026-05-17': {},
-      },
-    };
-    expect(selectLoadedDates.projector(state)).toEqual(['2026-05-16']);
   });
 });
 
@@ -130,5 +94,39 @@ describe('selectMergedAreaPrices', () => {
       },
     };
     expect(selectMergedAreaPrices.projector(state)['NO1']).toEqual([p1, p2]);
+  });
+
+  it('omits areas whose country is not enabled, leaving their data in state', () => {
+    const state: PricesState = {
+      ...base,
+      enabledCountries: ['NO'],
+      allAreaPricesByDate: { '2026-05-17': { NO1: [p(100)], DK1: [p(200)] } },
+    };
+    const merged = selectMergedAreaPrices.projector(state);
+    expect(merged['NO1']).toEqual([p(100)]);
+    expect(merged['DK1']).toBeUndefined();
+    // The underlying data is retained, so re-enabling Denmark costs no requests.
+    expect(state.allAreaPricesByDate['2026-05-17']['DK1']).toEqual([p(200)]);
+  });
+
+  it('includes areas of every enabled country', () => {
+    const state: PricesState = {
+      ...base,
+      enabledCountries: ['NO', 'DK'],
+      allAreaPricesByDate: { '2026-05-17': { NO1: [p(100)], DK1: [p(200)] } },
+    };
+    const merged = selectMergedAreaPrices.projector(state);
+    expect(merged['NO1']).toEqual([p(100)]);
+    expect(merged['DK1']).toEqual([p(200)]);
+  });
+
+  it('skips areas stored as empty arrays', () => {
+    const state: PricesState = {
+      ...base,
+      allAreaPricesByDate: { '2026-05-17': { NO1: [], NO2: [p(100)] } },
+    };
+    const merged = selectMergedAreaPrices.projector(state);
+    expect(merged['NO1']).toBeUndefined();
+    expect(merged['NO2']).toEqual([p(100)]);
   });
 });

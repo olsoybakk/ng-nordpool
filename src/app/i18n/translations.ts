@@ -49,6 +49,20 @@ export interface Translations {
   dataNotAvailable: string;
   menuAriaLabel: string;
   clearData: string;
+  countriesGroupLabel: string;
+  onlyNorway: string;
+  countryNO: string;
+  countrySE: string;
+  countryDK: string;
+  countryFI: string;
+  countryEE: string;
+  countryLT: string;
+  countryLV: string;
+  countryAT: string;
+  countryBE: string;
+  countryDELU: string;
+  countryFR: string;
+  countryNL: string;
 }
 
 export const translations: Record<Lang, Translations> = {
@@ -60,12 +74,13 @@ export const translations: Record<Lang, Translations> = {
     switchToEnglish: 'Switch to English',
     taxBtn: 'Tax',
     taxAriaLabel: 'Toggle tax (25% VAT)',
-    taxTitle: 'Include 25% VAT (NO4 exempt)',
+    taxTitle: 'Include 25% VAT — Norwegian areas only (NO4 exempt)',
     norgesprisAriaLabel: 'Toggle Norgespris reference line',
     norgesprisTitle: 'Show Norgespris (50 øre/kWh incl. tax)',
     norgesprisLabel: 'Norgespris',
     stromstotteAriaLabel: 'Toggle electricity support (strømstøtte)',
-    stromstotteTitle: 'Show effective prices after strømstøtte (90% above 77 øre/kWh excl. VAT)',
+    stromstotteTitle:
+      'Show effective prices after strømstøtte — Norwegian areas only (90% above 77 øre/kWh excl. VAT)',
     stromstotteLabel: 'Strømstøtte',
     chartTypeLabel: 'Chart type',
     lineBtn: 'Line',
@@ -101,6 +116,20 @@ export const translations: Record<Lang, Translations> = {
     dataNotAvailable: 'Price data is not available for all selected dates.',
     menuAriaLabel: 'Open menu',
     clearData: 'Clear saved data',
+    countriesGroupLabel: 'Countries',
+    onlyNorway: 'Norway only',
+    countryNO: 'Norway',
+    countrySE: 'Sweden',
+    countryDK: 'Denmark',
+    countryFI: 'Finland',
+    countryEE: 'Estonia',
+    countryLT: 'Lithuania',
+    countryLV: 'Latvia',
+    countryAT: 'Austria',
+    countryBE: 'Belgium',
+    countryDELU: 'Germany/Luxembourg',
+    countryFR: 'France',
+    countryNL: 'Netherlands',
   },
   nb: {
     title: 'Spotpriser',
@@ -110,13 +139,13 @@ export const translations: Record<Lang, Translations> = {
     switchToEnglish: 'Switch to English',
     taxBtn: 'MVA',
     taxAriaLabel: 'Slå av/på moms (25% MVA)',
-    taxTitle: 'Inkluder 25% MVA (NO4 er unntatt)',
+    taxTitle: 'Inkluder 25% MVA — bare norske områder (NO4 er unntatt)',
     norgesprisAriaLabel: 'Slå av/på Norgespris-linje',
     norgesprisTitle: 'Vis Norgespris (50 øre/kWh inkl. moms)',
     norgesprisLabel: 'Norgespris',
     stromstotteAriaLabel: 'Slå av/på strømstøtte',
     stromstotteTitle:
-      'Vis effektiv pris etter strømstøtte (90% av beløp over 77 øre/kWh ekskl. moms)',
+      'Vis effektiv pris etter strømstøtte — bare norske områder (90% av beløp over 77 øre/kWh ekskl. moms)',
     stromstotteLabel: 'Strømstøtte',
     chartTypeLabel: 'Diagramtype',
     lineBtn: 'Linje',
@@ -152,5 +181,19 @@ export const translations: Record<Lang, Translations> = {
     dataNotAvailable: 'Prisdata er ikke tilgjengelig for alle valgte datoer.',
     menuAriaLabel: 'Åpne meny',
     clearData: 'Slett lagrede data',
+    countriesGroupLabel: 'Land',
+    onlyNorway: 'Bare Norge',
+    countryNO: 'Norge',
+    countrySE: 'Sverige',
+    countryDK: 'Danmark',
+    countryFI: 'Finland',
+    countryEE: 'Estland',
+    countryLT: 'Litauen',
+    countryLV: 'Latvia',
+    countryAT: 'Østerrike',
+    countryBE: 'Belgia',
+    countryDELU: 'Tyskland/Luxemburg',
+    countryFR: 'Frankrike',
+    countryNL: 'Nederland',
   },
 };

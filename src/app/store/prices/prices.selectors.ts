@@ -1,18 +1,28 @@
 import { createFeatureSelector, createSelector } from '@ngrx/store';
-import { HourlyPrice, PriceArea, PricesState } from '../../models/price.model';
+import {
+  AREA_COUNTRY,
+  areasForCountries,
+  HourlyPrice,
+  PriceArea,
+  PricesState,
+} from '../../models/price.model';
 import { localISODate } from '../../utils/date';
 
 export const selectPricesState = createFeatureSelector<PricesState>('prices');
 
 export const selectAllPrices = createSelector(selectPricesState, (state) => state.prices);
 
-/** All areas for the primary selected date only (backwards compat). */
-export const selectAllAreaPrices = createSelector(
+export const selectSelectedArea = createSelector(selectPricesState, (state) => state.selectedArea);
+
+export const selectEnabledCountries = createSelector(
   selectPricesState,
-  (state) => state.allAreaPricesByDate[state.selectedDate] ?? {},
+  (state) => state.enabledCountries,
 );
 
-export const selectSelectedArea = createSelector(selectPricesState, (state) => state.selectedArea);
+/** Areas of the enabled countries, in canonical COUNTRIES order. */
+export const selectEnabledAreas = createSelector(selectEnabledCountries, (countries) =>
+  areasForCountries(countries),
+);
 
 export const selectSelectedDate = createSelector(selectPricesState, (state) => state.selectedDate);
 
@@ -110,13 +120,6 @@ function subtractDays(isoDate: string, days: number): string {
 
 export const selectNotification = createSelector(selectPricesState, (state) => state.notification);
 
-/** Date strings that have been fetched and have actual price data. */
-export const selectLoadedDates = createSelector(selectPricesState, (state) =>
-  Object.entries(state.allAreaPricesByDate)
-    .filter(([, dayData]) => Object.values(dayData).some((prices) => prices?.length))
-    .map(([date]) => date),
-);
-
 /** ISO date strings for the active range, oldest first. */
 export const selectActiveDates = createSelector(selectPricesState, (state) =>
   Array.from({ length: state.dateRangeDays }, (_, i) =>
@@ -124,11 +127,16 @@ export const selectActiveDates = createSelector(selectPricesState, (state) =>
   ),
 );
 
-/** All areas with prices concatenated across all dates in the active range, oldest first. */
+/**
+ * Areas of the *enabled* countries with prices concatenated across the active date range,
+ * oldest first. Filtering here rather than only in the chart keeps every consumer consistent and
+ * lets a disabled country's data stay in the store, so re-enabling it costs no requests.
+ */
 export const selectMergedAreaPrices = createSelector(selectPricesState, (state) => {
   const dates = Array.from({ length: state.dateRangeDays }, (_, i) =>
     subtractDays(state.selectedDate, state.dateRangeDays - 1 - i),
   );
+  const enabled = new Set(state.enabledCountries);
   const result: Partial<Record<PriceArea, HourlyPrice[]>> = {};
   for (const date of dates) {
     const dayData = state.allAreaPricesByDate[date];
@@ -136,7 +144,8 @@ export const selectMergedAreaPrices = createSelector(selectPricesState, (state) 
     for (const _area of Object.keys(dayData)) {
       const area = _area as PriceArea;
       const prices = dayData[area];
-      if (!prices) continue;
+      if (!prices?.length) continue;
+      if (!enabled.has(AREA_COUNTRY[area])) continue;
       if (!result[area]) result[area] = [];
       result[area]!.push(...prices);
     }

@@ -41,9 +41,18 @@ export class ControlsComponent {
   dropdownOpen = false;
 
   constructor() {
-    this.store.select(selectSelectedArea).pipe(takeUntilDestroyed()).subscribe((area) => (this.currentArea = area));
-    this.store.select(selectSelectedDate).pipe(takeUntilDestroyed()).subscribe((date) => (this.currentDate = date));
-    this.store.select(selectDateRangeDays).pipe(takeUntilDestroyed()).subscribe((days) => (this.currentRangeDays = days));
+    this.store
+      .select(selectSelectedArea)
+      .pipe(takeUntilDestroyed())
+      .subscribe((area) => (this.currentArea = area));
+    this.store
+      .select(selectSelectedDate)
+      .pipe(takeUntilDestroyed())
+      .subscribe((date) => (this.currentDate = date));
+    this.store
+      .select(selectDateRangeDays)
+      .pipe(takeUntilDestroyed())
+      .subscribe((days) => (this.currentRangeDays = days));
   }
 
   get currentAreaLabel(): string {
@@ -92,7 +101,7 @@ export class ControlsComponent {
       date = localISODate();
       this.currentDate = '';
       this.cdr.detectChanges(); // flush '' so Angular tracks it as the current binding value
-      this.currentDate = date;  // next CD (after this handler) sees '' → today and writes to DOM
+      this.currentDate = date; // next CD (after this handler) sees '' → today and writes to DOM
     }
     this.store.dispatch(selectDate({ date }));
     this.store.dispatch(loadPrices({ area: this.currentArea, date }));

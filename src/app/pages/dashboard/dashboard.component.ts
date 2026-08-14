@@ -26,9 +26,8 @@ import {
   selectDateRangeDays,
   selectNotification,
 } from '../../store';
-import { detectLocation, loadPrices, loadAllAreaPrices } from '../../store';
+import { detectLocation, loadPrices, requestPriceData } from '../../store';
 import { LanguageService } from '../../services/language.service';
-import { subtractDays } from '../../utils/date';
 import { BUILD_DATE } from '../../../environments/build-info';
 
 @Component({
@@ -114,20 +113,15 @@ export class DashboardComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    combineLatest([
-      this.store.select(selectSelectedArea),
-      this.store.select(selectSelectedDate),
-      this.store.select(selectDateRangeDays),
-    ])
+    combineLatest([this.store.select(selectSelectedArea), this.store.select(selectSelectedDate)])
       .pipe(first())
-      .subscribe(([area, date, days]) => {
+      .subscribe(([area, date]) => {
         if (!localStorage.getItem('selectedArea')) {
           this.store.dispatch(detectLocation());
         }
         this.store.dispatch(loadPrices({ area, date }));
-        for (let i = 0; i < days; i++) {
-          this.store.dispatch(loadAllAreaPrices({ date: subtractDays(date, i) }));
-        }
+        // The planner effect works out which dates and areas are actually missing.
+        this.store.dispatch(requestPriceData());
       });
   }
 
