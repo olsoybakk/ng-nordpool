@@ -24,7 +24,7 @@ Angular 21 app that displays Nordpool day-ahead electricity spot prices.
 
 > **After merging, always delete the branch** — both remote (`git push origin --delete <branch>`) and local (`git branch -D <branch>`). Then run `git checkout main && git pull`.
 
-> **After merging, always clean up `.playwright-mcp/`** — run `rm -rf .playwright-mcp/` to remove screenshots and snapshots left from Playwright MCP sessions. Also delete any stray `*.png` / `*.jpg` files that ended up in the project root (`rm -f *.png *.jpg`).
+> **After merging, always clean up `.playwright-mcp/`** — run `rm -rf .playwright-mcp/` to remove screenshots and snapshots left from Playwright MCP sessions. The directory is gitignored, so this is housekeeping rather than a safety net. Also delete any stray `*.png` / `*.jpg` files that ended up in the project root (`rm -f *.png *.jpg`) — those are **not** ignored and will be picked up by `git add -A`.
 
 ```bash
 git config core.hooksPath .githooks
@@ -35,7 +35,7 @@ git config core.hooksPath .githooks
 `.mcp.json` configures the Playwright MCP server (`npx @playwright/mcp@latest`).
 With the dev server running (`npm run dev`), Claude Code can navigate to
 `http://localhost:3000`, take screenshots, click elements, and inspect the live app.
-Screenshots and snapshots are written to `.playwright-mcp/`.
+Screenshots and snapshots are written to `.playwright-mcp/`, which is gitignored.
 Restart Claude Code after changing `.mcp.json` for the update to take effect.
 
 `.mcp.json` is in `.gitignore` and must never be committed. Default content:

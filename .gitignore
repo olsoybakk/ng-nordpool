@@ -46,6 +46,9 @@ src/environments/environment.ts
 # Local MCP config (contains machine-specific absolute paths)
 .mcp.json
 
+# Playwright MCP session output (screenshots, snapshots, console logs)
+.playwright-mcp/
+
 # System files
 .DS_Store
 Thumbs.db
