@@ -4,6 +4,12 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { NordpoolService } from './nordpool.service';
 import { PriceCacheService } from './price-cache.service';
 import { HourlyPrice, PriceArea } from '../models/price.model';
+import { environment } from '../../environments/environment';
+
+// CI has no NORDPOOL_API_URL (.env ships it empty; the real value lives in gitignored
+// .env.local), and the service short-circuits to 'not-configured' on an empty base URL.
+// Pin a URL for the duration of the suite so these tests exercise the HTTP path everywhere.
+const TEST_API_URL = 'https://test.invalid/api/DayAheadPrices';
 
 function entry(area: string, value: number) {
   return {
@@ -17,8 +23,12 @@ describe('NordpoolService.getAllAreaPrices', () => {
   let service: NordpoolService;
   let httpMock: HttpTestingController;
   let cache: PriceCacheService;
+  const realApiUrl = environment.nordpoolApiUrl;
 
   beforeEach(() => {
+    // The service reads environment.nordpoolApiUrl once at construction, so this has to be
+    // set before TestBed instantiates it.
+    environment.nordpoolApiUrl = TEST_API_URL;
     localStorage.clear();
     TestBed.configureTestingModule({
       providers: [NordpoolService, provideHttpClient(), provideHttpClientTesting()],
@@ -30,6 +40,7 @@ describe('NordpoolService.getAllAreaPrices', () => {
 
   afterEach(() => {
     httpMock.verify();
+    environment.nordpoolApiUrl = realApiUrl;
   });
 
   it('requests only the areas it was asked for', () => {
