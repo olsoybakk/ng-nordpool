@@ -9,6 +9,7 @@ export interface Translations {
   taxBtn: string;
   taxAriaLabel: string;
   taxTitle: string;
+  taxMixedTitle: string;
   norgesprisAriaLabel: string;
   norgesprisTitle: string;
   norgesprisLabel: string;
@@ -71,6 +72,8 @@ export const translations: Record<Lang, Translations> = {
     taxBtn: 'Tax',
     taxAriaLabel: 'Toggle tax (25% VAT)',
     taxTitle: 'Include 25% VAT — Norwegian areas only (NO4 exempt)',
+    taxMixedTitle:
+      'VAT is unavailable while other areas are shown alongside Norway — it applies to Norwegian areas only, so the comparison would be uneven',
     norgesprisAriaLabel: 'Toggle Norgespris reference line',
     norgesprisTitle: 'Show Norgespris (50 øre/kWh incl. tax)',
     norgesprisLabel: 'Norgespris',
@@ -132,6 +135,8 @@ export const translations: Record<Lang, Translations> = {
     taxBtn: 'MVA',
     taxAriaLabel: 'Slå av/på moms (25% MVA)',
     taxTitle: 'Inkluder 25% MVA — bare norske områder (NO4 er unntatt)',
+    taxMixedTitle:
+      'MVA er utilgjengelig når andre områder vises sammen med Norge — den gjelder bare norske områder, så sammenligningen ville blitt skjev',
     norgesprisAriaLabel: 'Slå av/på Norgespris-linje',
     norgesprisTitle: 'Vis Norgespris (50 øre/kWh inkl. moms)',
     norgesprisLabel: 'Norgespris',

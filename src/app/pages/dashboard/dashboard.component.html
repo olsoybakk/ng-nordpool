@@ -130,14 +130,16 @@
         <h2 class="section-title">{{ ls.t().hourlyPrices }}</h2>
         <div class="chart-controls">
           <!-- The three schemes below only apply to Norwegian areas. -->
+          <!-- VAT needs Norway *alone*: mixing it with other series would compare
+               VAT-inclusive Norwegian prices against raw foreign ones. -->
           <button
             class="toggle-btn"
             [class.toggle-btn--active]="includeTax()"
-            [disabled]="!hasNorway()"
+            [disabled]="!norwayOnly()"
             (click)="toggleTax()"
             [attr.aria-pressed]="includeTax()"
             [attr.aria-label]="ls.t().taxAriaLabel"
-            [attr.title]="ls.t().taxTitle"
+            [attr.title]="hasNorway() && !norwayOnly() ? ls.t().taxMixedTitle : ls.t().taxTitle"
           >
             {{ ls.t().taxBtn }}
           </button>

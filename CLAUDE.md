@@ -422,10 +422,16 @@ src/app/pages/
                   toggle, and a "Clear saved data" button that wipes localStorage
                   and reloads. Menu closes on outside click or Escape.
                   Line/Bar, Tax, Norgespris, and Strømstøtte toggles in the header.
-                  Tax / Norgespris / Strømstøtte are [disabled] when Norway is not among
-                    the enabled countries (hasNorway signal) — they are Norwegian schemes,
-                    so with NO off they would do nothing. Disabled, not hidden, to avoid
-                    a layout jump.
+                  Norgespris / Strømstøtte are [disabled] when Norway is not among the
+                    enabled countries (hasNorway signal) — they are Norwegian schemes, so
+                    with NO off they would do nothing. Disabled, not hidden, to avoid a
+                    layout jump.
+                  Tax is stricter: [disabled] unless Norway is the ONLY enabled entry
+                    (norwayOnly signal), and an effect switches includeTax off when that
+                    stops being true. VAT applies to Norwegian areas alone, so on a mixed
+                    chart it would put VAT-inclusive NO prices on the same axis as raw
+                    foreign ones. SYS counts as "other" — it is an unadjusted reference.
+                    The title swaps to taxMixedTitle to explain why it is unavailable.
                   All four signals are initialised from localStorage on load and
                   written back via effect() on every change (keys: 'chartMode',
                   'includeTax', 'showNorgespris', 'showStromstotte').
