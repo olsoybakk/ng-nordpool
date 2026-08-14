@@ -58,11 +58,7 @@ export interface Translations {
   countryEE: string;
   countryLT: string;
   countryLV: string;
-  countryAT: string;
-  countryBE: string;
-  countryDELU: string;
-  countryFR: string;
-  countryNL: string;
+  systemPrice: string;
 }
 
 export const translations: Record<Lang, Translations> = {
@@ -125,11 +121,7 @@ export const translations: Record<Lang, Translations> = {
     countryEE: 'Estonia',
     countryLT: 'Lithuania',
     countryLV: 'Latvia',
-    countryAT: 'Austria',
-    countryBE: 'Belgium',
-    countryDELU: 'Germany/Luxembourg',
-    countryFR: 'France',
-    countryNL: 'Netherlands',
+    systemPrice: 'Nordpool',
   },
   nb: {
     title: 'Spotpriser',
@@ -190,10 +182,6 @@ export const translations: Record<Lang, Translations> = {
     countryEE: 'Estland',
     countryLT: 'Litauen',
     countryLV: 'Latvia',
-    countryAT: 'Østerrike',
-    countryBE: 'Belgia',
-    countryDELU: 'Tyskland/Luxemburg',
-    countryFR: 'Frankrike',
-    countryNL: 'Nederland',
+    systemPrice: 'Nordpool',
   },
 };

@@ -15,7 +15,7 @@ describe('isNorwegianArea', () => {
   });
 
   it('rejects foreign areas', () => {
-    for (const area of ['SE3', 'DK1', 'FI', 'DE-LU', 'NL'] as PriceArea[]) {
+    for (const area of ['SE3', 'DK1', 'FI', 'EE', 'LV'] as PriceArea[]) {
       expect(isNorwegianArea(area)).toBe(false);
     }
   });
@@ -58,7 +58,7 @@ describe('displayOre', () => {
   });
 
   // VAT, Norgespris and strømstøtte are all Norwegian schemes — 15 of the 20 areas are foreign.
-  it.each(['SE1', 'SE3', 'DK1', 'DK2', 'FI', 'EE', 'LT', 'LV', 'AT', 'BE', 'DE-LU', 'FR', 'NL'])(
+  it.each(['SE1', 'SE2', 'SE3', 'SE4', 'DK1', 'DK2', 'FI', 'EE', 'LT', 'LV'])(
     'leaves %s untouched regardless of the toggles',
     (area) => {
       expect(displayOre(area as PriceArea, 100, false, false)).toBe(100);
@@ -70,5 +70,14 @@ describe('displayOre', () => {
 
   it('does not apply strømstøtte to a foreign area even above the threshold', () => {
     expect(displayOre('DK1', 200, true, true)).toBe(200);
+  });
+
+  // SYS is an unadjusted Nordic reference price, so the Norwegian schemes must not touch it.
+  it('leaves the SYS system price untouched under every toggle', () => {
+    expect(isNorwegianArea('SYS')).toBe(false);
+    expect(displayOre('SYS', 200, false, false)).toBe(200);
+    expect(displayOre('SYS', 200, true, false)).toBe(200);
+    expect(displayOre('SYS', 200, false, true)).toBe(200);
+    expect(displayOre('SYS', 200, true, true)).toBe(200);
   });
 });

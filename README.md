@@ -10,7 +10,7 @@ A single-page Angular app for browsing Nordpool electricity spot prices — toda
 
 ## Features
 
-- **20 price areas across 12 countries** — NO1–NO5, SE1–SE4, DK1/DK2, FI, EE, LT, LV, AT, BE, DE-LU, FR and NL, with a custom dropdown showing each area's colour and dimming unselected options
+- **15 price areas across 7 countries, plus the Nordpool system price** — NO1–NO5, SE1–SE4, DK1/DK2, FI, EE, LT, LV and `SYS`, with a custom dropdown showing each area's colour and dimming unselected options
 - **Country flag toggles** — add or remove a whole country with one click; only the enabled countries' areas are fetched, so the chart stays readable and the requests stay small
 - **Date range selector** — view 1–14 days at once; all areas fetched and merged across the selected range
 - **Line chart** — all areas overlaid as a step chart; selected area highlighted
