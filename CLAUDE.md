@@ -89,7 +89,9 @@ The API base URL is configured via `.env` (committed, default values) and `.env.
 
 Free, no API key. Returns 15-minute interval data for all requested areas in one response (`multiAreaEntries`), with prices in `NOK/MWh`. The service maps each 15-min entry directly to `HourlyPrice`, converting `NOK/MWh → øre/kWh` (÷ 10). `time_start`/`time_end` use `localDeliveryStart`/`localDeliveryEnd` (CET/CEST local time, no timezone suffix) — parsed as local time by JS `Date`.
 
-The app covers 20 areas across 12 countries (NO1–NO5, SE1–SE4, DK1/DK2, FI, EE, LT, LV, AT, BE, DE-LU, FR, NL). Only the areas of the **enabled countries** are requested — the default is Norway alone, and the user adds countries with the flag toggles. `currency=NOK` is requested for every area, including the euro-zone ones, so the chart stays directly comparable and the hardcoded "øre/kWh" unit strings remain valid.
+The app covers 15 areas across 7 countries (NO1–NO5, SE1–SE4, DK1/DK2, FI, EE, LT, LV) plus `SYS` — the Nordpool system price, labelled simply **Nordpool** in the UI. Only the areas of the **enabled countries** are requested — the default is Norway alone, and the user adds countries with the flag toggles. `currency=NOK` is requested for the Baltic areas too, so the chart stays directly comparable and the hardcoded "øre/kWh" unit strings remain valid.
+
+**Nordpool publishes more area codes than this app models.** The full list also includes Central Western Europe (`AT`, `BE`, `FR`, `GER`, `NL`, `PL`) and South East Europe (`BG`, `TEL`). The API returns **no data** for any of them through this proxy — verified across multiple dates, `currency=EUR`, `market=N2EX_DayAhead`, and requesting them alone; the response is always HTTP 200 with 96 entries and no key for those zones. They are deliberately not modelled: a country toggle that switches on and draws nothing is worse than no toggle. Re-probe before adding any of them. Note also that `GER` — not `DE-LU` — is the correct German code.
 
 ## Architecture
 
@@ -181,7 +183,7 @@ src/app/store/index.ts re-exports all of the above
 
 ### Services
 
-`src/app/services/price-cache.service.ts` — FIFO localStorage cache keyed by `date:area` strings (e.g. `"2026-05-13:NO1"`). Holds up to `16 × PRICE_AREAS.length` entries (currently 320, ~2.7 MB) — at 20 areas a 30-day retention would have pushed past the typical 5 MB localStorage quota, and 16 days still exceeds one full 14-day range across every area. Inserting an existing key moves it to the back; `load()` trims an oversized persisted array so a shrunk constant converges immediately rather than one entry per write. `setMany()` writes a batch with a single `JSON.stringify`, so a multi-area fetch doesn't re-serialize the whole array once per area. Silently falls back to in-memory if `localStorage` is unavailable (quota exceeded, private browsing).
+`src/app/services/price-cache.service.ts` — FIFO localStorage cache keyed by `date:area` strings (e.g. `"2026-05-13:NO1"`). Holds up to `16 × PRICE_AREAS.length` entries (currently 256, ~2.2 MB) — a 30-day retention at this area count would approach the typical 5 MB localStorage quota, and 16 days still exceeds one full 14-day range across every area. Inserting an existing key moves it to the back; `load()` trims an oversized persisted array so a shrunk constant converges immediately rather than one entry per write. `setMany()` writes a batch with a single `JSON.stringify`, so a multi-area fetch doesn't re-serialize the whole array once per area. Silently falls back to in-memory if `localStorage` is unavailable (quota exceeded, private browsing).
 
 `src/app/services/nordpool.service.ts` — two methods: `getPrices(date, area)` fetches a single area; `getAllAreaPrices(date, areas)` fetches the given areas in one request. Both check `PriceCacheService` before making an HTTP call and write results back per-area, so a `getAllAreaPrices` hit warms the `getPrices` cache and vice versa. `getAllAreaPrices` partitions the requested areas into cached and uncached and asks the API for **only the uncached subset**, so enabling one more country does not refetch the ones already held. Both map each 15-min `multiAreaEntries` entry directly to a `HourlyPrice` (÷ 10 for NOK/MWh → øre/kWh), yielding up to 96 entries per area with no per-hour averaging. `getAllAreaPrices` only includes an area in the result if `toIntervalPrices` returns a non-empty array — entries where `entryPerArea` is `{}` (prices not yet published) are filtered out, keeping the result `{}` so the effect's no-data check triggers correctly.
 
@@ -189,14 +191,14 @@ src/app/store/index.ts re-exports all of the above
 
 - Norway: lat/lon → NO1–NO5 (approximate bidding-zone boundaries)
 - Sweden: lat → SE1–SE4; Denmark: lon split at 10° → DK1/DK2
-- FI, EE, LT, LV, AT, BE, FR, NL map to their single area; `de` and `lu` both → DE-LU
-- Any other country → NO1
+- FI, EE, LT and LV map to their single area
+- Any other country → NO1 (including visitors in the unmodelled CWE/SEE zones)
 
 A detected area auto-enables its country, because the `selectArea` reducer handler does.
 
 ### Models
 
-`src/app/models/price.model.ts` — `HourlyPrice` (`ore_per_kWh`, `time_start`, `time_end`), `PricesState`, `PriceArea` union (20 areas), `PRICE_AREAS` display list, `AREA_COLORS` record (see the country-hue-family decision below), plus the country model: `CountryCode`, `Country` (`code`, `nameKey`, `areas`), `COUNTRIES` (canonical order), `AREA_COUNTRY`, `areasForCountries()`, `DEFAULT_COUNTRIES` (`['NO']`), and the `isCountryCode` / `isPriceArea` guards. The country model lives here rather than in its own file because `PricesState` needs `CountryCode`, which a separate `country.model.ts` would turn into an import cycle.
+`src/app/models/price.model.ts` — `HourlyPrice` (`ore_per_kWh`, `time_start`, `time_end`), `PricesState`, `PriceArea` union (15 areas + `SYS`), `PRICE_AREAS` display list, `AREA_COLORS` record (see the country-hue-family decision below), plus the country model: `CountryCode`, `Country` (`code`, `nameKey`, `areas`), `COUNTRIES` (canonical order; the `SYS` entry carries `isReference: true`), `AREA_COUNTRY`, `areasForCountries()`, `DEFAULT_COUNTRIES` (`['NO']`), and the `isCountryCode` / `isPriceArea` guards. The country model lives here rather than in its own file because `PricesState` needs `CountryCode`, which a separate `country.model.ts` would turn into an import cycle.
 
 ### Components
 
@@ -241,8 +243,8 @@ src/app/components/
                   date range (not just the selected date).
                   effectiveOre() applies the strømstøtte formula (when showStromstotte)
                   and tax factor in sequence, matching the chart's price transform.
-  country-toggles/ Row of 12 flag buttons (one per country in COUNTRIES order) that
-                  add/remove whole countries. Its own full-width row under the chart
+  country-toggles/ Row of 7 flag buttons (one per country in COUNTRIES order) plus a
+                  SYS chip, adding/removing whole countries. Its own full-width row under the chart
                   header, separated by a border-top, so 12 buttons don't compete with the
                   display toggles for the header row; flex-wrap gives 2–3 rows at 375px.
                   Flags are inline SVG in a shared 24×16 viewBox via a template @switch —
@@ -272,7 +274,7 @@ src/app/components/
                     One polyline per *visible* area (selectEnabledAreas is a stream of
                     _vm$ and a buildViewModel parameter); selected area renders on top
                     (sorted last). The right-edge area labels run a collision pass —
-                    with 20 lines they would otherwise overlap, so labels closer than
+                    with 16 lines they would otherwise overlap, so labels closer than
                     labelSize × 1.1 to an already-placed one are dropped (showLabel:false).
                     The selected area is resolved first and so always keeps its label.
                     Y scale = global snapped min/max across all areas (full dataset).
@@ -455,7 +457,7 @@ Lazy-loads `DashboardComponent` at `''`. Wildcard redirects to `''`.
 
 `chartMode`, `includeTax`, `showNorgespris`, and `showStromstotte` are written to `localStorage` by `effect()` calls in `DashboardComponent` and read back on component init.
 
-Price data is cached in `localStorage` via `PriceCacheService` (key `nordpool_price_cache`). Up to `16 × PRICE_AREAS.length` entries are kept (currently 320); `getAllAreaPrices` stores each area individually so a multi-area fetch warms the per-area cache.
+Price data is cached in `localStorage` via `PriceCacheService` (key `nordpool_price_cache`). Up to `16 × PRICE_AREAS.length` entries are kept (currently 256); `getAllAreaPrices` stores each area individually so a multi-area fetch warms the per-area cache.
 
 `detectLocation` is only dispatched when `localStorage.getItem('selectedArea')` is null (first visit or cleared storage). Once the area is detected and `selectArea` fires, `persistSelectedArea$` writes it to localStorage so detection never runs again.
 
@@ -505,7 +507,7 @@ Repo must be **public** for GitHub Pages on a free plan.
 - `chartMode` lives in the dashboard signal, not the store — it's purely presentational. It (along with `includeTax`, `showNorgespris`, and `showStromstotte`) is persisted to localStorage via `effect()` in the dashboard so settings survive a reload without polluting NgRx state.
 - `loadAllAreaPrices` fires a single API request per date via `getAllAreaPrices(date, areas)` — the proxy accepts a comma-separated `deliveryArea` list so no parallel requests are needed.
 - **Fetch bookkeeping records the attempt, not the result.** `getAllAreaPrices` drops areas whose price array is empty, so an area the API has no data for never lands in `allAreaPricesByDate` — a presence-only check would therefore re-request it on every date, range and country change forever. `attemptsByDate` stores a per-area timestamp, and `ATTEMPT_TTL_MS` (15 min) bounds the retry: day-ahead prices publish once a day around 13:00 CET, so a returning user still picks up newly published data while rapid clicking never re-hits the API. Attempts are recorded in the `loadAllAreaPrices` **reducer handler** (the timestamp rides on the action so the reducer stays pure), which also dedupes two triggers landing in the same tick. `attemptsByDate` is deliberately **not** persisted — prices survive in `PriceCacheService`, so a reload always grants a fresh retry.
-- **Area colours are country hue families, not a flat hue ramp.** One hue per country with lightness steps inside multi-area countries (SE1–SE4 at 232°, DK1/DK2 at 332°), so a line's country reads from its hue and its area from the shade. 20 areas cannot be separated by hue alone at 18° spacing, and the previously commented ramp collided with NO5 green and NO1 blue. NO1–NO5 keep their established colours — they are the primary audience and the app's recognisable identity.
+- **Area colours are country hue families, not a flat hue ramp.** One hue per country with lightness steps inside multi-area countries (SE1–SE4 at 232°, DK1/DK2 at 332°), so a line's country reads from its hue and its area from the shade. 16 areas cannot be separated by hue alone, and the previously commented flat ramp collided with NO5 green and NO1 blue. `SYS` is deliberately outside the scheme — neutral grey, because it is a computed reference price rather than a market. NO1–NO5 keep their established colours — they are the primary audience and the app's recognisable identity.
 - VAT, Norgespris and strømstøtte are Norwegian schemes, so `displayOre()` returns foreign areas untouched regardless of the toggles. Consolidating the three duplicated copies into `utils/pricing.ts` made that a one-line change rather than three.
 - `currency=NOK` is requested for the euro-zone areas too. The API does the conversion, which keeps every line directly comparable on one axis and keeps the hardcoded "øre/kWh" strings in the tooltip, stats-bar and table correct.
 - Price cache is keyed per `date:area`, and `getAllAreaPrices` splits the requested areas into cached and uncached rather than treating the whole set as all-or-nothing. Enabling one country therefore fetches only that country's areas.

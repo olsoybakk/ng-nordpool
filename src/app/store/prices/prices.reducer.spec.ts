@@ -197,9 +197,9 @@ describe('pricesReducer', () => {
     it('sorts into canonical order', () => {
       const state = pricesReducer(
         clean,
-        PricesActions.setEnabledCountries({ codes: ['NL', 'DK', 'NO'] }),
+        PricesActions.setEnabledCountries({ codes: ['LV', 'DK', 'NO'] }),
       );
-      expect(state.enabledCountries).toEqual(['NO', 'DK', 'NL']);
+      expect(state.enabledCountries).toEqual(['NO', 'DK', 'LV']);
     });
 
     it('ignores an empty list', () => {
@@ -256,7 +256,7 @@ describe('hydrateCountries', () => {
   });
 
   it('drops unknown codes and sorts into canonical order', () => {
-    expect(hydrateCountries('["NL","XX","NO"]')).toEqual(['NO', 'NL']);
+    expect(hydrateCountries('["LV","XX","NO"]')).toEqual(['NO', 'LV']);
   });
 
   it('deduplicates repeated codes', () => {

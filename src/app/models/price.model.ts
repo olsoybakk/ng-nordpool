@@ -43,11 +43,7 @@ export type PriceArea =
   | 'EE'
   | 'LT'
   | 'LV'
-  | 'AT'
-  | 'BE'
-  | 'DE-LU'
-  | 'FR'
-  | 'NL';
+  | 'SYS';
 
 export const PRICE_AREAS: { value: PriceArea; label: string }[] = [
   { value: 'NO1', label: 'NO1 — Sørøst-Norge' },
@@ -65,18 +61,14 @@ export const PRICE_AREAS: { value: PriceArea; label: string }[] = [
   { value: 'EE', label: 'EE — Estonia' },
   { value: 'LT', label: 'LT — Lithuania' },
   { value: 'LV', label: 'LV — Latvia' },
-  { value: 'AT', label: 'AT — Austria' },
-  { value: 'BE', label: 'BE — Belgium' },
-  { value: 'DE-LU', label: 'DE-LU — Germany/Luxembourg' },
-  { value: 'FR', label: 'FR — France' },
-  { value: 'NL', label: 'NL — Netherlands' },
+  { value: 'SYS', label: 'SYS — Nordpool' },
 ];
 
 /**
  * Country hue families: one hue per country, lightness steps within multi-area countries, so
- * a line's country reads from its hue and its area from the shade. 20 areas cannot be told
- * apart by hue alone (18° spacing), which is why the original flat ramp was discarded.
- * NO1–NO5 keep their long-established colours; the 11 new hues sit in the bands ≥18° away
+ * a line's country reads from its hue and its area from the shade. 15 areas cannot be told
+ * apart by hue alone (24° spacing), which is why a flat ramp was rejected.
+ * NO1–NO5 keep their long-established colours; the six added hues sit in the bands ≥18° away
  * from the reserved Norwegian hues (0 / 27 / 46 / 140 / 204).
  */
 export const AREA_COLORS: Record<PriceArea, string> = {
@@ -95,35 +87,27 @@ export const AREA_COLORS: Record<PriceArea, string> = {
   EE: 'hsl(252, 62%, 62%)',
   LT: 'hsl(292, 62%, 62%)',
   LV: 'hsl(272, 62%, 62%)',
-  AT: 'hsl(186, 60%, 62%)',
-  BE: 'hsl(70,  60%, 62%)',
-  'DE-LU': 'hsl(312, 62%, 62%)',
-  FR: 'hsl(114, 60%, 62%)',
-  NL: 'hsl(92,  60%, 62%)',
+  // Neutral grey: SYS is an unadjusted reference price, not a bidding zone, and should read
+  // as one against the coloured market lines.
+  SYS: 'hsl(220, 6%, 55%)',
 };
 
-export type CountryCode =
-  | 'NO'
-  | 'SE'
-  | 'DK'
-  | 'FI'
-  | 'EE'
-  | 'LT'
-  | 'LV'
-  | 'AT'
-  | 'BE'
-  | 'DE-LU'
-  | 'FR'
-  | 'NL';
+export type CountryCode = 'NO' | 'SE' | 'DK' | 'FI' | 'EE' | 'LT' | 'LV' | 'SYS';
 
+/**
+ * A toggleable group of price areas. Every entry is a country except SYS ("Nordpool"), the
+ * system price — a computed reference rather than a bidding zone, so it carries `isReference`
+ * and renders as a labelled chip instead of a flag.
+ */
 export interface Country {
   code: CountryCode;
   /** Key into the i18n dictionary — typed so a missing translation is a compile error. */
   nameKey: keyof Translations;
   areas: readonly PriceArea[];
+  isReference?: boolean;
 }
 
-/** Canonical display and iteration order: Nordics, then Baltics, then the rest. */
+/** Canonical display and iteration order: Nordics, then Baltics, then the SYS reference. */
 export const COUNTRIES: readonly Country[] = [
   { code: 'NO', nameKey: 'countryNO', areas: ['NO1', 'NO2', 'NO3', 'NO4', 'NO5'] },
   { code: 'SE', nameKey: 'countrySE', areas: ['SE1', 'SE2', 'SE3', 'SE4'] },
@@ -132,11 +116,7 @@ export const COUNTRIES: readonly Country[] = [
   { code: 'EE', nameKey: 'countryEE', areas: ['EE'] },
   { code: 'LT', nameKey: 'countryLT', areas: ['LT'] },
   { code: 'LV', nameKey: 'countryLV', areas: ['LV'] },
-  { code: 'AT', nameKey: 'countryAT', areas: ['AT'] },
-  { code: 'BE', nameKey: 'countryBE', areas: ['BE'] },
-  { code: 'DE-LU', nameKey: 'countryDELU', areas: ['DE-LU'] },
-  { code: 'FR', nameKey: 'countryFR', areas: ['FR'] },
-  { code: 'NL', nameKey: 'countryNL', areas: ['NL'] },
+  { code: 'SYS', nameKey: 'systemPrice', areas: ['SYS'], isReference: true },
 ];
 
 export const AREA_COUNTRY: Record<PriceArea, CountryCode> = COUNTRIES.reduce(

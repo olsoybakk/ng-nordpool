@@ -60,6 +60,14 @@
   }
 }
 
+// SYS is a reference price, not a market — set it apart from the run of flags.
+.flag-btn--reference {
+  margin-left: 0.4rem;
+  padding-left: 0.55rem;
+  border-left: 1px solid var(--color-border);
+  border-radius: 0 6px 6px 0;
+}
+
 .flag {
   display: block;
   flex-shrink: 0;

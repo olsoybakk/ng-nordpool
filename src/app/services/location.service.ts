@@ -53,17 +53,8 @@ export class LocationService {
         return 'LT';
       case 'lv':
         return 'LV';
-      case 'at':
-        return 'AT';
-      case 'be':
-        return 'BE';
-      case 'de':
-      case 'lu':
-        return 'DE-LU';
-      case 'fr':
-        return 'FR';
-      case 'nl':
-        return 'NL';
+      // Central Western and South East European zones exist in Nordpool's code list but the
+      // API returns no data for them, so they are not modelled — those visitors fall through.
       default:
         return 'NO1';
     }
