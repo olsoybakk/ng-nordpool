@@ -65,7 +65,7 @@ ng test --include="**/app.spec.ts"  # single test file
 npx prettier --write .  # format all files
 ```
 
-There is no linter configured (no ESLint or similar). Prettier config is in `package.json` (`printWidth: 100`, `singleQuote: true`, `angular` HTML parser).
+There is no linter configured (no ESLint or similar). Prettier config is in `.prettierrc` (`printWidth: 100`, `singleQuote: true`, `angular` HTML parser).
 
 ## TypeScript
 
@@ -195,6 +195,8 @@ src/app/store/index.ts re-exports all of the above
 - Any other country → NO1 (including visitors in the unmodelled CWE/SEE zones)
 
 A detected area auto-enables its country, because the `selectArea` reducer handler does.
+
+`src/app/services/language.service.ts` — signal-based i18n, not NgRx. `_lang` signal (`Lang = 'en' | 'nb'`) defaults to `'nb'`, initialised from `localStorage['lang']`; `t` is a `computed()` over `src/app/i18n/translations.ts` (`Translations` interface, ~60 keys, one object per language). `toggleLang()` flips between `'en'`/`'nb'` and persists. Consumed directly (not via the store) by `dashboard`, `controls`, `country-toggles`, `price-chart`, `price-table`, and `stats-bar` for template strings, and by `prices.effects.ts` for `setNotification` message text (`failedToLoad`, `dataNotAvailable`).
 
 ### Models
 
@@ -515,6 +517,7 @@ Repo must be **public** for GitHub Pages on a free plan.
 - **Fetch bookkeeping records the attempt, not the result.** `getAllAreaPrices` drops areas whose price array is empty, so an area the API has no data for never lands in `allAreaPricesByDate` — a presence-only check would therefore re-request it on every date, range and country change forever. `attemptsByDate` stores a per-area timestamp, and `ATTEMPT_TTL_MS` (15 min) bounds the retry: day-ahead prices publish once a day around 13:00 CET, so a returning user still picks up newly published data while rapid clicking never re-hits the API. Attempts are recorded in the `loadAllAreaPrices` **reducer handler** (the timestamp rides on the action so the reducer stays pure), which also dedupes two triggers landing in the same tick. `attemptsByDate` is deliberately **not** persisted — prices survive in `PriceCacheService`, so a reload always grants a fresh retry.
 - **Area colours are country hue families, not a flat hue ramp.** One hue per country with lightness steps inside multi-area countries (SE1–SE4 at 232°, DK1/DK2 at 332°), so a line's country reads from its hue and its area from the shade. 16 areas cannot be separated by hue alone, and the previously commented flat ramp collided with NO5 green and NO1 blue. `SYS` is deliberately outside the scheme — neutral grey, because it is a computed reference price rather than a market. NO1–NO5 keep their established colours — they are the primary audience and the app's recognisable identity.
 - VAT, Norgespris and strømstøtte are Norwegian schemes, so `displayOre()` returns foreign areas untouched regardless of the toggles. Consolidating the three duplicated copies into `utils/pricing.ts` made that a one-line change rather than three.
+- `utils/date.ts` holds two small date helpers shared across the store and components: `localISODate(d)` formats a `Date` as `YYYY-MM-DD` in local time (matching the CET/CEST timestamps in price data, unlike `toISOString()`), and `subtractDays(isoDate, days)` shifts an ISO date string back by `days` (used to compute the active date range).
 - `currency=NOK` is requested for the euro-zone areas too. The API does the conversion, which keeps every line directly comparable on one axis and keeps the hardcoded "øre/kWh" strings in the tooltip, stats-bar and table correct.
 - Price cache is keyed per `date:area`, and `getAllAreaPrices` splits the requested areas into cached and uncached rather than treating the whole set as all-or-nothing. Enabling one country therefore fetches only that country's areas.
 - Custom dropdown instead of native `<select>` because `<option>` elements do not support opacity or colour cross-browser.
