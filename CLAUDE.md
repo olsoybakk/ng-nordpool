@@ -200,7 +200,7 @@ A detected area auto-enables its country, because the `selectArea` reducer handl
 
 ### Models
 
-`src/app/models/price.model.ts` — `HourlyPrice` (`ore_per_kWh`, `time_start`, `time_end`), `PricesState`, `PriceArea` union (15 areas + `SYS`), `PRICE_AREAS` display list, `AREA_COLORS` record (see the country-hue-family decision below), plus the country model: `CountryCode`, `Country` (`code`, `nameKey`, `areas`), `COUNTRIES` (canonical order; the `SYS` entry carries `isReference: true`), `AREA_COUNTRY`, `areasForCountries()`, `DEFAULT_COUNTRIES` (`['NO']`), and the `isCountryCode` / `isPriceArea` guards. The country model lives here rather than in its own file because `PricesState` needs `CountryCode`, which a separate `country.model.ts` would turn into an import cycle.
+`src/app/models/price.model.ts` — `HourlyPrice` (`ore_per_kWh`, `time_start`, `time_end`), `PricesState`, `PriceArea` union (15 areas + `SYS`), `PRICE_AREAS` display list, `AREA_COLORS` record (see the country-hue-family decision below), plus the country model: `CountryCode`, `Country` (`code`, `nameKey`, `areas`), `COUNTRIES` (canonical order, `SYS` last as the system-price reference), `AREA_COUNTRY`, `areasForCountries()`, `DEFAULT_COUNTRIES` (`['NO']`), and the `isCountryCode` / `isPriceArea` guards. The country model lives here rather than in its own file because `PricesState` needs `CountryCode`, which a separate `country.model.ts` would turn into an import cycle.
 
 ### Components
 
