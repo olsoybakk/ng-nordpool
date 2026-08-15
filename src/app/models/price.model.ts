@@ -96,15 +96,13 @@ export type CountryCode = 'NO' | 'SE' | 'DK' | 'FI' | 'EE' | 'LT' | 'LV' | 'SYS'
 
 /**
  * A toggleable group of price areas. Every entry is a country except SYS ("Nordpool"), the
- * system price — a computed reference rather than a bidding zone, so it carries `isReference`
- * and renders as a labelled chip instead of a flag.
+ * Nordpool system price — a computed reference rather than a bidding zone.
  */
 export interface Country {
   code: CountryCode;
   /** Key into the i18n dictionary — typed so a missing translation is a compile error. */
   nameKey: keyof Translations;
   areas: readonly PriceArea[];
-  isReference?: boolean;
 }
 
 /** Canonical display and iteration order: Nordics, then Baltics, then the SYS reference. */
@@ -116,7 +114,7 @@ export const COUNTRIES: readonly Country[] = [
   { code: 'EE', nameKey: 'countryEE', areas: ['EE'] },
   { code: 'LT', nameKey: 'countryLT', areas: ['LT'] },
   { code: 'LV', nameKey: 'countryLV', areas: ['LV'] },
-  { code: 'SYS', nameKey: 'systemPrice', areas: ['SYS'], isReference: true },
+  { code: 'SYS', nameKey: 'systemPrice', areas: ['SYS'] },
 ];
 
 export const AREA_COUNTRY: Record<PriceArea, CountryCode> = COUNTRIES.reduce(
