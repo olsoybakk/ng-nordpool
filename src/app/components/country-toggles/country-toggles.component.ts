@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
@@ -11,6 +11,7 @@ import { LanguageService } from '../../services/language.service';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './country-toggles.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './country-toggles.component.scss',
 })
 export class CountryTogglesComponent {
