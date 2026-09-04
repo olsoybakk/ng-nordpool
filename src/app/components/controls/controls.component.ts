@@ -1,4 +1,11 @@
-import { ChangeDetectorRef, Component, ElementRef, HostListener, inject } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  HostListener,
+  inject,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -22,6 +29,7 @@ import {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './controls.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './controls.component.scss',
 })
 export class ControlsComponent {

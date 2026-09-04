@@ -8,6 +8,7 @@ import {
   inject,
   input,
   signal,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
@@ -103,6 +104,7 @@ const STROMSTOTTE_THRESHOLD_INCL_TAX = STROMSTOTTE_THRESHOLD * TAX_FACTOR;
   standalone: true,
   imports: [CommonModule],
   templateUrl: './price-chart.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './price-chart.component.scss',
 })
 export class PriceChartComponent {

@@ -1,4 +1,4 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, inject, input, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
@@ -27,6 +27,7 @@ function toHHMM(isoLocal: string): string {
   standalone: true,
   imports: [CommonModule],
   templateUrl: './price-table.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './price-table.component.scss',
 })
 export class PriceTableComponent {
@@ -44,14 +45,12 @@ export class PriceTableComponent {
     toObservable(this.showStromstotte),
   ]).pipe(
     map(([prices, current, area, includeTax, showStromstotte]) => {
-      return prices.map(
-        (p): TableRow => ({
-          ...p,
-          time: toHHMM(p.time_start),
-          isCurrent: p === current,
-          displayOre: displayOre(area, p.ore_per_kWh, includeTax, showStromstotte),
-        }),
-      );
+      return prices.map((p): TableRow => ({
+        ...p,
+        time: toHHMM(p.time_start),
+        isCurrent: p === current,
+        displayOre: displayOre(area, p.ore_per_kWh, includeTax, showStromstotte),
+      }));
     }),
   );
 }
