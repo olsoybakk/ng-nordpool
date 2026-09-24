@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, switchMap, map } from 'rxjs';
-import { PriceArea } from '../models/price.model';
+import { PriceArea } from '../../models/price.model';
 
 interface NominatimReverse {
   address: { country_code: string };

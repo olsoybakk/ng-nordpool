@@ -7,7 +7,6 @@ import {
   inject,
   OnInit,
   signal,
-  ChangeDetectionStrategy,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
@@ -30,7 +29,7 @@ import {
   selectEnabledCountries,
 } from '../../store';
 import { detectLocation, loadPrices, requestPriceData } from '../../store';
-import { LanguageService } from '../../services/language.service';
+import { LanguageService } from '../../core/services/language.service';
 import { CountryCode } from '../../models/price.model';
 import { BUILD_DATE } from '../../../environments/build-info';
 
@@ -46,7 +45,6 @@ import { BUILD_DATE } from '../../../environments/build-info';
     CountryTogglesComponent,
   ],
   templateUrl: './dashboard.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './dashboard.component.scss',
 })
 export class DashboardComponent implements OnInit {

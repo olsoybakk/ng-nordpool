@@ -1,8 +1,8 @@
-import { Component, inject, input, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
 import { selectCurrentPriceInRange, selectRangeStats, selectSelectedArea } from '../../store';
-import { LanguageService } from '../../services/language.service';
+import { LanguageService } from '../../core/services/language.service';
 import { PriceArea } from '../../models/price.model';
 import { displayOre } from '../../utils/pricing';
 
@@ -11,7 +11,6 @@ import { displayOre } from '../../utils/pricing';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './stats-bar.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './stats-bar.component.scss',
 })
 export class StatsBarComponent {

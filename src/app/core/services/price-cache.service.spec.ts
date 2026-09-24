@@ -1,5 +1,5 @@
 import { MAX_ENTRIES, PriceCacheService } from './price-cache.service';
-import { HourlyPrice } from '../models/price.model';
+import { HourlyPrice } from '../../models/price.model';
 
 const p = (ore: number): HourlyPrice => ({ ore_per_kWh: ore, time_start: '', time_end: '' });
 

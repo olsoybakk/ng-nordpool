@@ -8,10 +8,9 @@ import {
   inject,
   input,
   signal,
-  ChangeDetectionStrategy,
 } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { CommonModule } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { Store } from '@ngrx/store';
 import { map } from 'rxjs/operators';
 import { BehaviorSubject, combineLatest } from 'rxjs';
@@ -25,13 +24,14 @@ import {
   selectSelectedDate,
   selectDateRangeDays,
 } from '../../store';
-import { LanguageService } from '../../services/language.service';
+import { LanguageService } from '../../core/services/language.service';
 import {
   displayOre,
   NORGESPRIS_ORE_INCL_TAX,
   STROMSTOTTE_THRESHOLD,
   TAX_FACTOR,
 } from '../../utils/pricing';
+import { buildYTicks, clampZoomRange } from './chart-math';
 
 export type ChartMode = 'bar' | 'line';
 
@@ -40,8 +40,8 @@ interface BarData {
   hour: number;
   minute: number;
   timeLabel: string;
-  price: HourlyPrice;
   x: number;
+  slotX: number;
   barHeight: number;
   barY: number;
   isCurrent: boolean;
@@ -56,8 +56,6 @@ interface PointData {
   slot: number;
   cx: number;
   cy: number;
-  isCurrent: boolean;
-  ore: number;
 }
 
 interface AreaLine {
@@ -70,13 +68,6 @@ interface AreaLine {
   /** False when a nearer line already claimed this slice of the right edge. */
   showLabel: boolean;
   points: PointData[];
-}
-
-interface Zone {
-  y: number;
-  height: number;
-  level: 'low' | 'mid' | 'high';
-  label: string;
 }
 
 export interface TooltipEntry {
@@ -102,9 +93,8 @@ const STROMSTOTTE_THRESHOLD_INCL_TAX = STROMSTOTTE_THRESHOLD * TAX_FACTOR;
 @Component({
   selector: 'app-price-chart',
   standalone: true,
-  imports: [CommonModule],
+  imports: [DecimalPipe],
   templateUrl: './price-chart.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './price-chart.component.scss',
 })
 export class PriceChartComponent {
@@ -143,6 +133,10 @@ export class PriceChartComponent {
     };
     window.addEventListener('resize', onResize);
     destroyRef.onDestroy(() => window.removeEventListener('resize', onResize));
+    // Scrollbar drag handlers (onScrollThumbDown / onScrollThumbTouchStart) attach their own
+    // window listeners for the duration of a drag; this clears whichever one is active if the
+    // component is destroyed mid-drag.
+    destroyRef.onDestroy(() => this._activeDragCleanup?.());
 
     afterNextRender(() => {
       // Observe chart-wrapper, not the host, so the scrollbar appearing/disappearing
@@ -167,19 +161,14 @@ export class PriceChartComponent {
     const fullscreen = this.isFullscreen();
     const edge = 2 * (FULLSCREEN_OUTER + FULLSCREEN_INNER);
 
-    const renderedW = fullscreen
-      ? window.innerWidth - edge
-      : Math.min(DASHBOARD_MAX_W, ww) - DASHBOARD_H_PAD;
+    const renderedW = fullscreen ? ww - edge : Math.min(DASHBOARD_MAX_W, ww) - DASHBOARD_H_PAD;
 
     const labelSize = Math.round((12 * CHART_W) / Math.max(renderedW, 100));
     const padBottom = Math.max(PADDING.bottom, Math.round(labelSize * 1.5));
 
     let h: number;
     if (fullscreen) {
-      h = Math.max(
-        200,
-        Math.round(((window.innerHeight - edge) * CHART_W) / renderedW) - PADDING.top - padBottom,
-      );
+      h = Math.max(200, Math.round(((wh - edge) * CHART_W) / renderedW) - PADDING.top - padBottom);
     } else if (ww < 640) {
       h = Math.max(200, Math.round((wh * 0.38 * CHART_W) / renderedW) - PADDING.top - padBottom);
     } else if (ch > 0 && mode === 'line') {
@@ -242,6 +231,7 @@ export class PriceChartComponent {
     startRange: [number, number];
     trackW: number;
   } | null = null;
+  private _activeDragCleanup: (() => void) | null = null;
 
   readonly scrollThumbLeft = computed(() => {
     const zoom = this.zoomRange();
@@ -299,6 +289,59 @@ export class PriceChartComponent {
   );
   readonly vm = toSignal(this._vm$);
 
+  // Tooltip rows for the hovered slot only, recomputed lazily instead of eagerly for every
+  // slot in buildViewModel (which reran on every zoom tick/resize even though only one slot's
+  // worth of rows is ever rendered).
+  readonly pricesBySlot = computed<TooltipEntry[]>(() => {
+    const v = this.vm();
+    const slot = this.hoveredSlot();
+    if (!v || slot == null) return [];
+    return this.tooltipEntriesForSlot(
+      v.areaEntries,
+      slot,
+      v.selectedArea,
+      v.includeTax,
+      v.showStromstotte,
+      v.norgesprisDisplayOre,
+    );
+  });
+
+  private tooltipEntriesForSlot(
+    areaEntries: { area: PriceArea; hourlyPrices: HourlyPrice[] }[],
+    slot: number,
+    selectedArea: PriceArea,
+    includeTax: boolean,
+    showStromstotte: boolean,
+    norgesprisDisplayOre: number | null,
+  ): TooltipEntry[] {
+    const entries: TooltipEntry[] = areaEntries
+      .filter(({ hourlyPrices }) => hourlyPrices[slot] != null)
+      .map(({ area, hourlyPrices }) => ({
+        area,
+        label: PRICE_AREAS.find((p) => p.value === area)?.label ?? area,
+        ore: displayOre(area, hourlyPrices[slot].ore_per_kWh, includeTax, showStromstotte),
+        color: AREA_COLORS[area],
+        isSelected: area === selectedArea,
+      }))
+      .sort((a, b) => b.ore - a.ore);
+
+    if (norgesprisDisplayOre !== null) {
+      const nEntry: TooltipEntry = {
+        area: 'norgespris',
+        label: 'Norgespris',
+        ore: norgesprisDisplayOre,
+        color: 'var(--color-norgespris)',
+        isSelected: false,
+        isNorgespris: true,
+      };
+      const idx = entries.findIndex((e) => e.ore < norgesprisDisplayOre);
+      if (idx === -1) entries.push(nEntry);
+      else entries.splice(idx, 0, nEntry);
+    }
+
+    return entries;
+  }
+
   onMouseMove(event: MouseEvent): void {
     this.updateTooltip(event.currentTarget as SVGSVGElement, event.clientX, event.clientY, false);
   }
@@ -334,18 +377,7 @@ export class PriceChartComponent {
       } else {
         const center = this._pinchState.centerSlot;
         const centerFrac = (center - this._pinchState.range[0]) / initVisible;
-        // floor-based formula: same guarantee as scroll-zoom — slot under pinch center stays fixed
-        let start = Math.floor(center) - Math.floor(centerFrac * clamped);
-        let end = start + clamped - 1;
-        if (start < 0) {
-          start = 0;
-          end = Math.min(clamped - 1, total - 1);
-        }
-        if (end >= total) {
-          end = total - 1;
-          start = Math.max(0, end - clamped + 1);
-        }
-        this._zoomRange$.next([start, end]);
+        this._zoomRange$.next(clampZoomRange(center, centerFrac, clamped, total));
       }
       return;
     }
@@ -395,9 +427,11 @@ export class PriceChartComponent {
       this._scrollDragState = null;
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
+      this._activeDragCleanup = null;
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
+    this._activeDragCleanup = onUp;
   }
 
   onScrollTrackDown(event: MouseEvent): void {
@@ -452,9 +486,11 @@ export class PriceChartComponent {
       this._scrollDragState = null;
       window.removeEventListener('touchmove', onMove);
       window.removeEventListener('touchend', onEnd);
+      this._activeDragCleanup = null;
     };
     window.addEventListener('touchmove', onMove, { passive: false });
     window.addEventListener('touchend', onEnd);
+    this._activeDragCleanup = onEnd;
   }
 
   onScrollTrackTouchStart(event: TouchEvent): void {
@@ -515,7 +551,7 @@ export class PriceChartComponent {
       // is where the CSS starts scrolling the list.
       const ROW_H = 20;
       const CHROME_H = 44; // header (time / date) + padding
-      const rows = this.vm()?.pricesBySlot[slot]?.length ?? 0;
+      const rows = this.pricesBySlot().length;
       const HALF_H =
         this.chartMode() === 'bar'
           ? 35
@@ -570,18 +606,7 @@ export class PriceChartComponent {
     const visGap = this.chartW / visible;
     const cursorSlot = zs + (svgX - this.offsetX) / visGap;
     const cursorFrac = (cursorSlot - zs) / visible;
-    // floor-based formula guarantees floor(cursorSlot) stays under cursor after zoom
-    let start = Math.floor(cursorSlot) - Math.floor(cursorFrac * clamped);
-    let end = start + clamped - 1;
-    if (start < 0) {
-      start = 0;
-      end = Math.min(clamped - 1, total - 1);
-    }
-    if (end >= total) {
-      end = total - 1;
-      start = Math.max(0, end - clamped + 1);
-    }
-    this._zoomRange$.next([start, end]);
+    this._zoomRange$.next(clampZoomRange(cursorSlot, cursorFrac, clamped, total));
   }
 
   private buildViewModel(
@@ -672,7 +697,7 @@ export class PriceChartComponent {
       : 0;
 
     const bars: BarData[] = barPrices.map((p, i) => {
-      const ore = displayOre(selectedArea, p.ore_per_kWh, includeTax, showStromstotte);
+      const ore = allSingleValues[zStart + i];
       const normalised = (ore - singleMin) / singleRange;
       const barH = Math.max(2, normalised * chartH);
       const third = singleRange / 3;
@@ -707,8 +732,8 @@ export class PriceChartComponent {
         hour: hr,
         minute: mn,
         timeLabel: hr.toString().padStart(2, '0'),
-        price: p,
         x: this.offsetX + i * gap + gap * 0.1,
+        slotX: this.offsetX + i * gap,
         barHeight: barH,
         barY: this.offsetY + chartH - barH,
         isCurrent: current != null && p.time_start === current.time_start,
@@ -720,7 +745,7 @@ export class PriceChartComponent {
       };
     });
 
-    const yTicks = this.buildYTicks(singleMin, singleMax, chartH, labelSize);
+    const yTicks = buildYTicks(singleMin, singleMax, chartH, this.offsetY, labelSize);
 
     // Line chart: areas of the enabled countries, visible slots
     const areaEntries = visibleAreas
@@ -749,24 +774,20 @@ export class PriceChartComponent {
     const areaLines: AreaLine[] = areaEntries.map(({ area, hourlyPrices }) => {
       const stepPairs: string[] = [];
       const pts: PointData[] = [];
+      let lastOre = 0;
 
       hourlyPrices.forEach((p, i) => {
         const ore = displayOre(area, p.ore_per_kWh, includeTax, showStromstotte);
+        lastOre = ore;
         const x1 = this.offsetX + i * gap;
         const x2 = this.offsetX + (i + 1) * gap;
         const y = toYMulti(ore);
         stepPairs.push(`${x1},${y}`, `${x2},${y}`);
         if (current != null && p.time_start === current.time_start) {
-          pts.push({ slot: i, cx: x1, cy: y, isCurrent: true, ore });
+          pts.push({ slot: i, cx: x1, cy: y });
         }
       });
 
-      const lastOre = displayOre(
-        area,
-        hourlyPrices.at(-1)!.ore_per_kWh,
-        includeTax,
-        showStromstotte,
-      );
       const rawLabelX = this.offsetX + hourlyPrices.length * gap + 4;
       const maxLabelX = CHART_W - Math.round(labelSize * 1.8) - 4;
       return {
@@ -798,44 +819,7 @@ export class PriceChartComponent {
 
     areaLines.sort((a, b) => (a.isSelected ? 1 : 0) - (b.isSelected ? 1 : 0));
 
-    const multiTicks = this.buildYTicks(multiMin, multiMax, chartH, labelSize);
-
-    const lowThreshY = toYMulti(multiMin + multiRange / 3);
-    const highThreshY = toYMulti(multiMin + (2 * multiRange) / 3);
-    const zones: Zone[] = [
-      { y: this.offsetY, height: highThreshY - this.offsetY, level: 'high', label: 'High' },
-      { y: highThreshY, height: lowThreshY - highThreshY, level: 'mid', label: 'Mid' },
-      { y: lowThreshY, height: bottomY - lowThreshY, level: 'low', label: 'Low' },
-    ];
-
-    const pricesBySlot: TooltipEntry[][] = Array.from({ length: slotCount }, (_, slot) => {
-      const entries: TooltipEntry[] = areaEntries
-        .filter(({ hourlyPrices }) => hourlyPrices[slot] != null)
-        .map(({ area, hourlyPrices }) => ({
-          area,
-          label: PRICE_AREAS.find((p) => p.value === area)?.label ?? area,
-          ore: displayOre(area, hourlyPrices[slot].ore_per_kWh, includeTax, showStromstotte),
-          color: AREA_COLORS[area],
-          isSelected: area === selectedArea,
-        }))
-        .sort((a, b) => b.ore - a.ore);
-
-      if (norgesprisDisplayOre !== null) {
-        const nEntry: TooltipEntry = {
-          area: 'norgespris',
-          label: 'Norgespris',
-          ore: norgesprisDisplayOre,
-          color: 'var(--color-norgespris)',
-          isSelected: false,
-          isNorgespris: true,
-        };
-        const idx = entries.findIndex((e) => e.ore < norgesprisDisplayOre!);
-        if (idx === -1) entries.push(nEntry);
-        else entries.splice(idx, 0, nEntry);
-      }
-
-      return entries;
-    });
+    const multiTicks = buildYTicks(multiMin, multiMax, chartH, this.offsetY, labelSize);
 
     const fmtTime = (s: string) => {
       const d = new Date(s);
@@ -884,20 +868,14 @@ export class PriceChartComponent {
     }
 
     const clampY = (y: number) => Math.max(this.offsetY, Math.min(bottomY, y));
+    const toYSingle = (v: number) =>
+      this.offsetY + chartH - ((v - singleMin) / singleRange) * chartH;
     const norgesprisBarY =
-      norgesprisDisplayOre !== null
-        ? clampY(
-            this.offsetY + chartH - ((norgesprisDisplayOre - singleMin) / singleRange) * chartH,
-          )
-        : null;
+      norgesprisDisplayOre !== null ? clampY(toYSingle(norgesprisDisplayOre)) : null;
     const norgesprisLineY =
       norgesprisDisplayOre !== null ? clampY(toYMulti(norgesprisDisplayOre)) : null;
     const stromstotteBarY =
-      stromstotteThresholdOre !== null
-        ? clampY(
-            this.offsetY + chartH - ((stromstotteThresholdOre - singleMin) / singleRange) * chartH,
-          )
-        : null;
+      stromstotteThresholdOre !== null ? clampY(toYSingle(stromstotteThresholdOre)) : null;
     const stromstotteLineY =
       stromstotteThresholdOre !== null ? clampY(toYMulti(stromstotteThresholdOre)) : null;
 
@@ -907,8 +885,13 @@ export class PriceChartComponent {
       yTicks,
       areaLines,
       multiTicks,
-      zones,
-      pricesBySlot,
+      // Kept for the lazy pricesBySlot computed below, rather than eagerly building tooltip
+      // rows for every slot on every zoom/resize when only the hovered slot is ever shown.
+      areaEntries,
+      selectedArea,
+      includeTax,
+      showStromstotte,
+      norgesprisDisplayOre,
       slotTimes,
       nowLineX,
       slotCount,
@@ -922,23 +905,8 @@ export class PriceChartComponent {
     };
   }
 
-  private buildYTicks(min: number, max: number, chartH: number, labelSize: number) {
-    const ticks = [];
-    const range = max - min || 1;
-    // labelY is clamped so the top tick's text (centered on y) never extends above the SVG viewport.
-    const minLabelY = Math.ceil(labelSize * 0.6);
-    for (let val = min; val <= max; val += 50) {
-      const y = this.offsetY + chartH - ((val - min) / range) * chartH;
-      ticks.push({ val, y, labelY: Math.max(y, minLabelY) });
-    }
-    return ticks;
-  }
-
   trackByArea(_: number, line: AreaLine) {
     return line.area;
-  }
-  trackBySlot(_: number, bar: BarData) {
-    return bar.slot;
   }
   trackByAreaEntry(_: number, entry: TooltipEntry) {
     return entry.area;

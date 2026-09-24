@@ -81,9 +81,9 @@
           @for (bar of vm.bars; track bar.slot) {
             @if (bar.isDayBoundary && $index > 0) {
               <line
-                [attr.x1]="offsetX + $index * (chartW / vm.slotCount)"
+                [attr.x1]="bar.slotX"
                 [attr.y1]="offsetY"
-                [attr.x2]="offsetX + $index * (chartW / vm.slotCount)"
+                [attr.x2]="bar.slotX"
                 [attr.y2]="dims().bottomY"
                 class="day-grid-line"
               />
@@ -93,7 +93,7 @@
 
         @if (chartMode() === 'bar') {
           <!-- Bar chart bars -->
-          @for (bar of vm.bars; track trackBySlot($index, bar)) {
+          @for (bar of vm.bars; track bar.slot) {
             <g class="bar-group" [class.bar-group--current]="bar.isCurrent">
               <rect
                 [attr.x]="bar.x"
@@ -122,18 +122,7 @@
                 </text>
               }
               <!-- Hour label -->
-              @if (!vm.showDayLabels && bar.showHourLabel) {
-                <text
-                  [attr.x]="bar.x + vm.barW / 2"
-                  [attr.y]="dims().xAxisY"
-                  class="hour-label"
-                  text-anchor="middle"
-                  [attr.font-size]="dims().labelSize"
-                >
-                  {{ bar.timeLabel }}
-                </text>
-              }
-              @if (vm.showDayLabels && bar.showHourLabel) {
+              @if (bar.showHourLabel) {
                 <text
                   [attr.x]="bar.x + vm.barW / 2"
                   [attr.y]="dims().xAxisY"
@@ -227,7 +216,7 @@
               <text
                 [attr.x]="
                   Math.max(
-                    offsetX + $index * (chartW / vm.slotCount),
+                    bar.slotX,
                     dims().yLabelInside ? offsetX + dims().labelSize * 2.5 + 5 : 0
                   )
                 "
@@ -239,20 +228,9 @@
                 {{ bar.dayLabel }}
               </text>
             }
-            @if (!vm.showDayLabels && bar.minute === 0 && bar.hour % vm.hourStep === 0) {
+            @if (bar.showHourLabel) {
               <text
-                [attr.x]="offsetX + $index * (chartW / vm.slotCount)"
-                [attr.y]="dims().xAxisY"
-                class="hour-label"
-                text-anchor="middle"
-                [attr.font-size]="dims().labelSize"
-              >
-                {{ bar.timeLabel }}
-              </text>
-            }
-            @if (vm.showDayLabels && bar.showHourLabel) {
-              <text
-                [attr.x]="offsetX + $index * (chartW / vm.slotCount)"
+                [attr.x]="bar.slotX"
                 [attr.y]="dims().xAxisY"
                 class="hour-label"
                 text-anchor="middle"
@@ -401,7 +379,7 @@
     }
 
     <!-- Floating tooltip -->
-    @if (hoveredSlot() !== null && vm.pricesBySlot[hoveredSlot()!]?.length) {
+    @if (hoveredSlot() !== null && pricesBySlot().length) {
       <div
         class="tooltip"
         [style.left.px]="tooltipLeft()"
@@ -430,7 +408,7 @@
           </div>
         </div>
         <div class="tooltip__rows">
-          @for (entry of vm.pricesBySlot[hoveredSlot()!]; track trackByAreaEntry($index, entry)) {
+          @for (entry of pricesBySlot(); track trackByAreaEntry($index, entry)) {
             @if (chartMode() === 'line' || entry.isSelected || entry.isNorgespris) {
               <div
                 class="tooltip__row"

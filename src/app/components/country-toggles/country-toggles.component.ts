@@ -1,17 +1,16 @@
-import { Component, computed, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
 import { COUNTRIES, CountryCode, DEFAULT_COUNTRIES } from '../../models/price.model';
 import { selectEnabledCountries, setEnabledCountries, toggleCountry } from '../../store';
-import { LanguageService } from '../../services/language.service';
+import { LanguageService } from '../../core/services/language.service';
 
 @Component({
   selector: 'app-country-toggles',
   standalone: true,
   imports: [CommonModule],
   templateUrl: './country-toggles.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './country-toggles.component.scss',
 })
 export class CountryTogglesComponent {
