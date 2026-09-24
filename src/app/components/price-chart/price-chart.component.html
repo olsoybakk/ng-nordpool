@@ -355,7 +355,7 @@
           "
           [attr.font-size]="dims().labelSize"
         >
-          øre/kWh
+          {{ ls.t().oreUnit }}
         </text>
       </svg>
     </div>
@@ -404,7 +404,7 @@
           }
           <div class="tooltip__time-row">
             {{ vm.slotTimes[hoveredSlot()!].start }} – {{ vm.slotTimes[hoveredSlot()!].end }}
-            <span class="tooltip__unit">øre/kWh</span>
+            <span class="tooltip__unit">{{ ls.t().oreUnit }}</span>
           </div>
         </div>
         <div class="tooltip__rows">
