@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # ng-nordpool
 
-Angular 21 app that displays Nordpool day-ahead electricity spot prices.
+Angular 22 app that displays Nordpool day-ahead electricity spot prices.
 
 ## Links
 
@@ -74,6 +74,8 @@ There is no linter configured (no ESLint or similar). Prettier config is in `.pr
 ## Angular Signals
 
 Component state uses `signal()` / `effect()` rather than `BehaviorSubject`. Exception: `zoomRange` in `PriceChartComponent` is a `BehaviorSubject` so the private `_vm$` combineLatest receives the new value synchronously within event handlers, preventing a flicker render. Cleanup uses `inject(DestroyRef).onDestroy(...)` instead of `ngOnDestroy`. Store observables (`store.select(...)`) are kept as observables for the template `async` pipe; signals are used for purely local UI state (`chartMode`, `theme`, `isFullscreen`, `tooltipData`, etc.). `PriceChartComponent` is an exception — its view model is exposed as a `vm` signal via `toSignal(_vm$)` rather than an async-piped observable. `@ngrx/entity` is installed but not used.
+
+Every component uses Angular 22's default `OnPush` change-detection strategy (no component sets `changeDetection` explicitly anymore). This is why store-derived local state must be a signal (`toSignal(...)`) or read via the `async` pipe rather than a plain field mutated from inside an RxJS `.subscribe()` callback — a plain-field mutation from a subscription (as opposed to from a template-bound event handler) doesn't schedule a re-render under OnPush. `ControlsComponent`'s `currentArea`/`currentDate`/`currentRangeDays`/`areas` are signals for exactly this reason.
 
 ## Environment
 
@@ -183,11 +185,13 @@ src/app/store/index.ts re-exports all of the above
 
 ### Services
 
-`src/app/services/price-cache.service.ts` — FIFO localStorage cache keyed by `date:area` strings (e.g. `"2026-05-13:NO1"`). Holds up to `16 × PRICE_AREAS.length` entries (currently 256, ~2.2 MB) — a 30-day retention at this area count would approach the typical 5 MB localStorage quota, and 16 days still exceeds one full 14-day range across every area. Inserting an existing key moves it to the back; `load()` trims an oversized persisted array so a shrunk constant converges immediately rather than one entry per write. `setMany()` writes a batch with a single `JSON.stringify`, so a multi-area fetch doesn't re-serialize the whole array once per area. Silently falls back to in-memory if `localStorage` is unavailable (quota exceeded, private browsing).
+All four are `providedIn: 'root'` singletons and live under `src/app/core/services/`, per the app-wide-singletons-belong-in-core convention.
 
-`src/app/services/nordpool.service.ts` — two methods: `getPrices(date, area)` fetches a single area; `getAllAreaPrices(date, areas)` fetches the given areas in one request. Both check `PriceCacheService` before making an HTTP call and write results back per-area, so a `getAllAreaPrices` hit warms the `getPrices` cache and vice versa. `getAllAreaPrices` partitions the requested areas into cached and uncached and asks the API for **only the uncached subset**, so enabling one more country does not refetch the ones already held. Both map each 15-min `multiAreaEntries` entry directly to a `HourlyPrice` (÷ 10 for NOK/MWh → øre/kWh), yielding up to 96 entries per area with no per-hour averaging. `getAllAreaPrices` only includes an area in the result if `toIntervalPrices` returns a non-empty array — entries where `entryPerArea` is `{}` (prices not yet published) are filtered out, keeping the result `{}` so the effect's no-data check triggers correctly.
+`src/app/core/services/price-cache.service.ts` — FIFO localStorage cache keyed by `date:area` strings (e.g. `"2026-05-13:NO1"`). Holds up to `16 × PRICE_AREAS.length` entries (currently 256, ~2.2 MB) — a 30-day retention at this area count would approach the typical 5 MB localStorage quota, and 16 days still exceeds one full 14-day range across every area. Inserting an existing key moves it to the back; `load()` trims an oversized persisted array so a shrunk constant converges immediately rather than one entry per write. `setMany()` writes a batch with a single `JSON.stringify`, so a multi-area fetch doesn't re-serialize the whole array once per area. Silently falls back to in-memory if `localStorage` is unavailable (quota exceeded, private browsing).
 
-`src/app/services/location.service.ts` — `detectPriceArea()` wraps `navigator.geolocation.getCurrentPosition` in an Observable, calls `nominatim.openstreetmap.org/reverse` for the country code, then maps to a `PriceArea`:
+`src/app/core/services/nordpool.service.ts` — two methods: `getPrices(date, area)` fetches a single area; `getAllAreaPrices(date, areas)` fetches the given areas in one request. Both check `PriceCacheService` before making an HTTP call and write results back per-area, so a `getAllAreaPrices` hit warms the `getPrices` cache and vice versa. `getAllAreaPrices` partitions the requested areas into cached and uncached and asks the API for **only the uncached subset**, so enabling one more country does not refetch the ones already held. Both map each 15-min `multiAreaEntries` entry directly to a `HourlyPrice` (÷ 10 for NOK/MWh → øre/kWh), yielding up to 96 entries per area with no per-hour averaging. `getAllAreaPrices` only includes an area in the result if `toIntervalPrices` returns a non-empty array — entries where `entryPerArea` is `{}` (prices not yet published) are filtered out, keeping the result `{}` so the effect's no-data check triggers correctly. Cache keys are built by a single `cacheKey(date, area)` helper rather than inlined per call site.
+
+`src/app/core/services/location.service.ts` — `detectPriceArea()` wraps `navigator.geolocation.getCurrentPosition` in an Observable, calls `nominatim.openstreetmap.org/reverse` for the country code, then maps to a `PriceArea`:
 
 - Norway: lat/lon → NO1–NO5 (approximate bidding-zone boundaries)
 - Sweden: lat → SE1–SE4; Denmark: lon split at 10° → DK1/DK2
@@ -196,7 +200,7 @@ src/app/store/index.ts re-exports all of the above
 
 A detected area auto-enables its country, because the `selectArea` reducer handler does.
 
-`src/app/services/language.service.ts` — signal-based i18n, not NgRx. `_lang` signal (`Lang = 'en' | 'nb'`) defaults to `'nb'`, initialised from `localStorage['lang']`; `t` is a `computed()` over `src/app/i18n/translations.ts` (`Translations` interface, ~60 keys, one object per language). `toggleLang()` flips between `'en'`/`'nb'` and persists. Consumed directly (not via the store) by `dashboard`, `controls`, `country-toggles`, `price-chart`, `price-table`, and `stats-bar` for template strings, and by `prices.effects.ts` for `setNotification` message text (`failedToLoad`, `dataNotAvailable`).
+`src/app/core/services/language.service.ts` — signal-based i18n, not NgRx. `_lang` signal (`Lang = 'en' | 'nb'`) defaults to `'nb'`, initialised from `localStorage['lang']`; `t` is a `computed()` over `src/app/i18n/translations.ts` (`Translations` interface, ~60 keys, one object per language). `toggleLang()` flips between `'en'`/`'nb'` and persists (via `safeLocalStorageSet`, see Persistence below). Consumed directly (not via the store) by `dashboard`, `controls`, `country-toggles`, `price-chart`, `price-table`, and `stats-bar` for template strings, and by `prices.effects.ts` for `setNotification` message text (`failedToLoad`, `dataNotAvailable`).
 
 ### Models
 
@@ -313,10 +317,16 @@ src/app/components/
                     during the gesture.
                     Scroll-to-zoom: mouse wheel / trackpad on desktop. Uses
                     Math.pow(1.003, deltaY) so trackpad (small deltaY) feels smooth
-                    and mouse wheel (large deltaY) snaps. Uses floor-based formula
-                    (Math.floor(cursorSlot) - Math.floor(cursorFrac * clamped)) to
+                    and mouse wheel (large deltaY) snaps. Both scroll- and pinch-zoom
+                    delegate the actual range calculation to `clampZoomRange` in the
+                    sibling `chart-math.ts` (floor-based formula:
+                    Math.floor(cursorSlot) - Math.floor(cursorFrac * clamped)) to
                     guarantee the slot under the cursor is preserved after each zoom
-                    step. Tooltip and hover line are hidden on each wheel event.
+                    step — this used to be duplicated inline in both handlers.
+                    Tooltip and hover line are hidden on each wheel event.
+                    `chart-math.ts` also holds `buildYTicks` (pure, unit-tested in
+                    `chart-math.spec.ts`), extracted out of the component for the
+                    same reason.
                   Scrollbar: shown when zoomed; position:absolute at the bottom of
                     .chart-outer with a surface background and border-top separator,
                     so it never adds height to the card. A chart-outer--zoomed modifier
@@ -372,6 +382,11 @@ src/app/components/
                     Bar mode shows only the selected area and Norgespris (when active).
                     When Strømstøtte is active, all area prices in the tooltip already
                     reflect effective post-support values (no separate tooltip entry).
+                    `pricesBySlot` is a `computed()` on the component keyed off
+                    `hoveredSlot()` and `vm()`, built lazily by `tooltipEntriesForSlot`
+                    for just the hovered slot — not an eager array-per-slot field on
+                    `vm` — so zoom ticks and resizes don't rebuild tooltip rows for
+                    slots nobody is looking at.
                   Fullscreen uses CSS position:fixed (not the browser Fullscreen API).
                     dims() computed signal recalculates chartH and viewBox to fill
                     the card. width:auto on .chart-outer--fullscreen is critical —
@@ -394,9 +409,9 @@ src/app/components/
                     axis-label--inside which uses paint-order:stroke fill with a
                     4px (non-scaling) stroke in --color-surface — a per-glyph halo
                     that follows the exact letter outlines rather than a fixed rect.
-                    buildYTicks returns { val, y, labelY } — y is the geometrically
-                    correct grid-line position; labelY is clamped to
-                    max(y, labelSize*0.6) so the top tick's centered text never
+                    buildYTicks (chart-math.ts) returns { val, y, labelY } — y is
+                    the geometrically correct grid-line position; labelY is clamped
+                    to max(y, labelSize*0.6) so the top tick's centered text never
                     extends above the SVG viewport (y<0) and gets clipped.
                   Line visibility: vector-effect:non-scaling-stroke keeps stroke
                     widths in screen pixels (without it a 1.5-unit stroke at 1500-wide
@@ -464,6 +479,8 @@ Lazy-loads `DashboardComponent` at `''`. Wildcard redirects to `''`.
 `enabledCountries` is written to `localStorage` by the `persistEnabledCountries$` effect as a JSON array and read back by `hydrateCountries()` in the reducer's `initialState`, which drops unknown codes, dedupes, sorts into `COUNTRIES` order, and falls back to `DEFAULT_COUNTRIES` (`['NO']`) when the result would be empty.
 
 `chartMode`, `includeTax`, `showNorgespris`, and `showStromstotte` are written to `localStorage` by `effect()` calls in `DashboardComponent` and read back on component init.
+
+Every `localStorage.setItem` write in the persistence effects and `LanguageService.setLang` goes through `safeLocalStorageSet` (`src/app/utils/local-storage.ts`), which wraps the call in try/catch and no-ops on failure. Without this, a single quota-exceeded/unavailable-storage error thrown from inside an NgRx effect's `tap` permanently kills that effect's subscription for the rest of the session — persistence for that one field would silently stop working until a reload. `PriceCacheService.save()` already had its own equivalent guard; this makes the other write sites consistent with it.
 
 Price data is cached in `localStorage` via `PriceCacheService` (key `nordpool_price_cache`). Up to `16 × PRICE_AREAS.length` entries are kept (currently 256); `getAllAreaPrices` stores each area individually so a multi-area fetch warms the per-area cache.
 
@@ -534,7 +551,7 @@ Repo must be **public** for GitHub Pages on a free plan.
 - Touch tooltip uses a three-state anchor signal (`'above'` / `'below'` / `'center'`) instead of a boolean. On touch the tooltip appears above the fingertip; it flips to below when the touch is within ~264px of the top of the chart.
 - `selectCurrentPriceInRange` is used by the stats-bar instead of `selectCurrentPrice` so the "Now" card appears whenever the now-line is visible (today within the active range), not only when `selectedDate === today`.
 - `selectRangeStats` is used by the stats-bar for Min/Avg/Max so the values reflect all days in the active date range, not just the selected date.
-- Norgespris is injected into `pricesBySlot` as a `TooltipEntry` (`isNorgespris: true`) and sorted by price value alongside the other areas, rather than always appended at the bottom. `TooltipEntry.area` is `string` (not `PriceArea`) to accommodate the `'norgespris'` key.
+- Norgespris is injected into the hovered slot's tooltip entries (`tooltipEntriesForSlot`, feeding the `pricesBySlot` computed) as a `TooltipEntry` (`isNorgespris: true`) and sorted by price value alongside the other areas, rather than always appended at the bottom. `TooltipEntry.area` is `string` (not `PriceArea`) to accommodate the `'norgespris'` key.
 - Strømstøtte applies as a pre-tax transform inside `displayOre()` rather than a separate pass, so every code path (bars, line points, y-scale min/max, tooltip) automatically uses effective prices with a single flag. The threshold line uses `--color-norgespris` (same red) since both lines are reference overlays of the same visual weight — no separate CSS variable needed.
 - Multi-day prices are merged via `selectMergedAreaPrices` (selector concatenates `allAreaPricesByDate` entries for the active range). The store keyed by date avoids re-fetching already-loaded days.
 - `loadAllAreaPrices$` treats both HTTP errors and null API responses (HTTP 200 with null body) the same way: dispatch `loadAllAreaPricesSuccess` with empty results + `setNotification`. The Nordpool API returns null for dates outside its ~10-day history window, not a 500.
