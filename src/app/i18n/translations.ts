@@ -42,6 +42,7 @@ export interface Translations {
   avg: string;
   max: string;
   time: string;
+  oreUnit: string;
   enterFullscreen: string;
   exitFullscreen: string;
   resetZoom: string;
@@ -107,6 +108,7 @@ export const translations: Record<Lang, Translations> = {
     avg: 'Avg',
     max: 'Max',
     time: 'Time',
+    oreUnit: 'øre/kWh',
     enterFullscreen: 'Enter fullscreen',
     exitFullscreen: 'Exit fullscreen',
     resetZoom: 'Reset zoom',
@@ -138,11 +140,11 @@ export const translations: Record<Lang, Translations> = {
     taxMixedTitle:
       'MVA er utilgjengelig når andre områder vises sammen med Norge — den gjelder bare norske områder, så sammenligningen ville blitt skjev',
     norgesprisAriaLabel: 'Slå av/på Norgespris-linje',
-    norgesprisTitle: 'Vis Norgespris (50 øre/kWh inkl. moms)',
+    norgesprisTitle: 'Vis Norgespris (50 øre/kWt inkl. moms)',
     norgesprisLabel: 'Norgespris',
     stromstotteAriaLabel: 'Slå av/på strømstøtte',
     stromstotteTitle:
-      'Vis effektiv pris etter strømstøtte — bare norske områder (90% av beløp over 77 øre/kWh ekskl. moms)',
+      'Vis effektiv pris etter strømstøtte — bare norske områder (90% av beløp over 77 øre/kWt ekskl. moms)',
     stromstotteLabel: 'Strømstøtte',
     chartTypeLabel: 'Diagramtype',
     lineBtn: 'Linje',
@@ -170,6 +172,7 @@ export const translations: Record<Lang, Translations> = {
     avg: 'Snitt',
     max: 'Maks',
     time: 'Tid',
+    oreUnit: 'øre/kWt',
     enterFullscreen: 'Åpne fullskjerm',
     exitFullscreen: 'Lukk fullskjerm',
     resetZoom: 'Tilbakestill zoom',
