@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HourlyPrice, PRICE_AREAS } from '../models/price.model';
+import { HourlyPrice, PRICE_AREAS } from '../../models/price.model';
 
 export interface CacheEntry {
   key: string;

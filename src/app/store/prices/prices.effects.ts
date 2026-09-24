@@ -12,9 +12,9 @@ import {
   withLatestFrom,
 } from 'rxjs/operators';
 import { EMPTY, from, of, timer } from 'rxjs';
-import { NordpoolService } from '../../services/nordpool.service';
-import { LocationService } from '../../services/location.service';
-import { LanguageService } from '../../services/language.service';
+import { NordpoolService } from '../../core/services/nordpool.service';
+import { LocationService } from '../../core/services/location.service';
+import { LanguageService } from '../../core/services/language.service';
 import {
   selectSelectedDate,
   selectPricesState,
@@ -23,6 +23,7 @@ import {
 } from './prices.selectors';
 import * as PricesActions from './prices.actions';
 import { subtractDays } from '../../utils/date';
+import { safeLocalStorageSet } from '../../utils/local-storage';
 import { areasForCountries } from '../../models/price.model';
 import { planAreaFetches } from './fetch-plan';
 
@@ -48,7 +49,7 @@ export class PricesEffects {
       this.store.select(selectSelectedArea).pipe(
         skip(1),
         distinctUntilChanged(),
-        tap((area) => localStorage.setItem('selectedArea', area)),
+        tap((area) => safeLocalStorageSet('selectedArea', area)),
       ),
     { dispatch: false },
   );
@@ -58,7 +59,7 @@ export class PricesEffects {
       this.store.select(selectEnabledCountries).pipe(
         skip(1),
         distinctUntilChanged(),
-        tap((codes) => localStorage.setItem('enabledCountries', JSON.stringify(codes))),
+        tap((codes) => safeLocalStorageSet('enabledCountries', JSON.stringify(codes))),
       ),
     { dispatch: false },
   );
@@ -68,7 +69,7 @@ export class PricesEffects {
       this.actions$.pipe(
         ofType(PricesActions.selectDate),
         tap(({ date }) =>
-          localStorage.setItem('selectedDate', JSON.stringify({ date, savedAt: Date.now() })),
+          safeLocalStorageSet('selectedDate', JSON.stringify({ date, savedAt: Date.now() })),
         ),
       ),
     { dispatch: false },
@@ -78,7 +79,7 @@ export class PricesEffects {
     () =>
       this.actions$.pipe(
         ofType(PricesActions.setDateRangeDays),
-        tap(({ days }) => localStorage.setItem('dateRangeDays', String(days))),
+        tap(({ days }) => safeLocalStorageSet('dateRangeDays', String(days))),
       ),
     { dispatch: false },
   );

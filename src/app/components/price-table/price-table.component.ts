@@ -1,4 +1,4 @@
-import { Component, inject, input, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
@@ -6,7 +6,7 @@ import { map } from 'rxjs/operators';
 import { combineLatest } from 'rxjs';
 import { HourlyPrice } from '../../models/price.model';
 import { selectAllPrices, selectCurrentPrice, selectSelectedArea } from '../../store';
-import { LanguageService } from '../../services/language.service';
+import { LanguageService } from '../../core/services/language.service';
 import { displayOre } from '../../utils/pricing';
 
 interface TableRow extends HourlyPrice {
@@ -27,7 +27,6 @@ function toHHMM(isoLocal: string): string {
   standalone: true,
   imports: [CommonModule],
   templateUrl: './price-table.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './price-table.component.scss',
 })
 export class PriceTableComponent {

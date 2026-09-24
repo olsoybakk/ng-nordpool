@@ -2,8 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
-import { HourlyPrice, PriceArea } from '../models/price.model';
-import { environment } from '../../environments/environment';
+import { HourlyPrice, PriceArea } from '../../models/price.model';
+import { environment } from '../../../environments/environment';
 import { PriceCacheService } from './price-cache.service';
 
 interface NordpoolEntry {
@@ -16,6 +16,10 @@ interface NordpoolResponse {
   multiAreaEntries: NordpoolEntry[];
 }
 
+function cacheKey(date: string, area: PriceArea): string {
+  return `${date}:${area}`;
+}
+
 @Injectable({ providedIn: 'root' })
 export class NordpoolService {
   private readonly http = inject(HttpClient);
@@ -24,7 +28,7 @@ export class NordpoolService {
 
   getPrices(date: string, area: PriceArea): Observable<HourlyPrice[]> {
     if (!this.baseUrl) return throwError(() => new Error('not-configured'));
-    const key = `${date}:${area}`;
+    const key = cacheKey(date, area);
     const cached = this.cache.get(key);
     if (cached) return of(cached);
 
@@ -51,7 +55,7 @@ export class NordpoolService {
     const cached: Partial<Record<PriceArea, HourlyPrice[]>> = {};
     const uncached: PriceArea[] = [];
     for (const area of areas) {
-      const hit = this.cache.get(`${date}:${area}`);
+      const hit = this.cache.get(cacheKey(date, area));
       if (hit) cached[area] = hit;
       else uncached.push(area);
     }
@@ -73,7 +77,7 @@ export class NordpoolService {
         this.cache.setMany(
           uncached
             .filter((area) => result[area]?.length)
-            .map((area) => ({ key: `${date}:${area}`, data: result[area]! })),
+            .map((area) => ({ key: cacheKey(date, area), data: result[area]! })),
         );
       }),
     );

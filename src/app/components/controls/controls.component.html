@@ -11,7 +11,7 @@
         (click)="toggleDropdown()"
         (keydown)="onTriggerKeydown($event)"
       >
-        <span class="area-dot" [style.background]="areaColors[currentArea]"></span>
+        <span class="area-dot" [style.background]="areaColors[currentArea()]"></span>
         <span class="area-select__label">{{ currentAreaLabel }}</span>
         <svg
           class="area-select__chevron"
@@ -31,12 +31,12 @@
         </svg>
       </button>
       <ul class="area-select__options" role="listbox" [attr.aria-label]="ls.t().priceArea">
-        @for (area of areas; track area.value) {
+        @for (area of areas(); track area.value) {
           <li
             class="area-select__option"
             role="option"
-            [attr.aria-selected]="area.value === currentArea"
-            [class.area-select__option--selected]="area.value === currentArea"
+            [attr.aria-selected]="area.value === currentArea()"
+            [class.area-select__option--selected]="area.value === currentArea()"
             tabindex="0"
             (click)="selectAreaOption(area.value)"
             (keydown.enter)="selectAreaOption(area.value)"
@@ -63,14 +63,14 @@
         <input
           id="date-input"
           type="date"
-          [ngModel]="currentDate"
+          [ngModel]="currentDate()"
           [max]="maxDate"
           (ngModelChange)="onDateChange($event)"
         />
         <button
           class="nav-btn"
           (click)="stepDate(1)"
-          [disabled]="currentDate >= maxDate"
+          [disabled]="currentDate() >= maxDate"
           [attr.aria-label]="ls.t().nextDay"
         >
           &rsaquo;
@@ -84,14 +84,14 @@
         <button
           class="nav-btn"
           (click)="stepRange(-1)"
-          [disabled]="currentRangeDays <= 1"
+          [disabled]="currentRangeDays() <= 1"
           [attr.aria-label]="ls.t().fewerDays"
         >
           &lsaquo;
         </button>
         <select
           id="range-select"
-          [ngModel]="currentRangeDays"
+          [ngModel]="currentRangeDays()"
           (ngModelChange)="setRangeDays($event)"
           [attr.aria-label]="ls.t().dateRangeLabel"
         >
@@ -102,7 +102,7 @@
         <button
           class="nav-btn"
           (click)="stepRange(1)"
-          [disabled]="currentRangeDays >= maxRangeDays"
+          [disabled]="currentRangeDays() >= maxRangeDays"
           [attr.aria-label]="ls.t().moreDays"
         >
           &rsaquo;

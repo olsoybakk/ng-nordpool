@@ -1,5 +1,6 @@
 import { computed, Injectable, signal } from '@angular/core';
-import { Lang, translations, Translations } from '../i18n/translations';
+import { Lang, translations, Translations } from '../../i18n/translations';
+import { safeLocalStorageSet } from '../../utils/local-storage';
 
 @Injectable({ providedIn: 'root' })
 export class LanguageService {
@@ -10,7 +11,7 @@ export class LanguageService {
 
   setLang(lang: Lang): void {
     this._lang.set(lang);
-    localStorage.setItem('lang', lang);
+    safeLocalStorageSet('lang', lang);
   }
 
   toggleLang(): void {

@@ -3,8 +3,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { NordpoolService } from './nordpool.service';
 import { PriceCacheService } from './price-cache.service';
-import { HourlyPrice, PriceArea } from '../models/price.model';
-import { environment } from '../../environments/environment';
+import { HourlyPrice, PriceArea } from '../../models/price.model';
+import { environment } from '../../../environments/environment';
 
 // CI has no NORDPOOL_API_URL (.env ships it empty; the real value lives in gitignored
 // .env.local), and the service short-circuits to 'not-configured' on an empty base URL.
