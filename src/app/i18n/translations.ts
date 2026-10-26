@@ -6,10 +6,10 @@ export interface Translations {
   switchToDark: string;
   switchToNorwegian: string;
   switchToEnglish: string;
-  taxBtn: string;
-  taxAriaLabel: string;
-  taxTitle: string;
-  taxMixedTitle: string;
+  vatBtn: string;
+  vatAriaLabel: string;
+  vatTitle: string;
+  vatMixedTitle: string;
   norgesprisAriaLabel: string;
   norgesprisTitle: string;
   norgesprisLabel: string;
@@ -70,13 +70,13 @@ export const translations: Record<Lang, Translations> = {
     switchToDark: 'Switch to dark mode',
     switchToNorwegian: 'Bytt til norsk',
     switchToEnglish: 'Switch to English',
-    taxBtn: 'Tax',
-    taxAriaLabel: 'Toggle tax (25% VAT)',
-    taxTitle: 'Include 25% VAT — Norwegian areas only (NO4 exempt)',
-    taxMixedTitle:
+    vatBtn: 'VAT',
+    vatAriaLabel: 'Toggle VAT (25%)',
+    vatTitle: 'Include 25% VAT — Norwegian areas only (NO4 exempt)',
+    vatMixedTitle:
       'VAT is unavailable while other areas are shown alongside Norway — it applies to Norwegian areas only, so the comparison would be uneven',
     norgesprisAriaLabel: 'Toggle Norgespris reference line',
-    norgesprisTitle: 'Show Norgespris (50 øre/kWh incl. tax)',
+    norgesprisTitle: 'Show Norgespris (50 øre/kWh incl. VAT)',
     norgesprisLabel: 'Norgespris',
     stromstotteAriaLabel: 'Toggle electricity support (strømstøtte)',
     stromstotteTitle:
@@ -134,10 +134,10 @@ export const translations: Record<Lang, Translations> = {
     switchToDark: 'Bytt til mørkt tema',
     switchToNorwegian: 'Bytt til norsk',
     switchToEnglish: 'Switch to English',
-    taxBtn: 'MVA',
-    taxAriaLabel: 'Slå av/på moms (25% MVA)',
-    taxTitle: 'Inkluder 25% MVA — bare norske områder (NO4 er unntatt)',
-    taxMixedTitle:
+    vatBtn: 'MVA',
+    vatAriaLabel: 'Slå av/på moms (25% MVA)',
+    vatTitle: 'Inkluder 25% MVA — bare norske områder (NO4 er unntatt)',
+    vatMixedTitle:
       'MVA er utilgjengelig når andre områder vises sammen med Norge — den gjelder bare norske områder, så sammenligningen ville blitt skjev',
     norgesprisAriaLabel: 'Slå av/på Norgespris-linje',
     norgesprisTitle: 'Vis Norgespris (50 øre/kWt inkl. moms)',

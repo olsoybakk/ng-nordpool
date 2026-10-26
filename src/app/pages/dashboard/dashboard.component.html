@@ -117,7 +117,7 @@
       class="dashboard__stats"
       [class.dashboard__stats--loading]="(loading$ | async) || (allAreasLoading$ | async)"
     >
-      <app-stats-bar [includeTax]="includeTax()" [showStromstotte]="showStromstotte()" />
+      <app-stats-bar [includeVat]="includeVat()" [showStromstotte]="showStromstotte()" />
     </section>
 
     <section class="dashboard__chart">
@@ -134,14 +134,14 @@
                VAT-inclusive Norwegian prices against raw foreign ones. -->
           <button
             class="toggle-btn"
-            [class.toggle-btn--active]="includeTax()"
+            [class.toggle-btn--active]="includeVat()"
             [disabled]="!norwayOnly()"
-            (click)="toggleTax()"
-            [attr.aria-pressed]="includeTax()"
-            [attr.aria-label]="ls.t().taxAriaLabel"
-            [attr.title]="hasNorway() && !norwayOnly() ? ls.t().taxMixedTitle : ls.t().taxTitle"
+            (click)="toggleVat()"
+            [attr.aria-pressed]="includeVat()"
+            [attr.aria-label]="ls.t().vatAriaLabel"
+            [attr.title]="hasNorway() && !norwayOnly() ? ls.t().vatMixedTitle : ls.t().vatTitle"
           >
-            {{ ls.t().taxBtn }}
+            {{ ls.t().vatBtn }}
           </button>
 
           <button
@@ -206,7 +206,7 @@
       <app-country-toggles />
       <app-price-chart
         [chartMode]="chartMode()"
-        [includeTax]="includeTax()"
+        [includeVat]="includeVat()"
         [showNorgespris]="showNorgespris()"
         [showStromstotte]="showStromstotte()"
       />
@@ -218,7 +218,7 @@
         [class.dashboard__table--loading]="(loading$ | async) || (allAreasLoading$ | async)"
       >
         <h2 class="section-title">{{ ls.t().allHours }}</h2>
-        <app-price-table [includeTax]="includeTax()" [showStromstotte]="showStromstotte()" />
+        <app-price-table [includeVat]="includeVat()" [showStromstotte]="showStromstotte()" />
       </section>
     }
   </div>

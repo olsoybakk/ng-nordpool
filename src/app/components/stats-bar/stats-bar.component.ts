@@ -17,7 +17,7 @@ export class StatsBarComponent {
   private readonly store = inject(Store);
   readonly ls = inject(LanguageService);
 
-  includeTax = input(false);
+  includeVat = input(false);
   showStromstotte = input(false);
 
   currentPrice$ = this.store.select(selectCurrentPriceInRange);
@@ -26,6 +26,6 @@ export class StatsBarComponent {
 
   /** Area comes second to match the existing template call sites. */
   effectiveOre(rawOre: number, area: PriceArea): number {
-    return displayOre(area, rawOre, this.includeTax(), this.showStromstotte());
+    return displayOre(area, rawOre, this.includeVat(), this.showStromstotte());
   }
 }

@@ -27,9 +27,9 @@ import {
 import { LanguageService } from '../../core/services/language.service';
 import {
   displayOre,
-  NORGESPRIS_ORE_INCL_TAX,
+  NORGESPRIS_ORE_INCL_VAT,
   STROMSTOTTE_THRESHOLD,
-  TAX_FACTOR,
+  VAT_FACTOR,
 } from '../../utils/pricing';
 import { buildYTicks, clampZoomRange } from './chart-math';
 
@@ -88,7 +88,7 @@ const FULLSCREEN_INNER = 12;
 const DASHBOARD_H_PAD = 64;
 const DASHBOARD_MAX_W = 1100;
 const CARD_PAD_PX = 20;
-const STROMSTOTTE_THRESHOLD_INCL_TAX = STROMSTOTTE_THRESHOLD * TAX_FACTOR;
+const STROMSTOTTE_THRESHOLD_INCL_VAT = STROMSTOTTE_THRESHOLD * VAT_FACTOR;
 
 @Component({
   selector: 'app-price-chart',
@@ -103,7 +103,7 @@ export class PriceChartComponent {
   readonly ls = inject(LanguageService);
 
   chartMode = input<ChartMode>('line');
-  includeTax = input(false);
+  includeVat = input(false);
   showNorgespris = input(false);
   showStromstotte = input(false);
 
@@ -253,7 +253,7 @@ export class PriceChartComponent {
     // current CD cycle, which would render one frame with the previous area set.
     this.store.select(selectEnabledAreas),
     toObservable(this.dims),
-    toObservable(this.includeTax),
+    toObservable(this.includeVat),
     toObservable(this.showNorgespris),
     toObservable(this.showStromstotte),
     this._zoomRange$,
@@ -267,7 +267,7 @@ export class PriceChartComponent {
         dateRangeDays,
         visibleAreas,
         dims,
-        includeTax,
+        includeVat,
         showNorgespris,
         showStromstotte,
         zoom,
@@ -280,7 +280,7 @@ export class PriceChartComponent {
           dateRangeDays,
           visibleAreas as PriceArea[],
           dims,
-          includeTax,
+          includeVat,
           showNorgespris as boolean,
           showStromstotte as boolean,
           zoom as [number, number] | null,
@@ -300,7 +300,7 @@ export class PriceChartComponent {
       v.areaEntries,
       slot,
       v.selectedArea,
-      v.includeTax,
+      v.includeVat,
       v.showStromstotte,
       v.norgesprisDisplayOre,
     );
@@ -310,7 +310,7 @@ export class PriceChartComponent {
     areaEntries: { area: PriceArea; hourlyPrices: HourlyPrice[] }[],
     slot: number,
     selectedArea: PriceArea,
-    includeTax: boolean,
+    includeVat: boolean,
     showStromstotte: boolean,
     norgesprisDisplayOre: number | null,
   ): TooltipEntry[] {
@@ -319,7 +319,7 @@ export class PriceChartComponent {
       .map(({ area, hourlyPrices }) => ({
         area,
         label: PRICE_AREAS.find((p) => p.value === area)?.label ?? area,
-        ore: displayOre(area, hourlyPrices[slot].ore_per_kWh, includeTax, showStromstotte),
+        ore: displayOre(area, hourlyPrices[slot].ore_per_kWh, includeVat, showStromstotte),
         color: AREA_COLORS[area],
         isSelected: area === selectedArea,
       }))
@@ -622,7 +622,7 @@ export class PriceChartComponent {
       labelSize,
       yLabelInside,
     }: { chartH: number; bottomY: number; labelSize: number; yLabelInside: boolean },
-    includeTax: boolean,
+    includeVat: boolean,
     showNorgespris: boolean,
     showStromstotte: boolean,
     zoom: [number, number] | null,
@@ -651,19 +651,19 @@ export class PriceChartComponent {
 
     // Reference line values in the display unit (computed early so scale can include them)
     const norgesprisDisplayOre = showNorgespris
-      ? includeTax
-        ? NORGESPRIS_ORE_INCL_TAX
-        : NORGESPRIS_ORE_INCL_TAX / TAX_FACTOR
+      ? includeVat
+        ? NORGESPRIS_ORE_INCL_VAT
+        : NORGESPRIS_ORE_INCL_VAT / VAT_FACTOR
       : null;
     const stromstotteThresholdOre = showStromstotte
-      ? includeTax
-        ? STROMSTOTTE_THRESHOLD_INCL_TAX
+      ? includeVat
+        ? STROMSTOTTE_THRESHOLD_INCL_VAT
         : STROMSTOTTE_THRESHOLD
       : null;
 
     // Bar chart: single area — scale from full dataset so y-axis stays fixed while zooming
     const allSingleValues = allBarPrices.map((p) =>
-      displayOre(selectedArea, p.ore_per_kWh, includeTax, showStromstotte),
+      displayOre(selectedArea, p.ore_per_kWh, includeVat, showStromstotte),
     );
     const singleMin = snapFloor25(Math.min(...allSingleValues) - 5);
     const singleMax = snapCeil25(Math.max(...allSingleValues) + 5);
@@ -761,7 +761,7 @@ export class PriceChartComponent {
       rawMultiMax = -Infinity;
     for (const area of visibleAreas) {
       for (const p of allAreaPrices[area] ?? []) {
-        const v = displayOre(area, p.ore_per_kWh, includeTax, showStromstotte);
+        const v = displayOre(area, p.ore_per_kWh, includeVat, showStromstotte);
         if (v < rawMultiMin) rawMultiMin = v;
         if (v > rawMultiMax) rawMultiMax = v;
       }
@@ -777,7 +777,7 @@ export class PriceChartComponent {
       let lastOre = 0;
 
       hourlyPrices.forEach((p, i) => {
-        const ore = displayOre(area, p.ore_per_kWh, includeTax, showStromstotte);
+        const ore = displayOre(area, p.ore_per_kWh, includeVat, showStromstotte);
         lastOre = ore;
         const x1 = this.offsetX + i * gap;
         const x2 = this.offsetX + (i + 1) * gap;
@@ -889,7 +889,7 @@ export class PriceChartComponent {
       // rows for every slot on every zoom/resize when only the hovered slot is ever shown.
       areaEntries,
       selectedArea,
-      includeTax,
+      includeVat,
       showStromstotte,
       norgesprisDisplayOre,
       slotTimes,
