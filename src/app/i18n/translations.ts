@@ -70,13 +70,13 @@ export const translations: Record<Lang, Translations> = {
     switchToDark: 'Switch to dark mode',
     switchToNorwegian: 'Bytt til norsk',
     switchToEnglish: 'Switch to English',
-    taxBtn: 'Tax',
-    taxAriaLabel: 'Toggle tax (25% VAT)',
+    taxBtn: 'VAT',
+    taxAriaLabel: 'Toggle VAT (25%)',
     taxTitle: 'Include 25% VAT — Norwegian areas only (NO4 exempt)',
     taxMixedTitle:
       'VAT is unavailable while other areas are shown alongside Norway — it applies to Norwegian areas only, so the comparison would be uneven',
     norgesprisAriaLabel: 'Toggle Norgespris reference line',
-    norgesprisTitle: 'Show Norgespris (50 øre/kWh incl. tax)',
+    norgesprisTitle: 'Show Norgespris (50 øre/kWh incl. VAT)',
     norgesprisLabel: 'Norgespris',
     stromstotteAriaLabel: 'Toggle electricity support (strømstøtte)',
     stromstotteTitle:
