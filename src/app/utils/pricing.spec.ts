@@ -3,7 +3,7 @@ import {
   displayOre,
   isNorwegianArea,
   STROMSTOTTE_THRESHOLD,
-  TAX_FACTOR,
+  VAT_FACTOR,
 } from './pricing';
 import { PriceArea } from '../models/price.model';
 
@@ -49,12 +49,12 @@ describe('displayOre', () => {
     expect(displayOre('NO4', 100, true)).toBe(100);
   });
 
-  it('returns the raw price when tax is off', () => {
+  it('returns the raw price when VAT is off', () => {
     expect(displayOre('NO1', 100, false)).toBe(100);
   });
 
   it('applies strømstøtte then VAT for a Norwegian area', () => {
-    expect(displayOre('NO1', 100, true, true)).toBeCloseTo(79.3 * TAX_FACTOR);
+    expect(displayOre('NO1', 100, true, true)).toBeCloseTo(79.3 * VAT_FACTOR);
   });
 
   // VAT, Norgespris and strømstøtte are all Norwegian schemes — 15 of the 20 areas are foreign.

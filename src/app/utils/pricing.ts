@@ -1,8 +1,8 @@
 import { AREA_COUNTRY, PriceArea } from '../models/price.model';
 
-export const TAX_FACTOR = 1.25;
+export const VAT_FACTOR = 1.25;
 export const STROMSTOTTE_THRESHOLD = 77; // øre/kWh excl. VAT
-export const NORGESPRIS_ORE_INCL_TAX = 50;
+export const NORGESPRIS_ORE_INCL_VAT = 50;
 
 /** Norwegian areas exempt from the 25% VAT. */
 export const NO_VAT_EXEMPT_AREAS = new Set<PriceArea>(['NO4']);
@@ -26,10 +26,10 @@ export function applyStromstotte(rawOre: number): number {
 export function displayOre(
   area: PriceArea,
   rawOre: number,
-  includeTax: boolean,
+  includeVat: boolean,
   showStromstotte = false,
 ): number {
   if (!isNorwegianArea(area)) return rawOre;
   const ore = showStromstotte ? applyStromstotte(rawOre) : rawOre;
-  return includeTax && !NO_VAT_EXEMPT_AREAS.has(area) ? ore * TAX_FACTOR : ore;
+  return includeVat && !NO_VAT_EXEMPT_AREAS.has(area) ? ore * VAT_FACTOR : ore;
 }

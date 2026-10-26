@@ -242,13 +242,13 @@ src/app/components/
                   trigger focuses the first/last option. Options have tabindex=0
                   with Enter/Space to select.
   stats-bar/      Now / Min / Avg / Max cards derived from store selectors.
-                  Inputs: includeTax, showStromstotte.
+                  Inputs: includeVat, showStromstotte.
                   "Now" uses selectCurrentPriceInRange so it appears whenever the
                   now-line is visible in the chart (not only when selectedDate === today).
                   Min/Avg/Max use selectRangeStats, which covers all days in the active
                   date range (not just the selected date).
                   effectiveOre() applies the strømstøtte formula (when showStromstotte)
-                  and tax factor in sequence, matching the chart's price transform.
+                  and VAT factor in sequence, matching the chart's price transform.
   country-toggles/ Row of 7 flag buttons (one per country in COUNTRIES order) plus a
                   SYS chip, adding/removing whole countries. Its own full-width row under the chart
                   header, separated by a border-top, so 12 buttons don't compete with the
@@ -263,7 +263,7 @@ src/app/components/
                   guard so the constraint is visible rather than a silent no-op.
                   A "Bare Norge" / "Norway only" reset appears whenever more than Norway
                   is enabled — switching 11 countries off one at a time is tedious.
-  price-chart/    Pure SVG chart (no charting lib). Inputs: chartMode, includeTax,
+  price-chart/    Pure SVG chart (no charting lib). Inputs: chartMode, includeVat,
                   showNorgespris, showStromstotte. Selects date range from store for multi-day data.
                   Y scale: both modes snap min to floor-25 and max to ceil-25 of
                     (full-dataset values ± 5 øre buffer). Horizontal grid lines at
@@ -291,8 +291,8 @@ src/app/components/
                     fullscreen toggle; pinch-to-zoom; scroll-to-zoom.
                   Mobile chart height: 38% of viewport height (desktop uses container
                     height in line mode, fixed CHART_H in bar mode).
-                  Tax: prices multiplied by 1.25 when includeTax is true (NO4 exempt).
-                  Norgespris: dashed reference line at 50 øre/kWh (incl. tax) when
+                  VAT: prices multiplied by 1.25 when includeVat is true (NO4 exempt).
+                  Norgespris: dashed reference line at 50 øre/kWh (incl. VAT) when
                     showNorgespris is true. Also injected into the tooltip as a
                     TooltipEntry (isNorgespris: true) sorted by price value alongside
                     the other areas (not always at the bottom).
@@ -301,7 +301,7 @@ src/app/components/
                     VAT are unchanged; prices above are compressed to
                     0.1 × spot + 0.9 × 77 (90% covered). A dashed threshold line is
                     drawn at 77 øre (or 96.25 incl. VAT) using --color-norgespris.
-                    The transformation is applied inside displayOre() before the tax
+                    The transformation is applied inside displayOre() before the VAT
                     factor, affecting bars, line points, y-scale, and tooltip prices.
                     Norgespris and Strømstøtte are independent toggles — both can be
                     active simultaneously.
@@ -421,12 +421,12 @@ src/app/components/
   price-table/    Up to 96-row table (one row per 15-min interval). Current
                   interval row highlighted + "Now" badge.
                   Only shown when chartMode === 'bar'.
-                  Inputs: includeTax, showStromstotte. Uses the same shared
+                  Inputs: includeVat, showStromstotte. Uses the same shared
                   displayOre() from utils/pricing.ts as the chart, so displayed prices
                   always match.
 
 src/app/pages/
-  dashboard/      Owns chartMode, includeTax, showNorgespris, showStromstotte signals.
+  dashboard/      Owns chartMode, includeVat, showNorgespris, showStromstotte signals.
                   Header tagline: dateLabel computed signal formats the selected date
                     (single day) or range (multi-day) using Intl.DateTimeFormat with
                     the active locale (nb-NO / en-GB); reacts to date, range, and
@@ -438,20 +438,20 @@ src/app/pages/
                   client timezone, from `BUILD_DATE` in build-info.ts), language
                   toggle, and a "Clear saved data" button that wipes localStorage
                   and reloads. Menu closes on outside click or Escape.
-                  Line/Bar, Tax, Norgespris, and Strømstøtte toggles in the header.
+                  Line/Bar, VAT, Norgespris, and Strømstøtte toggles in the header.
                   Norgespris / Strømstøtte are [disabled] when Norway is not among the
                     enabled countries (hasNorway signal) — they are Norwegian schemes, so
                     with NO off they would do nothing. Disabled, not hidden, to avoid a
                     layout jump.
-                  Tax is stricter: [disabled] unless Norway is the ONLY enabled entry
-                    (norwayOnly signal), and an effect switches includeTax off when that
+                  VAT is stricter: [disabled] unless Norway is the ONLY enabled entry
+                    (norwayOnly signal), and an effect switches includeVat off when that
                     stops being true. VAT applies to Norwegian areas alone, so on a mixed
                     chart it would put VAT-inclusive NO prices on the same axis as raw
                     foreign ones. SYS counts as "other" — it is an unadjusted reference.
-                    The title swaps to taxMixedTitle to explain why it is unavailable.
+                    The title swaps to vatMixedTitle to explain why it is unavailable.
                   All four signals are initialised from localStorage on load and
                   written back via effect() on every change (keys: 'chartMode',
-                  'includeTax', 'showNorgespris', 'showStromstotte').
+                  'includeVat', 'showNorgespris', 'showStromstotte').
                   Chart controls use flex-wrap so all five buttons remain accessible
                   on narrow mobile viewports without overflow.
                   On init dispatches loadPrices + requestPriceData via
@@ -478,7 +478,7 @@ Lazy-loads `DashboardComponent` at `''`. Wildcard redirects to `''`.
 
 `enabledCountries` is written to `localStorage` by the `persistEnabledCountries$` effect as a JSON array and read back by `hydrateCountries()` in the reducer's `initialState`, which drops unknown codes, dedupes, sorts into `COUNTRIES` order, and falls back to `DEFAULT_COUNTRIES` (`['NO']`) when the result would be empty.
 
-`chartMode`, `includeTax`, `showNorgespris`, and `showStromstotte` are written to `localStorage` by `effect()` calls in `DashboardComponent` and read back on component init.
+`chartMode`, `includeVat`, `showNorgespris`, and `showStromstotte` are written to `localStorage` by `effect()` calls in `DashboardComponent` and read back on component init.
 
 Every `localStorage.setItem` write in the persistence effects and `LanguageService.setLang` goes through `safeLocalStorageSet` (`src/app/utils/local-storage.ts`), which wraps the call in try/catch and no-ops on failure. Without this, a single quota-exceeded/unavailable-storage error thrown from inside an NgRx effect's `tap` permanently kills that effect's subscription for the rest of the session — persistence for that one field would silently stop working until a reload. `PriceCacheService.save()` already had its own equivalent guard; this makes the other write sites consistent with it.
 
@@ -529,7 +529,7 @@ Repo must be **public** for GitHub Pages on a free plan.
 - Step chart geometry: two points per hour (left + right edge at same Y) produces correct staircase without any path commands — a plain `<polyline>` is enough.
 - Tooltip uses HTML (not SVG foreignObject) for easy styling. Uses `position: fixed` (not `absolute`) so it is never clipped by `overflow: hidden` on `.chart-outer`. Coordinates in `updateTooltip` are therefore viewport-relative (`clientX/clientY`); `relX/relY` are only used for slot detection and the flip threshold. `pointer-events: none` so it never blocks mouse events on the SVG.
 - Tooltip flip threshold uses absolute pixels (`rect.width - 240`) rather than a percentage so it accounts for the tooltip's actual width.
-- `chartMode` lives in the dashboard signal, not the store — it's purely presentational. It (along with `includeTax`, `showNorgespris`, and `showStromstotte`) is persisted to localStorage via `effect()` in the dashboard so settings survive a reload without polluting NgRx state.
+- `chartMode` lives in the dashboard signal, not the store — it's purely presentational. It (along with `includeVat`, `showNorgespris`, and `showStromstotte`) is persisted to localStorage via `effect()` in the dashboard so settings survive a reload without polluting NgRx state.
 - `loadAllAreaPrices` fires a single API request per date via `getAllAreaPrices(date, areas)` — the proxy accepts a comma-separated `deliveryArea` list so no parallel requests are needed.
 - **Fetch bookkeeping records the attempt, not the result.** `getAllAreaPrices` drops areas whose price array is empty, so an area the API has no data for never lands in `allAreaPricesByDate` — a presence-only check would therefore re-request it on every date, range and country change forever. `attemptsByDate` stores a per-area timestamp, and `ATTEMPT_TTL_MS` (15 min) bounds the retry: day-ahead prices publish once a day around 13:00 CET, so a returning user still picks up newly published data while rapid clicking never re-hits the API. Attempts are recorded in the `loadAllAreaPrices` **reducer handler** (the timestamp rides on the action so the reducer stays pure), which also dedupes two triggers landing in the same tick. `attemptsByDate` is deliberately **not** persisted — prices survive in `PriceCacheService`, so a reload always grants a fresh retry.
 - **Area colours are country hue families, not a flat hue ramp.** One hue per country with lightness steps inside multi-area countries (SE1–SE4 at 232°, DK1/DK2 at 332°), so a line's country reads from its hue and its area from the shade. 16 areas cannot be separated by hue alone, and the previously commented flat ramp collided with NO5 green and NO1 blue. `SYS` is deliberately outside the scheme — neutral grey, because it is a computed reference price rather than a market. NO1–NO5 keep their established colours — they are the primary audience and the app's recognisable identity.
@@ -552,7 +552,7 @@ Repo must be **public** for GitHub Pages on a free plan.
 - `selectCurrentPriceInRange` is used by the stats-bar instead of `selectCurrentPrice` so the "Now" card appears whenever the now-line is visible (today within the active range), not only when `selectedDate === today`.
 - `selectRangeStats` is used by the stats-bar for Min/Avg/Max so the values reflect all days in the active date range, not just the selected date.
 - Norgespris is injected into the hovered slot's tooltip entries (`tooltipEntriesForSlot`, feeding the `pricesBySlot` computed) as a `TooltipEntry` (`isNorgespris: true`) and sorted by price value alongside the other areas, rather than always appended at the bottom. `TooltipEntry.area` is `string` (not `PriceArea`) to accommodate the `'norgespris'` key.
-- Strømstøtte applies as a pre-tax transform inside `displayOre()` rather than a separate pass, so every code path (bars, line points, y-scale min/max, tooltip) automatically uses effective prices with a single flag. The threshold line uses `--color-norgespris` (same red) since both lines are reference overlays of the same visual weight — no separate CSS variable needed.
+- Strømstøtte applies as a pre-VAT transform inside `displayOre()` rather than a separate pass, so every code path (bars, line points, y-scale min/max, tooltip) automatically uses effective prices with a single flag. The threshold line uses `--color-norgespris` (same red) since both lines are reference overlays of the same visual weight — no separate CSS variable needed.
 - Multi-day prices are merged via `selectMergedAreaPrices` (selector concatenates `allAreaPricesByDate` entries for the active range). The store keyed by date avoids re-fetching already-loaded days.
 - `loadAllAreaPrices$` treats both HTTP errors and null API responses (HTTP 200 with null body) the same way: dispatch `loadAllAreaPricesSuccess` with empty results + `setNotification`. The Nordpool API returns null for dates outside its ~10-day history window, not a 500.
 - `planAreaFetches` replaced `selectLoadedDates`, whose "a date is loaded if _any_ area has data" heuristic became wrong once fetching went per-area: a date loaded while only Norway was enabled would have counted as complete and never picked up a newly enabled country.

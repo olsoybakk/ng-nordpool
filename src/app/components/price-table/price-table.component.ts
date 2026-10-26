@@ -33,22 +33,22 @@ export class PriceTableComponent {
   private readonly store = inject(Store);
   readonly ls = inject(LanguageService);
 
-  includeTax = input(false);
+  includeVat = input(false);
   showStromstotte = input(false);
 
   rows$ = combineLatest([
     this.store.select(selectAllPrices),
     this.store.select(selectCurrentPrice),
     this.store.select(selectSelectedArea),
-    toObservable(this.includeTax),
+    toObservable(this.includeVat),
     toObservable(this.showStromstotte),
   ]).pipe(
-    map(([prices, current, area, includeTax, showStromstotte]) => {
+    map(([prices, current, area, includeVat, showStromstotte]) => {
       return prices.map((p): TableRow => ({
         ...p,
         time: toHHMM(p.time_start),
         isCurrent: p === current,
-        displayOre: displayOre(area, p.ore_per_kWh, includeTax, showStromstotte),
+        displayOre: displayOre(area, p.ore_per_kWh, includeVat, showStromstotte),
       }));
     }),
   );

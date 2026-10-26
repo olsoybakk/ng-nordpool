@@ -108,7 +108,10 @@ export class DashboardComponent implements OnInit {
 
   menuOpen = signal(false);
   chartMode = signal<ChartMode>((localStorage.getItem('chartMode') as ChartMode | null) ?? 'line');
-  includeTax = signal(localStorage.getItem('includeTax') === 'true');
+  // Falls back to the pre-rename 'includeTax' key so existing users keep their setting.
+  includeVat = signal(
+    (localStorage.getItem('includeVat') ?? localStorage.getItem('includeTax')) === 'true',
+  );
   showNorgespris = signal(localStorage.getItem('showNorgespris') === 'true');
   showStromstotte = signal(localStorage.getItem('showStromstotte') === 'true');
   theme = signal<'dark' | 'light'>(
@@ -123,13 +126,14 @@ export class DashboardComponent implements OnInit {
       localStorage.setItem('chartMode', this.chartMode());
     });
     effect(() => {
-      localStorage.setItem('includeTax', String(this.includeTax()));
+      localStorage.setItem('includeVat', String(this.includeVat()));
+      localStorage.removeItem('includeTax');
     });
     // Adding a second country while VAT is on would otherwise leave a mixed chart. Switch it
     // off rather than just greying out the button, so what's drawn always matches the toggle.
-    // Converges after one pass: the write only happens while includeTax is still true.
+    // Converges after one pass: the write only happens while includeVat is still true.
     effect(() => {
-      if (!this.norwayOnly() && this.includeTax()) this.includeTax.set(false);
+      if (!this.norwayOnly() && this.includeVat()) this.includeVat.set(false);
     });
     effect(() => {
       localStorage.setItem('showNorgespris', String(this.showNorgespris()));
@@ -165,8 +169,8 @@ export class DashboardComponent implements OnInit {
     this.theme.set(this.theme() === 'dark' ? 'light' : 'dark');
   }
 
-  toggleTax(): void {
-    this.includeTax.update((v) => !v);
+  toggleVat(): void {
+    this.includeVat.update((v) => !v);
   }
 
   toggleNorgespris(): void {
