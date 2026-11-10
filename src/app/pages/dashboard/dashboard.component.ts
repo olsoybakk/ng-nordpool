@@ -11,8 +11,6 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
-import { combineLatest } from 'rxjs';
-import { first } from 'rxjs/operators';
 import { ControlsComponent } from '../../components/controls/controls.component';
 import { StatsBarComponent } from '../../components/stats-bar/stats-bar.component';
 import { PriceChartComponent, ChartMode } from '../../components/price-chart/price-chart.component';
@@ -20,15 +18,13 @@ import { PriceTableComponent } from '../../components/price-table/price-table.co
 import { CountryTogglesComponent } from '../../components/country-toggles/country-toggles.component';
 import {
   selectError,
-  selectLoading,
   selectAllAreasLoading,
-  selectSelectedArea,
   selectSelectedDate,
   selectDateRangeDays,
   selectNotification,
   selectEnabledCountries,
 } from '../../store';
-import { detectLocation, loadPrices, requestPriceData } from '../../store';
+import { detectLocation, requestPriceData } from '../../store';
 import { LanguageService } from '../../core/services/language.service';
 import { CountryCode } from '../../models/price.model';
 import { BUILD_DATE } from '../../../environments/build-info';
@@ -57,7 +53,6 @@ export class DashboardComponent implements OnInit {
     return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   })();
 
-  loading$ = this.store.select(selectLoading);
   allAreasLoading$ = this.store.select(selectAllAreasLoading);
   error$ = this.store.select(selectError);
   dateRangeDays$ = this.store.select(selectDateRangeDays);
@@ -149,16 +144,11 @@ export class DashboardComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    combineLatest([this.store.select(selectSelectedArea), this.store.select(selectSelectedDate)])
-      .pipe(first())
-      .subscribe(([area, date]) => {
-        if (!localStorage.getItem('selectedArea')) {
-          this.store.dispatch(detectLocation());
-        }
-        this.store.dispatch(loadPrices({ area, date }));
-        // The planner effect works out which dates and areas are actually missing.
-        this.store.dispatch(requestPriceData());
-      });
+    if (!localStorage.getItem('selectedArea')) {
+      this.store.dispatch(detectLocation());
+    }
+    // The planner effect works out which dates are actually missing.
+    this.store.dispatch(requestPriceData());
   }
 
   setChartMode(mode: ChartMode): void {

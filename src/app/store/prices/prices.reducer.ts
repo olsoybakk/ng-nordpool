@@ -59,14 +59,12 @@ export function hydrateArea(raw: string | null, countries: readonly CountryCode[
 const initialCountries = hydrateCountries(localStorage.getItem('enabledCountries'));
 
 export const initialState: PricesState = {
-  prices: [],
   allAreaPricesByDate: {},
   attemptsByDate: {},
   selectedArea: hydrateArea(localStorage.getItem('selectedArea'), initialCountries),
   enabledCountries: initialCountries,
   selectedDate: loadStoredDate(),
   dateRangeDays: isNaN(storedDays) ? 1 : storedDays,
-  loading: false,
   allAreasLoadingCount: 0,
   error: null,
   notification: null,
@@ -75,46 +73,18 @@ export const initialState: PricesState = {
 export const pricesReducer = createReducer(
   initialState,
 
-  on(PricesActions.loadPrices, (state) => ({
-    ...state,
-    loading: true,
-    error: null,
-  })),
-
-  on(PricesActions.loadPricesSuccess, (state, { prices }) => ({
-    ...state,
-    prices,
-    loading: false,
-  })),
-
-  on(PricesActions.loadPricesFailure, (state, { error }) => ({
-    ...state,
-    loading: false,
-    error,
-  })),
-
   // Attempts are recorded on dispatch, not on success, so an in-flight request also suppresses
   // a duplicate plan and an HTTP failure throttles for the TTL instead of retrying immediately.
-  on(PricesActions.loadAllAreaPrices, (state, { date, areas, at }) => ({
+  on(PricesActions.loadAllAreaPrices, (state, { date, at }) => ({
     ...state,
-    attemptsByDate: {
-      ...state.attemptsByDate,
-      [date]: {
-        ...state.attemptsByDate[date],
-        ...Object.fromEntries(areas.map((area) => [area, at])),
-      },
-    },
+    attemptsByDate: { ...state.attemptsByDate, [date]: at },
     allAreasLoadingCount: state.allAreasLoadingCount + 1,
   })),
 
-  // Merge, never replace: fetches are area-scoped now, so enabling Sweden must not wipe the
-  // Norwegian data already held for this date.
+  // Replace rather than merge: every fetch covers all areas, so the result is the whole day.
   on(PricesActions.loadAllAreaPricesSuccess, (state, { date, results }) => ({
     ...state,
-    allAreaPricesByDate: {
-      ...state.allAreaPricesByDate,
-      [date]: { ...state.allAreaPricesByDate[date], ...results },
-    },
+    allAreaPricesByDate: { ...state.allAreaPricesByDate, [date]: results },
     allAreasLoadingCount: Math.max(0, state.allAreasLoadingCount - 1),
   })),
 

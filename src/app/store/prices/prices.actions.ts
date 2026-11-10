@@ -1,44 +1,25 @@
 import { createAction, props } from '@ngrx/store';
-import { CountryCode, HourlyPrice, PriceArea } from '../../models/price.model';
-
-export const loadPrices = createAction(
-  '[Prices] Load Prices',
-  props<{ area: PriceArea; date: string }>(),
-);
-
-export const loadPricesSuccess = createAction(
-  '[Prices] Load Prices Success',
-  props<{ prices: HourlyPrice[] }>(),
-);
-
-export const loadPricesFailure = createAction(
-  '[Prices] Load Prices Failure',
-  props<{ error: string }>(),
-);
+import { CountryCode, DayPrices, PriceArea } from '../../models/price.model';
 
 /**
- * Ask for whatever price data the current date range and enabled countries need. The
- * planPriceFetches$ effect is the only place that turns this into loadAllAreaPrices actions,
- * so the attempt bookkeeping and the `at` timestamp live in exactly one place.
+ * Ask for whatever price data the current date range needs. The planPriceFetches$ effect is the
+ * only place that turns this into loadAllAreaPrices actions, so the attempt bookkeeping and the
+ * `at` timestamp live in exactly one place.
  */
 export const requestPriceData = createAction('[Prices] Request Price Data');
 
 /**
- * `areas` is the requested set (not the set that came back) and `at` is the dispatch time —
- * the reducer records both so an area the API has no data for is not re-requested forever.
+ * Fetches every area for one date. `at` is the dispatch time — the reducer records it so a date
+ * the API has no data for is not re-requested forever.
  */
 export const loadAllAreaPrices = createAction(
   '[Prices] Load All Area Prices',
-  props<{ date: string; areas: PriceArea[]; at: number }>(),
+  props<{ date: string; at: number }>(),
 );
 
 export const loadAllAreaPricesSuccess = createAction(
   '[Prices] Load All Area Prices Success',
-  props<{
-    date: string;
-    areas: PriceArea[];
-    results: Partial<Record<PriceArea, HourlyPrice[]>>;
-  }>(),
+  props<{ date: string; results: DayPrices }>(),
 );
 
 export const loadAllAreaPricesFailure = createAction(

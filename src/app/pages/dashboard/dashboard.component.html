@@ -113,15 +113,12 @@
       </div>
     }
 
-    <section
-      class="dashboard__stats"
-      [class.dashboard__stats--loading]="(loading$ | async) || (allAreasLoading$ | async)"
-    >
+    <section class="dashboard__stats" [class.dashboard__stats--loading]="allAreasLoading$ | async">
       <app-stats-bar [includeVat]="includeVat()" [showStromstotte]="showStromstotte()" />
     </section>
 
     <section class="dashboard__chart">
-      @if ((loading$ | async) || (allAreasLoading$ | async)) {
+      @if (allAreasLoading$ | async) {
         <div class="data-overlay" aria-hidden="true">
           <div class="spinner"></div>
         </div>
@@ -215,7 +212,7 @@
     @if (chartMode() === 'bar' && (dateRangeDays$ | async) === 1) {
       <section
         class="dashboard__table"
-        [class.dashboard__table--loading]="(loading$ | async) || (allAreasLoading$ | async)"
+        [class.dashboard__table--loading]="allAreasLoading$ | async"
       >
         <h2 class="section-title">{{ ls.t().allHours }}</h2>
         <app-price-table [includeVat]="includeVat()" [showStromstotte]="showStromstotte()" />

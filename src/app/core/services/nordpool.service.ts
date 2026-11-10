@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
-import { HourlyPrice, PriceArea } from '../../models/price.model';
+import { DayPrices, HourlyPrice, PRICE_AREAS, PriceArea } from '../../models/price.model';
 import { environment } from '../../../environments/environment';
 import { PriceCacheService } from './price-cache.service';
 
@@ -16,9 +16,7 @@ interface NordpoolResponse {
   multiAreaEntries: NordpoolEntry[];
 }
 
-function cacheKey(date: string, area: PriceArea): string {
-  return `${date}:${area}`;
-}
+const ALL_AREAS: PriceArea[] = PRICE_AREAS.map((a) => a.value);
 
 @Injectable({ providedIn: 'root' })
 export class NordpoolService {
@@ -26,65 +24,36 @@ export class NordpoolService {
   private readonly cache = inject(PriceCacheService);
   private readonly baseUrl = environment.nordpoolApiUrl;
 
-  getPrices(date: string, area: PriceArea): Observable<HourlyPrice[]> {
+  /**
+   * Fetches every area for one date in a single request, regardless of which countries are
+   * enabled — toggling a country or switching area then never needs the network. Areas the API
+   * returned nothing for are left out, so an unpublished date yields `{}`.
+   */
+  getDayPrices(date: string): Observable<DayPrices> {
     if (!this.baseUrl) return throwError(() => new Error('not-configured'));
-    const key = cacheKey(date, area);
-    const cached = this.cache.get(key);
+    const cached = this.cache.get(date);
     if (cached) return of(cached);
 
-    return this.http.get<NordpoolResponse>(this.buildUrl(date, [area])).pipe(
-      map((r) => (r?.multiAreaEntries ? this.toIntervalPrices(r.multiAreaEntries, area) : [])),
-      tap((prices) => {
-        if (prices.length) this.cache.set(key, prices);
-      }),
-    );
-  }
-
-  /**
-   * Fetches the given areas for one date, requesting only the ones not already cached. Splitting
-   * cached from uncached matters because areas arrive a country at a time: with Norway already
-   * cached, enabling Sweden must fetch 4 areas rather than all 20.
-   */
-  getAllAreaPrices(
-    date: string,
-    areas: PriceArea[],
-  ): Observable<Partial<Record<PriceArea, HourlyPrice[]>>> {
-    if (!this.baseUrl) return throwError(() => new Error('not-configured'));
-    if (!areas.length) return of({});
-
-    const cached: Partial<Record<PriceArea, HourlyPrice[]>> = {};
-    const uncached: PriceArea[] = [];
-    for (const area of areas) {
-      const hit = this.cache.get(cacheKey(date, area));
-      if (hit) cached[area] = hit;
-      else uncached.push(area);
-    }
-
-    if (!uncached.length) return of(cached);
-
-    return this.http.get<NordpoolResponse>(this.buildUrl(date, uncached)).pipe(
+    return this.http.get<NordpoolResponse>(this.buildUrl(date)).pipe(
       map((r) => {
-        const result: Partial<Record<PriceArea, HourlyPrice[]>> = { ...cached };
+        const result: DayPrices = {};
         if (r?.multiAreaEntries) {
-          for (const area of uncached) {
+          for (const area of ALL_AREAS) {
             const prices = this.toIntervalPrices(r.multiAreaEntries, area);
             if (prices.length) result[area] = prices;
           }
         }
         return result;
       }),
+      // An empty day is not cached, so an unpublished tomorrow is retried later.
       tap((result) => {
-        this.cache.setMany(
-          uncached
-            .filter((area) => result[area]?.length)
-            .map((area) => ({ key: cacheKey(date, area), data: result[area]! })),
-        );
+        if (Object.keys(result).length) this.cache.set(date, result);
       }),
     );
   }
 
-  private buildUrl(date: string, areas: PriceArea[]): string {
-    return `${this.baseUrl}?date=${date}&market=DayAhead&deliveryArea=${areas.join(',')}&currency=NOK`;
+  private buildUrl(date: string): string {
+    return `${this.baseUrl}?date=${date}&market=DayAhead&deliveryArea=${ALL_AREAS.join(',')}&currency=NOK`;
   }
 
   // Converts 15-min entries to HourlyPrice[], dividing NOK/MWh → NOK/kWh.

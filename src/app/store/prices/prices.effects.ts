@@ -15,17 +15,11 @@ import { EMPTY, from, of, timer } from 'rxjs';
 import { NordpoolService } from '../../core/services/nordpool.service';
 import { LocationService } from '../../core/services/location.service';
 import { LanguageService } from '../../core/services/language.service';
-import {
-  selectSelectedDate,
-  selectPricesState,
-  selectSelectedArea,
-  selectEnabledCountries,
-} from './prices.selectors';
+import { selectPricesState, selectSelectedArea, selectEnabledCountries } from './prices.selectors';
 import * as PricesActions from './prices.actions';
 import { subtractDays } from '../../utils/date';
 import { safeLocalStorageSet } from '../../utils/local-storage';
-import { areasForCountries } from '../../models/price.model';
-import { planAreaFetches } from './fetch-plan';
+import { planDateFetches } from './fetch-plan';
 
 @Injectable()
 export class PricesEffects {
@@ -87,72 +81,43 @@ export class PricesEffects {
   detectLocation$ = createEffect(() =>
     this.actions$.pipe(
       ofType(PricesActions.detectLocation),
-      withLatestFrom(this.store.select(selectSelectedDate)),
-      switchMap(([, date]) =>
+      switchMap(() =>
         this.locationService.detectPriceArea().pipe(
-          mergeMap((area) =>
-            of(
-              PricesActions.selectArea({ area }),
-              PricesActions.loadPrices({ area, date }),
-              PricesActions.requestPriceData(),
-            ),
-          ),
+          map((area) => PricesActions.selectArea({ area })),
           catchError(() => EMPTY),
         ),
       ),
     ),
   );
 
-  loadPrices$ = createEffect(() =>
-    this.actions$.pipe(
-      ofType(PricesActions.loadPrices),
-      switchMap(({ area, date }) =>
-        this.nordpoolService.getPrices(date, area).pipe(
-          map((prices) => PricesActions.loadPricesSuccess({ prices })),
-          catchError((err: Error) =>
-            of(
-              PricesActions.loadPricesFailure({
-                error:
-                  err.message === 'not-configured'
-                    ? 'API URL is not configured'
-                    : this.ls.t().failedToLoad,
-              }),
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
-
-  /** Fetch the requested areas for a single date — mergeMap so concurrent date fetches complete. */
+  /** Fetch every area for a single date — mergeMap so concurrent date fetches complete. */
   loadAllAreaPrices$ = createEffect(() =>
     this.actions$.pipe(
       ofType(PricesActions.loadAllAreaPrices),
-      mergeMap(({ date, areas }) =>
-        this.nordpoolService.getAllAreaPrices(date, areas).pipe(
+      mergeMap(({ date }) =>
+        this.nordpoolService.getDayPrices(date).pipe(
           mergeMap((results) => {
             // Only a total miss warrants a toast. A partial miss just leaves that area without a
-            // line, and the attempt record stops it being re-requested.
+            // line, and the attempt record stops the date being re-requested.
             const noData = Object.keys(results).length === 0;
             return noData
               ? of(
-                  PricesActions.loadAllAreaPricesSuccess({ date, areas, results: {} }),
+                  PricesActions.loadAllAreaPricesSuccess({ date, results: {} }),
                   PricesActions.setNotification({
                     message: this.ls.t().dataNotAvailable,
                   }),
                 )
-              : of(PricesActions.loadAllAreaPricesSuccess({ date, areas, results }));
+              : of(PricesActions.loadAllAreaPricesSuccess({ date, results }));
           }),
           catchError((err: Error) =>
-            of(
-              PricesActions.loadAllAreaPricesSuccess({ date, areas, results: {} }),
-              PricesActions.setNotification({
-                message:
-                  err.message === 'not-configured'
-                    ? 'API URL is not configured.'
-                    : 'Price data is not available for all selected dates.',
-              }),
-            ),
+            err.message === 'not-configured'
+              ? of(PricesActions.loadAllAreaPricesFailure({ error: 'API URL is not configured' }))
+              : of(
+                  PricesActions.loadAllAreaPricesSuccess({ date, results: {} }),
+                  PricesActions.setNotification({
+                    message: 'Price data is not available for all selected dates.',
+                  }),
+                ),
           ),
         ),
       ),
@@ -169,8 +134,9 @@ export class PricesEffects {
 
   /**
    * The single place that turns "we might need data" into concrete fetches. Every trigger that
-   * can widen the required date+area set funnels through here, so the attempt bookkeeping and the
-   * `at` timestamp are constructed once.
+   * can widen the required date set funnels through here, so the attempt bookkeeping and the
+   * `at` timestamp are constructed once. Country and area changes are not triggers: every fetch
+   * already covers all areas.
    *
    * Deliberately keyed on actions, never on loadAllAreaPricesSuccess — keying it on the success
    * action would close the loop and let it re-plan itself indefinitely.
@@ -181,32 +147,19 @@ export class PricesEffects {
         PricesActions.requestPriceData,
         PricesActions.selectDate,
         PricesActions.setDateRangeDays,
-        PricesActions.toggleCountry,
-        PricesActions.setEnabledCountries,
-        PricesActions.selectArea,
       ),
       withLatestFrom(this.store.select(selectPricesState)),
       mergeMap(([, state]) => {
         const dates = Array.from({ length: state.dateRangeDays }, (_, i) =>
           subtractDays(state.selectedDate, i),
         );
-        const areas = areasForCountries(state.enabledCountries);
-        const plan = planAreaFetches(state, dates, areas, Date.now());
+        const now = Date.now();
         return from(
-          plan.map(({ date, areas: missing }) =>
-            PricesActions.loadAllAreaPrices({ date, areas: missing, at: Date.now() }),
+          planDateFetches(state, dates, now).map((date) =>
+            PricesActions.loadAllAreaPrices({ date, at: now }),
           ),
         );
       }),
-    ),
-  );
-
-  /** Toggling a country can reassign selectedArea, so reload the single-area series for it. */
-  loadPricesAfterCountryToggle$ = createEffect(() =>
-    this.actions$.pipe(
-      ofType(PricesActions.toggleCountry, PricesActions.setEnabledCountries),
-      withLatestFrom(this.store.select(selectSelectedArea), this.store.select(selectSelectedDate)),
-      map(([, area, date]) => PricesActions.loadPrices({ area, date })),
     ),
   );
 }

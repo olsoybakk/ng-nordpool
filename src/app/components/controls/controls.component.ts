@@ -18,7 +18,6 @@ import {
   selectSelectedDate,
   selectDateRangeDays,
   selectEnabledAreas,
-  loadPrices,
   selectArea,
   selectDate,
   setDateRangeDays,
@@ -114,7 +113,6 @@ export class ControlsComponent {
 
   onAreaChange(area: PriceArea): void {
     this.store.dispatch(selectArea({ area }));
-    this.store.dispatch(loadPrices({ area, date: this.currentDate() }));
   }
 
   onDateChange(date: string): void {
@@ -124,9 +122,8 @@ export class ControlsComponent {
       this.cdr.detectChanges();
       this.currentDate.set(date); // next CD (after this handler) sees '' → today and writes to DOM
     }
+    // The planPriceFetches$ effect fetches whichever dates of the new range are missing.
     this.store.dispatch(selectDate({ date }));
-    this.store.dispatch(loadPrices({ area: this.currentArea(), date }));
-    // loadAllAreaPrices for the full range is handled by the loadMultiDayPrices$ effect
   }
 
   stepDate(days: number): void {
