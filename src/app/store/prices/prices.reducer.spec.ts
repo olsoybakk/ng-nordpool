@@ -24,63 +24,21 @@ describe('pricesReducer', () => {
     expect(state).toEqual(initialState);
   });
 
-  describe('loadPrices', () => {
-    it('sets loading and clears error', () => {
-      const state = pricesReducer(
-        { ...clean, error: 'previous error' },
-        PricesActions.loadPrices({ area: 'NO1', date: '2026-05-17' }),
-      );
-      expect(state.loading).toBe(true);
-      expect(state.error).toBeNull();
-    });
-  });
-
-  describe('loadPricesSuccess', () => {
-    it('stores prices and clears loading', () => {
-      const prices = [price(100), price(200)];
-      const state = pricesReducer(
-        { ...clean, loading: true },
-        PricesActions.loadPricesSuccess({ prices }),
-      );
-      expect(state.loading).toBe(false);
-      expect(state.prices).toEqual(prices);
-    });
-  });
-
-  describe('loadPricesFailure', () => {
-    it('sets error and clears loading', () => {
-      const state = pricesReducer(
-        { ...clean, loading: true },
-        PricesActions.loadPricesFailure({ error: 'Network error' }),
-      );
-      expect(state.loading).toBe(false);
-      expect(state.error).toBe('Network error');
-    });
-  });
-
   describe('loadAllAreaPrices', () => {
     it('increments allAreasLoadingCount', () => {
       const state = pricesReducer(
         clean,
-        PricesActions.loadAllAreaPrices({ date: '2026-05-17', areas: ['NO1'], at: AT }),
+        PricesActions.loadAllAreaPrices({ date: '2026-05-17', at: AT }),
       );
       expect(state.allAreasLoadingCount).toBe(1);
     });
 
-    it('records an attempt timestamp for every requested area', () => {
+    it('records an attempt timestamp for the date, keeping other dates', () => {
       const state = pricesReducer(
-        clean,
-        PricesActions.loadAllAreaPrices({ date: '2026-05-17', areas: ['DK1', 'DK2'], at: AT }),
+        { ...clean, attemptsByDate: { '2026-05-16': 1 } },
+        PricesActions.loadAllAreaPrices({ date: '2026-05-17', at: AT }),
       );
-      expect(state.attemptsByDate['2026-05-17']).toEqual({ DK1: AT, DK2: AT });
-    });
-
-    it('merges attempts with those already recorded for the date', () => {
-      const state = pricesReducer(
-        { ...clean, attemptsByDate: { '2026-05-17': { NO1: 1 } } },
-        PricesActions.loadAllAreaPrices({ date: '2026-05-17', areas: ['DK1'], at: AT }),
-      );
-      expect(state.attemptsByDate['2026-05-17']).toEqual({ NO1: 1, DK1: AT });
+      expect(state.attemptsByDate).toEqual({ '2026-05-16': 1, '2026-05-17': AT });
     });
   });
 
@@ -91,7 +49,6 @@ describe('pricesReducer', () => {
         { ...clean, allAreasLoadingCount: 1 },
         PricesActions.loadAllAreaPricesSuccess({
           date: '2026-05-17',
-          areas: ['NO1'],
           results: { NO1: prices },
         }),
       );
@@ -99,19 +56,17 @@ describe('pricesReducer', () => {
       expect(state.allAreaPricesByDate['2026-05-17']['NO1']).toEqual(prices);
     });
 
-    it('merges into the date rather than replacing it', () => {
-      // Fetches are area-scoped, so enabling Denmark must not wipe the Norwegian data.
+    it('keeps the data held for other dates', () => {
       const no = [price(50)];
       const dk = [price(70)];
       const state = pricesReducer(
-        { ...clean, allAreaPricesByDate: { '2026-05-17': { NO1: no } } },
-        PricesActions.loadAllAreaPricesSuccess({
-          date: '2026-05-17',
-          areas: ['DK1'],
-          results: { DK1: dk },
-        }),
+        { ...clean, allAreaPricesByDate: { '2026-05-16': { NO1: no } } },
+        PricesActions.loadAllAreaPricesSuccess({ date: '2026-05-17', results: { DK1: dk } }),
       );
-      expect(state.allAreaPricesByDate['2026-05-17']).toEqual({ NO1: no, DK1: dk });
+      expect(state.allAreaPricesByDate).toEqual({
+        '2026-05-16': { NO1: no },
+        '2026-05-17': { DK1: dk },
+      });
     });
 
     it('does not decrement allAreasLoadingCount below 0', () => {
@@ -119,7 +74,6 @@ describe('pricesReducer', () => {
         { ...clean, allAreasLoadingCount: 0 },
         PricesActions.loadAllAreaPricesSuccess({
           date: '2026-05-17',
-          areas: ['NO1'],
           results: {},
         }),
       );

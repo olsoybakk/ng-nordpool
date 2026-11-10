@@ -9,7 +9,7 @@ import { LocationService } from '../../core/services/location.service';
 import { LanguageService } from '../../core/services/language.service';
 import * as PricesActions from './prices.actions';
 import { initialState } from './prices.reducer';
-import { HourlyPrice, PriceArea, PricesState } from '../../models/price.model';
+import { DayPrices, PriceArea, PricesState } from '../../models/price.model';
 
 // take(n) unsubscribes once n values arrive, so a resolved helper never keeps listening for
 // (and double-consuming) actions dispatched later in the same test.
@@ -29,11 +29,7 @@ describe('PricesEffects', () => {
   let actions$: Subject<unknown>;
   let store: MockStore;
   let effects: PricesEffects;
-  let languageService: LanguageService;
-  let nordpoolService: {
-    getPrices: ReturnType<typeof vi.fn>;
-    getAllAreaPrices: ReturnType<typeof vi.fn>;
-  };
+  let nordpoolService: { getDayPrices: ReturnType<typeof vi.fn> };
   let locationService: { detectPriceArea: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
@@ -42,7 +38,7 @@ describe('PricesEffects', () => {
     // dispatching, and a ReplaySubject would replay the previous test's/action's last value to
     // a later `.subscribe()` in the same test (e.g. the "stream survives a failure" case below).
     actions$ = new Subject();
-    nordpoolService = { getPrices: vi.fn(), getAllAreaPrices: vi.fn() };
+    nordpoolService = { getDayPrices: vi.fn() };
     locationService = { detectPriceArea: vi.fn() };
 
     TestBed.configureTestingModule({
@@ -58,100 +54,75 @@ describe('PricesEffects', () => {
 
     effects = TestBed.inject(PricesEffects);
     store = TestBed.inject(MockStore);
-    languageService = TestBed.inject(LanguageService);
-  });
-
-  describe('loadPrices$', () => {
-    it('dispatches loadPricesSuccess on a successful fetch', async () => {
-      const prices: HourlyPrice[] = [
-        { ore_per_kWh: 100, time_start: '2026-05-17T00:00:00', time_end: '2026-05-17T00:15:00' },
-      ];
-      nordpoolService.getPrices.mockReturnValue(of(prices));
-
-      const result = firstEmission(effects.loadPrices$);
-      actions$.next(PricesActions.loadPrices({ area: 'NO1', date: '2026-05-17' }));
-
-      expect(await result).toEqual(PricesActions.loadPricesSuccess({ prices }));
-    });
-
-    it('dispatches loadPricesFailure with a generic message on a network error', async () => {
-      nordpoolService.getPrices.mockReturnValue(throwError(() => new Error('network down')));
-
-      const result = firstEmission(effects.loadPrices$);
-      actions$.next(PricesActions.loadPrices({ area: 'NO1', date: '2026-05-17' }));
-
-      const action = (await result) as ReturnType<typeof PricesActions.loadPricesFailure>;
-      expect(action.type).toBe(PricesActions.loadPricesFailure.type);
-      expect(action.error).toBe(languageService.t().failedToLoad);
-    });
-
-    it('dispatches a specific error when the API URL is not configured', async () => {
-      nordpoolService.getPrices.mockReturnValue(throwError(() => new Error('not-configured')));
-
-      const result = firstEmission(effects.loadPrices$);
-      actions$.next(PricesActions.loadPrices({ area: 'NO1', date: '2026-05-17' }));
-
-      const action = (await result) as ReturnType<typeof PricesActions.loadPricesFailure>;
-      expect(action.error).toBe('API URL is not configured');
-    });
   });
 
   describe('loadAllAreaPrices$', () => {
     it('dispatches success only when the API returns data', async () => {
-      const results: Partial<Record<PriceArea, HourlyPrice[]>> = {
+      const results: DayPrices = {
         NO1: [
           { ore_per_kWh: 100, time_start: '2026-05-17T00:00:00', time_end: '2026-05-17T00:15:00' },
         ],
       };
-      nordpoolService.getAllAreaPrices.mockReturnValue(of(results));
+      nordpoolService.getDayPrices.mockReturnValue(of(results));
 
       const result = firstEmission(effects.loadAllAreaPrices$);
-      actions$.next(PricesActions.loadAllAreaPrices({ date: '2026-05-17', areas: ['NO1'], at: 1 }));
+      actions$.next(PricesActions.loadAllAreaPrices({ date: '2026-05-17', at: 1 }));
 
       expect(await result).toEqual(
-        PricesActions.loadAllAreaPricesSuccess({ date: '2026-05-17', areas: ['NO1'], results }),
+        PricesActions.loadAllAreaPricesSuccess({ date: '2026-05-17', results }),
+      );
+    });
+
+    it('dispatches loadAllAreaPricesFailure when the API URL is not configured', async () => {
+      nordpoolService.getDayPrices.mockReturnValue(throwError(() => new Error('not-configured')));
+
+      const result = firstEmission(effects.loadAllAreaPrices$);
+      actions$.next(PricesActions.loadAllAreaPrices({ date: '2026-05-17', at: 1 }));
+
+      expect(await result).toEqual(
+        PricesActions.loadAllAreaPricesFailure({ error: 'API URL is not configured' }),
       );
     });
 
     it('dispatches success with empty results plus a notification on a total miss', async () => {
-      nordpoolService.getAllAreaPrices.mockReturnValue(of({}));
+      nordpoolService.getDayPrices.mockReturnValue(of({}));
 
       const result = collect(effects.loadAllAreaPrices$, 2);
-      actions$.next(PricesActions.loadAllAreaPrices({ date: '2026-05-17', areas: ['NO1'], at: 1 }));
+      actions$.next(PricesActions.loadAllAreaPrices({ date: '2026-05-17', at: 1 }));
 
       const [success, notification] = await result;
       expect(success).toEqual(
-        PricesActions.loadAllAreaPricesSuccess({ date: '2026-05-17', areas: ['NO1'], results: {} }),
+        PricesActions.loadAllAreaPricesSuccess({ date: '2026-05-17', results: {} }),
       );
       expect(notification.type).toBe(PricesActions.setNotification.type);
     });
 
     it('treats an HTTP/null-body error the same as a total miss', async () => {
-      nordpoolService.getAllAreaPrices.mockReturnValue(throwError(() => new Error('boom')));
+      nordpoolService.getDayPrices.mockReturnValue(throwError(() => new Error('boom')));
 
       const result = collect(effects.loadAllAreaPrices$, 2);
-      actions$.next(PricesActions.loadAllAreaPrices({ date: '2026-05-17', areas: ['NO1'], at: 1 }));
+      actions$.next(PricesActions.loadAllAreaPrices({ date: '2026-05-17', at: 1 }));
 
       const [success, notification] = await result;
       expect(success).toEqual(
-        PricesActions.loadAllAreaPricesSuccess({ date: '2026-05-17', areas: ['NO1'], results: {} }),
+        PricesActions.loadAllAreaPricesSuccess({ date: '2026-05-17', results: {} }),
       );
       expect(notification.type).toBe(PricesActions.setNotification.type);
     });
 
     it('does not permanently break the effect stream after a failure', async () => {
-      nordpoolService.getAllAreaPrices.mockReturnValueOnce(throwError(() => new Error('boom')));
-      nordpoolService.getAllAreaPrices.mockReturnValueOnce(
+      nordpoolService.getDayPrices.mockReturnValueOnce(throwError(() => new Error('boom')));
+      nordpoolService.getDayPrices.mockReturnValueOnce(
         of({ NO1: [{ ore_per_kWh: 1, time_start: 'a', time_end: 'b' }] }),
       );
 
       // Drain the two actions from the first (failing) request.
       const first = collect(effects.loadAllAreaPrices$, 2);
-      actions$.next(PricesActions.loadAllAreaPrices({ date: '2026-05-17', areas: ['NO1'], at: 1 }));
+      actions$.next(PricesActions.loadAllAreaPrices({ date: '2026-05-17', at: 1 }));
       await first;
 
       const second = firstEmission(effects.loadAllAreaPrices$);
-      actions$.next(PricesActions.loadAllAreaPrices({ date: '2026-05-18', areas: ['NO1'], at: 2 }));
+      actions$.next(PricesActions.loadAllAreaPrices({ date: '2026-05-18', at: 2 }));
       const action = (await second) as ReturnType<typeof PricesActions.loadAllAreaPricesSuccess>;
       expect(action.date).toBe('2026-05-18');
       expect(action.results['NO1']).toBeDefined();
@@ -159,17 +130,13 @@ describe('PricesEffects', () => {
   });
 
   describe('detectLocation$', () => {
-    it('dispatches selectArea, loadPrices and requestPriceData on success', async () => {
-      store.setState(rootState({ selectedDate: '2026-05-17' }));
+    it('dispatches selectArea on success — every area is already loaded', async () => {
       locationService.detectPriceArea.mockReturnValue(of('NO3' as PriceArea));
 
-      const result = collect(effects.detectLocation$, 3);
+      const result = firstEmission(effects.detectLocation$);
       actions$.next(PricesActions.detectLocation());
 
-      const [selectArea, loadPrices, requestPriceData] = await result;
-      expect(selectArea).toEqual(PricesActions.selectArea({ area: 'NO3' }));
-      expect(loadPrices).toEqual(PricesActions.loadPrices({ area: 'NO3', date: '2026-05-17' }));
-      expect(requestPriceData).toEqual(PricesActions.requestPriceData());
+      expect(await result).toEqual(PricesActions.selectArea({ area: 'NO3' }));
     });
 
     it('falls back to silence (no dispatch) when detection fails, without breaking the stream', async () => {
@@ -185,10 +152,9 @@ describe('PricesEffects', () => {
       expect(emitted).toBe(0);
       sub.unsubscribe();
 
-      const result = collect(effects.detectLocation$, 3);
+      const result = firstEmission(effects.detectLocation$);
       actions$.next(PricesActions.detectLocation());
-      const [selectArea] = await result;
-      expect(selectArea).toEqual(PricesActions.selectArea({ area: 'NO2' }));
+      expect(await result).toEqual(PricesActions.selectArea({ area: 'NO2' }));
     });
   });
 
@@ -197,17 +163,8 @@ describe('PricesEffects', () => {
       PricesActions.requestPriceData(),
       PricesActions.selectDate({ date: '2026-05-17' }),
       PricesActions.setDateRangeDays({ days: 2 }),
-      PricesActions.toggleCountry({ code: 'SE' }),
-      PricesActions.setEnabledCountries({ codes: ['NO'] }),
-      PricesActions.selectArea({ area: 'NO2' }),
-    ])('fires on %o and dispatches loadAllAreaPrices for the missing areas', async (trigger) => {
-      store.setState(
-        rootState({
-          selectedDate: '2026-05-17',
-          dateRangeDays: 1,
-          enabledCountries: ['NO'],
-        }),
-      );
+    ])('fires on %o and dispatches loadAllAreaPrices for the missing date', async (trigger) => {
+      store.setState(rootState({ selectedDate: '2026-05-17', dateRangeDays: 1 }));
 
       const result = firstEmission(effects.planPriceFetches$);
       actions$.next(trigger);
@@ -217,20 +174,47 @@ describe('PricesEffects', () => {
       expect(action.date).toBe('2026-05-17');
     });
 
-    it('does not re-plan a date/area combination that already has data', async () => {
+    it.each([
+      PricesActions.toggleCountry({ code: 'SE' }),
+      PricesActions.setEnabledCountries({ codes: ['NO', 'DK'] }),
+      PricesActions.selectArea({ area: 'SE3' }),
+    ])('does not fetch on %o — every area is already loaded', async (trigger) => {
+      store.setState(rootState({ selectedDate: '2026-05-17', dateRangeDays: 1 }));
+
+      let emitted = 0;
+      effects.planPriceFetches$.subscribe(() => emitted++);
+      actions$.next(trigger);
+      await new Promise((r) => setTimeout(r, 0));
+      expect(emitted).toBe(0);
+    });
+
+    it('dispatches one loadAllAreaPrices per missing date of the range', async () => {
+      store.setState(
+        rootState({
+          selectedDate: '2026-05-17',
+          dateRangeDays: 3,
+          allAreaPricesByDate: {
+            '2026-05-16': { NO1: [{ ore_per_kWh: 1, time_start: 'a', time_end: 'b' }] },
+          },
+        }),
+      );
+
+      const result = collect(effects.planPriceFetches$, 2);
+      actions$.next(PricesActions.requestPriceData());
+
+      const dates = (await result).map(
+        (a) => (a as ReturnType<typeof PricesActions.loadAllAreaPrices>).date,
+      );
+      expect(dates).toEqual(['2026-05-17', '2026-05-15']);
+    });
+
+    it('does not re-plan a date that already has data', async () => {
       store.setState(
         rootState({
           selectedDate: '2026-05-17',
           dateRangeDays: 1,
-          enabledCountries: ['NO'],
           allAreaPricesByDate: {
-            '2026-05-17': {
-              NO1: [{ ore_per_kWh: 1, time_start: 'a', time_end: 'b' }],
-              NO2: [{ ore_per_kWh: 1, time_start: 'a', time_end: 'b' }],
-              NO3: [{ ore_per_kWh: 1, time_start: 'a', time_end: 'b' }],
-              NO4: [{ ore_per_kWh: 1, time_start: 'a', time_end: 'b' }],
-              NO5: [{ ore_per_kWh: 1, time_start: 'a', time_end: 'b' }],
-            },
+            '2026-05-17': { NO1: [{ ore_per_kWh: 1, time_start: 'a', time_end: 'b' }] },
           },
         }),
       );

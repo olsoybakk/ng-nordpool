@@ -10,7 +10,12 @@ import { localISODate, subtractDays } from '../../utils/date';
 
 export const selectPricesState = createFeatureSelector<PricesState>('prices');
 
-export const selectAllPrices = createSelector(selectPricesState, (state) => state.prices);
+/** The selected area's prices for the selected date, read from the all-areas data. */
+export const selectAllPrices = createSelector(
+  selectPricesState,
+  (state): HourlyPrice[] =>
+    state.allAreaPricesByDate[state.selectedDate]?.[state.selectedArea] ?? [],
+);
 
 export const selectSelectedArea = createSelector(selectPricesState, (state) => state.selectedArea);
 
@@ -30,8 +35,6 @@ export const selectDateRangeDays = createSelector(
   selectPricesState,
   (state) => state.dateRangeDays,
 );
-
-export const selectLoading = createSelector(selectPricesState, (state) => state.loading);
 
 export const selectAllAreasLoading = createSelector(
   selectPricesState,
@@ -64,9 +67,7 @@ export const selectCurrentPriceInRange = createSelector(selectPricesState, (stat
   const oldestDate = subtractDays(selectedDate, dateRangeDays - 1);
   if (todayISO < oldestDate || todayISO > selectedDate) return null;
 
-  const todayPrices =
-    state.allAreaPricesByDate[todayISO]?.[selectedArea] ??
-    (selectedDate === todayISO ? state.prices : []);
+  const todayPrices = state.allAreaPricesByDate[todayISO]?.[selectedArea] ?? [];
 
   return (
     todayPrices.find((p) => {
@@ -90,18 +91,10 @@ export const selectDailyStats = createSelector(selectAllPrices, (prices) => {
 /** Min/max/avg across all days in the active date range for the selected area. */
 export const selectRangeStats = createSelector(selectPricesState, (state) => {
   const { selectedDate, dateRangeDays, selectedArea } = state;
-  let prices: HourlyPrice[];
-  if (dateRangeDays <= 1) {
-    prices = state.prices;
-  } else {
-    const dates = Array.from({ length: dateRangeDays }, (_, i) =>
-      subtractDays(selectedDate, dateRangeDays - 1 - i),
-    );
-    prices = [];
-    for (const date of dates) {
-      const dayPrices = state.allAreaPricesByDate[date]?.[selectedArea];
-      if (dayPrices) prices.push(...dayPrices);
-    }
+  const prices: HourlyPrice[] = [];
+  for (let i = dateRangeDays - 1; i >= 0; i--) {
+    const dayPrices = state.allAreaPricesByDate[subtractDays(selectedDate, i)]?.[selectedArea];
+    if (dayPrices) prices.push(...dayPrices);
   }
   if (!prices.length) return null;
   const values = prices.map((p) => p.ore_per_kWh);

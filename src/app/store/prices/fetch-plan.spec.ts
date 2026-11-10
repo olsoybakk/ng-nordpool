@@ -1,5 +1,5 @@
-import { ATTEMPT_TTL_MS, planAreaFetches } from './fetch-plan';
-import { HourlyPrice, PriceArea, PricesState } from '../../models/price.model';
+import { ATTEMPT_TTL_MS, planDateFetches } from './fetch-plan';
+import { HourlyPrice, PricesState } from '../../models/price.model';
 
 const NOW = 1_760_000_000_000;
 
@@ -14,72 +14,38 @@ function state(
   return { allAreaPricesByDate, attemptsByDate };
 }
 
-describe('planAreaFetches', () => {
-  it('includes an area that has never been attempted', () => {
-    expect(planAreaFetches(state(), ['2026-05-16'], ['NO1'], NOW)).toEqual([
-      { date: '2026-05-16', areas: ['NO1'] },
-    ]);
+describe('planDateFetches', () => {
+  it('includes a date that has never been attempted', () => {
+    expect(planDateFetches(state(), ['2026-05-16'], NOW)).toEqual(['2026-05-16']);
   });
 
-  it('skips an area that already has price data', () => {
+  it('skips a date that already has price data', () => {
     const s = state({ '2026-05-16': { NO1: prices() } });
-    expect(planAreaFetches(s, ['2026-05-16'], ['NO1'], NOW)).toEqual([]);
+    expect(planDateFetches(s, ['2026-05-16'], NOW)).toEqual([]);
   });
 
-  it('skips an area attempted but returning no data, while the TTL holds', () => {
-    // The regression case: the service never stores an empty area, so without the attempt
-    // record this area would be re-requested on every single user interaction.
-    const s = state({ '2026-05-16': {} }, { '2026-05-16': { DK1: NOW - 60_000 } });
-    expect(planAreaFetches(s, ['2026-05-16'], ['DK1'], NOW)).toEqual([]);
+  it('skips a date attempted but returning no data, while the TTL holds', () => {
+    // The regression case: an empty day carries no data, so without the attempt record it
+    // would be re-requested on every single user interaction.
+    const s = state({ '2026-05-16': {} }, { '2026-05-16': NOW - 60_000 });
+    expect(planDateFetches(s, ['2026-05-16'], NOW)).toEqual([]);
   });
 
-  it('retries an attempted-but-empty area once the TTL has expired', () => {
-    const s = state({ '2026-05-16': {} }, { '2026-05-16': { DK1: NOW - ATTEMPT_TTL_MS } });
-    expect(planAreaFetches(s, ['2026-05-16'], ['DK1'], NOW)).toEqual([
-      { date: '2026-05-16', areas: ['DK1'] },
-    ]);
+  it('retries an attempted-but-empty date once the TTL has expired', () => {
+    const s = state({ '2026-05-16': {} }, { '2026-05-16': NOW - ATTEMPT_TTL_MS });
+    expect(planDateFetches(s, ['2026-05-16'], NOW)).toEqual(['2026-05-16']);
   });
 
-  it('requests only the missing areas for a date, as one grouped entry', () => {
-    const s = state(
-      { '2026-05-16': { NO1: prices(), NO2: prices() } },
-      { '2026-05-16': { NO3: NOW - 1000 } },
-    );
-    const areas: PriceArea[] = ['NO1', 'NO2', 'NO3', 'NO4', 'NO5'];
-    expect(planAreaFetches(s, ['2026-05-16'], areas, NOW)).toEqual([
-      { date: '2026-05-16', areas: ['NO4', 'NO5'] },
-    ]);
+  it('skips an in-flight date that has no data yet', () => {
+    const s = state({}, { '2026-05-16': NOW - 1000 });
+    expect(planDateFetches(s, ['2026-05-16'], NOW)).toEqual([]);
   });
 
-  it('returns one entry per date and omits fully covered dates', () => {
+  it('returns only the missing dates of a range, in order', () => {
     const s = state({ '2026-05-15': { NO1: prices() } });
-    expect(planAreaFetches(s, ['2026-05-15', '2026-05-16'], ['NO1'], NOW)).toEqual([
-      { date: '2026-05-16', areas: ['NO1'] },
-    ]);
-  });
-
-  it('returns an empty plan when everything is covered', () => {
-    const s = state({ '2026-05-16': { NO1: prices(), NO2: prices() } });
-    expect(planAreaFetches(s, ['2026-05-16'], ['NO1', 'NO2'], NOW)).toEqual([]);
-  });
-
-  it('requests only a newly enabled country across every active date', () => {
-    // Norway already loaded for both dates; enabling Denmark must not refetch NO.
-    const s = state({
-      '2026-05-15': { NO1: prices() },
-      '2026-05-16': { NO1: prices() },
-    });
-    const plan = planAreaFetches(s, ['2026-05-15', '2026-05-16'], ['NO1', 'DK1', 'DK2'], NOW);
-    expect(plan).toEqual([
-      { date: '2026-05-15', areas: ['DK1', 'DK2'] },
-      { date: '2026-05-16', areas: ['DK1', 'DK2'] },
-    ]);
-  });
-
-  it('treats an area stored as an empty array as missing', () => {
-    const s = state({ '2026-05-16': { NO1: [] } });
-    expect(planAreaFetches(s, ['2026-05-16'], ['NO1'], NOW)).toEqual([
-      { date: '2026-05-16', areas: ['NO1'] },
+    expect(planDateFetches(s, ['2026-05-16', '2026-05-15', '2026-05-14'], NOW)).toEqual([
+      '2026-05-16',
+      '2026-05-14',
     ]);
   });
 });

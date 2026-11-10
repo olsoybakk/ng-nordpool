@@ -6,22 +6,23 @@ export interface HourlyPrice {
   time_end: string;
 }
 
+/** Every area's prices for one date, as returned by a single all-areas request. */
+export type DayPrices = Partial<Record<PriceArea, HourlyPrice[]>>;
+
 export interface PricesState {
-  prices: HourlyPrice[];
-  allAreaPricesByDate: Record<string, Partial<Record<PriceArea, HourlyPrice[]>>>;
+  allAreaPricesByDate: Record<string, DayPrices>;
   /**
-   * Epoch-ms timestamp of the last fetch *attempt* per date+area. Records the attempt rather
-   * than the result, because an area the API has no data for is never stored in
+   * Epoch-ms timestamp of the last fetch *attempt* per date. Records the attempt rather than
+   * the result, because a date the API has no data for is never stored in
    * allAreaPricesByDate — so a presence check alone would re-request it forever.
    * Deliberately not persisted: prices survive in PriceCacheService, so a reload always
    * grants a fresh retry.
    */
-  attemptsByDate: Record<string, Partial<Record<PriceArea, number>>>;
+  attemptsByDate: Record<string, number>;
   selectedArea: PriceArea;
   enabledCountries: CountryCode[];
   selectedDate: string;
   dateRangeDays: number;
-  loading: boolean;
   allAreasLoadingCount: number;
   error: string | null;
   notification: string | null;

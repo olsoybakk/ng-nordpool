@@ -1,21 +1,42 @@
-import { selectDailyStats, selectMergedAreaPrices, selectRangeStats } from './prices.selectors';
+import {
+  selectAllPrices,
+  selectDailyStats,
+  selectMergedAreaPrices,
+  selectRangeStats,
+} from './prices.selectors';
 import { HourlyPrice, PricesState } from '../../models/price.model';
 
 const p = (ore: number): HourlyPrice => ({ ore_per_kWh: ore, time_start: '', time_end: '' });
 
 const base: PricesState = {
-  prices: [],
   allAreaPricesByDate: {},
   attemptsByDate: {},
   selectedArea: 'NO1',
   enabledCountries: ['NO'],
   selectedDate: '2026-05-17',
   dateRangeDays: 1,
-  loading: false,
   allAreasLoadingCount: 0,
   error: null,
   notification: null,
 };
+
+describe('selectAllPrices', () => {
+  it('derives the selected area and date from the all-areas data', () => {
+    const state: PricesState = {
+      ...base,
+      selectedArea: 'NO2',
+      allAreaPricesByDate: {
+        '2026-05-16': { NO2: [p(1)] },
+        '2026-05-17': { NO1: [p(100)], NO2: [p(200)] },
+      },
+    };
+    expect(selectAllPrices.projector(state)).toEqual([p(200)]);
+  });
+
+  it('returns an empty array when the date is not loaded', () => {
+    expect(selectAllPrices.projector(base)).toEqual([]);
+  });
+});
 
 describe('selectDailyStats', () => {
   it('returns null for empty prices', () => {
@@ -42,8 +63,12 @@ describe('selectRangeStats', () => {
     expect(selectRangeStats.projector(base)).toBeNull();
   });
 
-  it('uses state.prices for single-day range', () => {
-    const state: PricesState = { ...base, prices: [p(100), p(200)], dateRangeDays: 1 };
+  it('uses the selected area of the selected date for a single-day range', () => {
+    const state: PricesState = {
+      ...base,
+      dateRangeDays: 1,
+      allAreaPricesByDate: { '2026-05-17': { NO1: [p(100), p(200)], NO2: [p(900)] } },
+    };
     const result = selectRangeStats.projector(state)!;
     expect(result.min).toBe(100);
     expect(result.max).toBe(200);
