@@ -88,6 +88,9 @@ const FULLSCREEN_INNER = 12;
 const DASHBOARD_H_PAD = 64;
 const DASHBOARD_MAX_W = 1100;
 const CARD_PAD_PX = 20;
+// Below this height the dashboard leaves its fit-to-viewport layout (see the
+// (max-height: 500px) queries in dashboard.component.scss) — keep in sync.
+const SHORT_VIEWPORT_H = 500;
 const STROMSTOTTE_THRESHOLD_INCL_VAT = STROMSTOTTE_THRESHOLD * VAT_FACTOR;
 
 @Component({
@@ -171,6 +174,14 @@ export class PriceChartComponent {
       h = Math.max(200, Math.round(((wh - edge) * CHART_W) / renderedW) - PADDING.top - padBottom);
     } else if (ww < 640) {
       h = Math.max(200, Math.round((wh * 0.38 * CHART_W) / renderedW) - PADDING.top - padBottom);
+    } else if (wh <= SHORT_VIEWPORT_H) {
+      // Landscape phone: the chart scrolls into view on its own, so let it take most of
+      // the screen height rather than the squeezed fit-to-viewport container.
+      h = Math.max(200, Math.round((wh * 0.75 * CHART_W) / renderedW) - PADDING.top - padBottom);
+    } else if (wh >= ww && mode === 'line') {
+      // Portrait tablet: the dashboard is not in fit-to-viewport mode here, so the
+      // container is content-sized and sizing from it would collapse to the minimum.
+      h = Math.max(200, Math.round((wh * 0.55 * CHART_W) / renderedW) - PADDING.top - padBottom);
     } else if (ch > 0 && mode === 'line') {
       h = Math.max(
         200,
