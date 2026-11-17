@@ -10,11 +10,14 @@
     padding-bottom: 2.5rem;
   }
 
+  // Fit-to-viewport layout for line mode. Opted out on narrow, portrait and short
+  // screens (landscape phones) — there the flex:1 chart would be squeezed to ~100px.
+  // The 500px height threshold is mirrored by SHORT_VIEWPORT_H in price-chart.
   &--viewport {
     height: 100dvh;
     overflow-y: auto;
 
-    @media (max-width: 640px), (orientation: portrait) {
+    @media (max-width: 640px), (orientation: portrait), (max-height: 500px) {
       height: auto;
       overflow-y: visible;
     }
@@ -267,7 +270,7 @@
     flex: 1;
     min-height: 0;
 
-    @media (max-width: 640px), (orientation: portrait) {
+    @media (max-width: 640px), (orientation: portrait), (max-height: 500px) {
       flex: none;
     }
   }
@@ -289,7 +292,7 @@
     flex-direction: column;
     min-height: 200px;
 
-    @media (max-width: 640px), (orientation: portrait) {
+    @media (max-width: 640px), (orientation: portrait), (max-height: 500px) {
       flex: none;
       display: block;
     }

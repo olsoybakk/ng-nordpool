@@ -165,6 +165,16 @@
   gap: 1.5rem;
   align-items: flex-start;
   flex-wrap: wrap;
+
+  // Tighter spacing so Date and Days share one row on a 375px phone; narrower
+  // screens (320px) still wrap rather than overflow.
+  @media (max-width: 640px) {
+    gap: 0.75rem;
+
+    input[type='date'] {
+      padding: 0 0.5rem;
+    }
+  }
 }
 
 .date-nav {

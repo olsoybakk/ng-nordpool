@@ -213,7 +213,8 @@ src/app/components/
   controls/       Custom area dropdown + date <input> with ‹/› prev/next day buttons
                   + Days stepper (1–14, ‹/› buttons + native <select>).
                   Date and Days controls are wrapped in a `.date-range-row` flex
-                  container so they always appear on the same row.
+                  container so they share a row down to 375px (the gap and date-input
+                  padding tighten ≤640px to fit); at 320px they wrap rather than overflow.
                   maxDate is tomorrow (Date.now() + 864e5). stepDate(±1) guards
                   against going past maxDate. Next button disabled at maxDate.
                   Area change → selectArea (no fetch — every area is already loaded).
@@ -287,8 +288,15 @@ src/app/components/
                     within the visible date range (single-day: selectedDate === today;
                     multi-day: oldest date ≤ today ≤ selectedDate); hover tooltip;
                     fullscreen toggle; pinch-to-zoom; scroll-to-zoom.
-                  Mobile chart height: 38% of viewport height (desktop uses container
-                    height in line mode, fixed CHART_H in bar mode).
+                  Chart height (dims()): mobile (<640px) 38% of viewport height;
+                    short screens (height ≤ SHORT_VIEWPORT_H = 500, landscape phones)
+                    75%; portrait ≥640px in line mode 55%; otherwise container height
+                    in line mode (fit-to-viewport layout), fixed CHART_H in bar mode.
+                    The fit-to-viewport layout (`.dashboard--viewport`) is only active
+                    in landscape, ≥640px wide and >500px tall — outside it the container
+                    is content-sized, so sizing from it would collapse to the 200-unit
+                    floor. SHORT_VIEWPORT_H mirrors the (max-height: 500px) queries in
+                    dashboard.component.scss.
                   VAT: prices multiplied by 1.25 when includeVat is true (NO4 exempt).
                   Norgespris: dashed reference line at 50 øre/kWh (incl. VAT) when
                     showNorgespris is true. Also injected into the tooltip as a

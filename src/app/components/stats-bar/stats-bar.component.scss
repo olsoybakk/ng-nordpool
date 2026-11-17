@@ -1,6 +1,8 @@
 .stats-bar {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  // auto-fit (not auto-fill) collapses unused tracks so the 3–4 cards stretch to fill
+  // the row instead of leaving empty columns on wide screens.
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 1rem;
 
   // 3-item state (Now hidden): make the first card (Avg) span both columns so
